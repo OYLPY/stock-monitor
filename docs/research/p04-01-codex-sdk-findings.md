@@ -84,4 +84,4 @@ SDK 的 run() 汇总已完成 items、finalResponse 和 usage；实现会把 tur
 2. 线程继续显式限制工作目录、沙箱和网络；成功 PoC 是只读、无工具、无外部行情请求。
 3. P08 的 Codex adapter 必须在首次流错误后立即中止当前 SDK turn、持久化并复用每任务预算；只有在 P08 验证 HTTP 429、凭据错误、权限错误和并发取消均不超出 NFR-004 后，才可将集成视为符合要求。仅设置 timeout 或依赖 CLI feature flag 不足以证明请求次数有界。
 4. 将 429/费用限制、真实 auth-specific error、取消后的 CLI/远端状态列为 `NOT_VERIFIED`；不得让无凭据模式的通用 network error冒充已验证的认证错误。
-5. P04-01 在本地调用 PoC 及常规工程检查通过后，仍须因 retry budget 不满足验收而保持 Issue Open；禁止将该路径描述为符合 NFR-004。
+5. P04-01 是依赖可行性 PoC：真实调用、失败/权限边界及工程验收证据齐全后可关闭 #33。裸 SDK 离线重试超出 NFR-004，模拟 429 被归为通用网络错误，真实账号额度语义仍未验证；这些是 P08-01 的硬性设计门槛，不能把本 PoC 描述成产品已符合 NFR-004。

@@ -1,9 +1,9 @@
 # 当前执行状态
 
-- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–05 / #28–32 与 PMO-01 / #88 均已完成并关闭。P04-01 / #33 正在完成 Codex SDK 可行性 PoC；真实本地授权调用及结构化输出通过，裸 SDK 离线连接重试超出 NFR-004，候选宿主取消策略在断连场景将请求限制为 3。#33 保持 Open，直到 quota/error 边界和任务验收状态完成记录。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–05 / #28–32 与 PMO-01 / #88 均已完成并关闭。P04-01 / #33 的可行性验收完成并关闭：真实本地授权调用及结构化输出通过；裸 SDK 离线重试超出 NFR-004，候选宿主取消策略仅在断连场景限制到 3 次，请求限额语义仍待验证。P08-01 必须实现并验证任务级重试预算、429 分类与取消边界，之后才能声称符合 NFR-004。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
-- **依赖**：P04-01 / #33 的 P03-02 / #29 已关闭。P04-02 / #34、P04-03 / #35、P04-04 / #36 各自依赖 P03-01 / #28、P02-02 / #25、P03-05 / #32，均已关闭；是否跨过 P04-01 进入并行项，按开发计划依赖和当前 Issue 验收决定。
-- **同步状态**：本次进入 P04-01 前确认无开放 PR，执行 `git fetch --prune origin` / `git pull --ff-only origin main`；`main` 当前基线 `750fcee1c2cd4a057a377f587371e236ac01495d`，同步结果 `Already up to date`。再次推送前仍须检查开放 PR 并同步远端 `main`。
+- **依赖**：P04-01 / #33 的 P03-02 / #29 已关闭。P04-02 / #34、P04-03 / #35、P04-04 / #36 各自依赖 P03-01 / #28、P02-02 / #25、P03-05 / #32，均已关闭；按 P04 任务顺序继续 P04-02。
+- **同步状态**：进入 P04-01 前确认无开放 PR，执行 `git fetch --prune origin` / `git pull --ff-only origin main`，基线为 `750fcee1c2cd4a057a377f587371e236ac01495d`。PoC 已以 `aa07f9ec2c19c745752eb6c79f111f9e0d2cb9ee` 推送；[Quality CI run 43732653552](https://github.com/OYLPY/stock-monitor/actions/runs/43732653552) success。再次推送前仍须检查开放 PR 并同步远端 `main`。
 - **产品边界**：本地即开即用，无应用登录、注册或用户管理；本地批准绑定不可变计划版本。UI 采用 shadcn/ui 设计基线，组件接入安排在 P06。产品可复用本机 CLI 登录，但这不构成应用登录或账号管理。
 - **P01-03 结果**：FR-Trade/追踪文档已直接推送 main；本地 format、lint、typecheck、unit（3 文件/19 测试）、build、ID/链接检查通过；Issue #22 已在 Quality #19 成功后关闭。详见 `harness/handoffs/P01-03.md`。
 - **P01-04 本地验收**：NFR-001–013 / AC-NFR-001–022，RQ 全量矩阵和研究/交易功能 AC 映射已完成；补齐外部不可信文本权限边界与六字段上下文恢复验收。format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、编号/矩阵/本地链接自检均通过；integration 不适用（`package.json` 无独立命令）。详细记录见 `harness/handoffs/P01-04.md`。
@@ -36,4 +36,4 @@
 - **P03-05 设计提交 CI**：`8cb0a017919b3af6f21f91ccbc14ab85e1a9bbc4` 已推送；[Quality CI run 43724830729](https://github.com/OYLPY/stock-monitor/actions/runs/43724830729) success。六字段交接见 `harness/handoffs/P03-05.md`。
 - **PMO-01 远端验收**：`16011b6057bb332dca3a51eb2b57630cf2fdf9ab` 与最终证据提交 `0d9c969868da3b17f841e64c8b7f3d82ef233f17` 已 push；[Quality CI run 43722032781](https://github.com/OYLPY/stock-monitor/actions/runs/43722032781) 与 [43722192853](https://github.com/OYLPY/stock-monitor/actions/runs/43722192853) 均成功；#88 已更新并关闭。
 - **P04-01 本地发现**：`@openai/codex-sdk` / 随附 CLI 均为 0.169.0；全局 CLI 为 0.149.1。一次真实调用通过 JSON Schema；空 `CODEX_HOME` 确认为 `not_logged_in`，SDK 返回通用网络错误。临时环境裸离线端点记录 37 个 `/v1/responses` 请求；首个流式网络错误后由宿主 abort 的候选策略记录 3 个请求并通过；模拟 429 记录 2 个请求，仍归为通用网络错误。详细证据见 `docs/research/p04-01-codex-sdk-findings.md` 和 `poc/codex/actual-run-2026-11-16.jsonl`。
-- **下一步具体操作**：暂存 P04-01 的 PoC、调研、索引和 handoff 文件，运行 `git diff --cached --check`；通过后在 #33 登记真实验收结果。推送前再次查开放 PR、fetch/pull `main`；push 后等待 Quality CI，按 PoC 可行性结论决定是否关闭 #33，再进入 P04 下一项。
+- **下一步具体操作**：开始 P04-02 / #34 的 SQLite/Drizzle 精度与迁移 PoC；P03-01 / #28 已关闭。

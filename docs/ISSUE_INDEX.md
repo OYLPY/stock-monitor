@@ -126,7 +126,7 @@
 
 ### [P04 技术可行性验证](https://github.com/OYLPY/stock-monitor/issues/5)
 
-- [ ] [P04-01 — Codex SDK 本地授权与流式调用 PoC](https://github.com/OYLPY/stock-monitor/issues/33) · 依赖：P03-02
+- [x] [P04-01 — Codex SDK 本地授权与流式调用 PoC](https://github.com/OYLPY/stock-monitor/issues/33) · 交付：[p04-01-codex-sdk-findings.md](research/p04-01-codex-sdk-findings.md)、[PoC](../poc/codex/README.md) · 依赖：P03-02
 - [ ] [P04-02 — SQLite/Drizzle 精度与迁移 PoC](https://github.com/OYLPY/stock-monitor/issues/34) · 依赖：P03-01
 - [ ] [P04-03 — 美日历史/公告数据适配器 PoC](https://github.com/OYLPY/stock-monitor/issues/35) · 依赖：P02-02
 - [ ] [P04-04 — 后台 Worker、关闭浏览器及重启恢复 PoC](https://github.com/OYLPY/stock-monitor/issues/36) · 依赖：P03-05
