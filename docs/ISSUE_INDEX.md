@@ -83,7 +83,7 @@
 | 重大性、新事件、迟到发现、去重和每轮最多 3 项 | docs/requirements/FR_RESEARCH.md：FR-Research-003/004/005 | AC-RES-007–012：无新事件、旧/重复事件、过期数据、缺少来源、超额事件 |
 | 晨报、经济日历、研究候选、风控与账本字段 | docs/requirements/FR_RESEARCH.md：FR-Research-007/008/009 | AC-RES-013–016：未完成交易日、经济日历、空策略、风控输入不足 |
 | 来源时间戳、验证等级、Fixture 隔离及降级状态 | docs/requirements/FR_RESEARCH.md：FR-Research-006/010/011 | AC-RES-009–017；P07/P08/P12 实施后进行运行时验证 |
-| 用例与产品需求可追踪至明细 FR | docs/requirements/REQUIREMENTS_INDEX.md、docs/requirements/USE_CASES.md | RQ-003–012、RQ-023、RQ-028、RQ-030 映射到 FR 和 AC-RES-001–018 |
+| 用例与产品需求可追踪至明细 FR | docs/requirements/REQUIREMENTS_INDEX.md、docs/requirements/USE_CASES.md | RQ-003–012、RQ-023、RQ-028、RQ-030 映射到 FR 和 AC-RES-001–023 |
 
 #### P01-03 需求—设计—验证追踪
 
@@ -94,6 +94,16 @@
 | 模拟订单、成交与只追加账本 | docs/requirements/FR_TRADE.md：FR-Trade-009/010 | AC-TRD-013/014；P10/P12 运行时验证 |
 | 回测可复算、防未来函数、五维评分和 Fixture 降级 | docs/requirements/FR_TRADE.md：FR-Trade-008/011/012/013 | AC-TRD-006/010/016–019；P09/P12 运行时验证 |
 | RQ—用例—明细契约完整映射 | docs/requirements/REQUIREMENTS_INDEX.md、USE_CASES.md | RQ-002、RQ-013–022 → UC-04/07/08 → FR-Trade → AC-TRD-001–019 |
+
+#### P01-04 非功能需求—完整追踪
+
+| 要求 | 设计入口 | 验收入口 |
+|---|---|---|
+| 性能、离线/外部降级、重试、Worker 恢复 | docs/requirements/NFR.md：NFR-002–005 | AC-NFR-003–009；P04/P11/P12-02/P12-06 运行时验证 |
+| 凭据保护、本地边界、审计和备份 | docs/requirements/NFR.md：NFR-001/006–008 | AC-NFR-001/002/010–012/022；P02/P05/P12-05 运行时验证 |
+| 数据质量、Fixture 隔离、语言和无障碍 | docs/requirements/NFR.md：NFR-009–012 | AC-NFR-013–020；P06/P07/P08/P12-03/P12-04 运行时验证 |
+| 上下文交接、证据恢复和不可信外部文本边界 | docs/requirements/NFR.md：NFR-008/013 | AC-NFR-021/022；P08-05/P12-05 回归 |
+| 全部产品 RQ、功能 FR 和 NFR 均可追到设计与测试阶段 | docs/requirements/TRACEABILITY.md | RQ-001–031、FR-Research-001–012、FR-Trade-001–013、NFR-001–013 → 对应 AC；仅文档定义，P12 尚未运行 |
 
 ### [P02 系统基本设计](https://github.com/OYLPY/stock-monitor/issues/3)
 

@@ -229,7 +229,7 @@ V1 不以“模拟赚了多少钱”为核心 KPI，而使用以下可审计指�
 - P01-01 建立**产品范围/用户旅程的基线**；不替代下一阶段的详细交易公式、API、UX 原型或 NFR。
 - P01-02 将 F-BRIEF/F-WATCH/F-DAILY/F-WEEKLY/F-RESEARCH 细化为需求字段和输出契约，详见 [FR-Research](FR_RESEARCH.md)。
 - P01-03 将 F-BACKTEST/F-RISK/F-PAPER 细化为资金、状态机和可测试公式，详见 [FR-Trade](FR_TRADE.md)。
-- P01-04 完成所有 MUST 的非功能指标、追踪矩阵、验收用例，关闭矛盾和遗漏。
+- P01-04 完成所有 MUST 的非功能指标、追踪矩阵和验收用例，详见 [NFR](NFR.md) 与 [TRACEABILITY](TRACEABILITY.md)；实现和运行验证仍由对应后续 Issue 负责。
 - P02/P03 针对已确认 MUST 约束编写架构与详细设计，任何新设计不可倒逼放宽风险规则。
 - 后续每一个变更应关联需求 ID → Issue → 设计章节 → 单元/集成/E2E 验证 → main 提交和 CI → 验收证据。按项目当前执行授权直接在 main 开发，不创建 PR。
 

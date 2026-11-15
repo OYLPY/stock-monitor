@@ -73,7 +73,7 @@
 | [`P01-01`](https://github.com/OYLPY/stock-monitor/issues/20) | **PRD 与用户场景/范围**：定义本地个人研究用户、晨报/监测/研究审计/周审计闭环、六研究角色、UI导航、V1范围及非目标；拆分联机与离线能力。 | docs/requirements/PRD.md、用例图、需求清单 | 每个用户旅程有触发、输入、预期结果和异常路径；不含真实交易服务；依赖：P00-02 |
 | [`P01-02`](https://github.com/OYLPY/stock-monitor/issues/21) | **晨报、异常监控与 AI 研究功能需求**：定义市场日历、仅交易时段监测、重大事件判定、最多3个新事件、去重、来源时间戳；晨报经济日历、3策略、风险裁决、可验证性等级。 | FR-Research 编号、工作流、报告契约 | 正常/休市/午休/无新闻/旧新闻/数据过期/缺少来源均有验收案例；依赖：P01-01 |
 | [`P01-03`](https://github.com/OYLPY/stock-monitor/issues/22) | **纸面交易、回测、风控需求**：区分候选、计划、审批、模拟挂单/成交与账本；明确初始100万JPY、当前权益2%风险、历史峰值20%回撤；仅多头股票及非杠杆ETF。 | FR-Trade、风控公式规范、交易状态图 | 测试覆盖权益不可核验、跳空、滑点、最小交易单位、汇率、禁止杠杆/期权/做空；依赖：P01-01 |
-| [`P01-04`](https://github.com/OYLPY/stock-monitor/issues/23) | **非功能需求与验收追踪矩阵**：定义性能、可恢复性、离线降级、凭据保护、审计、备份、数据质量、语言和无障碍；为所有功能关联设计/测试编号。 | NFR.md、docs/requirements/TRACEABILITY.md | 不存在缺少验收标准的 MUST 功能；不能把 Fixture 结果当作真实外部联通；依赖：P01-02, P01-03 |
+| [`P01-04`](https://github.com/OYLPY/stock-monitor/issues/23) | **非功能需求与验收追踪矩阵**：定义性能、可恢复性、离线降级、凭据保护、审计、备份、数据质量、语言和无障碍；为所有功能关联设计/测试编号。 | [`NFR.md`](requirements/NFR.md)、[`TRACEABILITY.md`](requirements/TRACEABILITY.md) | 不存在缺少验收标准的 MUST 功能；不能把 Fixture 结果当作真实外部联通；依赖：P01-02, P01-03 |
 
 ### P02 — 系统基本设计
 
