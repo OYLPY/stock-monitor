@@ -1,6 +1,8 @@
 # AI 六角色研究工作流设计
 
-> 状态：P02-03 设计基线。定义一个 Codex 研究任务内的六个串行职责步骤、输入输出、应用层验证与确定性风控边界；不表示 Codex 运行时、模型授权或纸面模拟器已接入。Codex/数据来源 PoC 由 P04 验证，任务运行实现由 P08 落地，具体持久化与 DTO 由 P03 细化。
+> Doc ID: DOC-0008 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
+
+> 状态：P02-03 设计基线。定义一个 Codex 研究任务内的六个串行职责步骤、输入输出、应用层验证与确定性风控边界；不表示 Codex 运行时、模型授权或纸面模拟器已接入。Codex/数据来源 PoC 由 P04 验证，任务运行实现由 P08 落地，持久步骤状态与恢复契约见 [WORKFLOW_STATE.md](WORKFLOW_STATE.md)，DTO 见 P03-02。
 >
 > 六个角色是同一模型工作流中的职责划分，不是六个独立 Agent。来源时间、质量和 `DEMO_ONLY` 规则沿用[数据溯源设计](DATA_PROVENANCE.md)；系统信任边界见[系统架构](ARCHITECTURE.md)。
 
@@ -82,7 +84,7 @@ flowchart TD
 
 ## 审计与后续实现
 
-每个角色步骤需能关联任务和角色顺序、输入 evidence/source ID、适用的流程/提示版本、结构化输出引用、应用校验结果、执行状态和失败原因；不得记录认证凭据。数据库字段由 P03-01、API/DTO 由 P03-02、运行时调用与工具边界由 P04/P08 细化。完整来源血缘遵循 [DATA_PROVENANCE.md](DATA_PROVENANCE.md)，纸面计划版本批准和交易边界遵循 [FR-Trade](../requirements/FR_TRADE.md)。
+每个角色步骤需能关联任务、固定角色顺序、输入 evidence/source ID、流程/schema 版本、校验结果、结构化输出和失败原因；不得记录认证凭据、隐藏推理或完整模型上下文。步骤检查点和崩溃恢复遵循 [WORKFLOW_STATE.md](WORKFLOW_STATE.md)，数据库由 [DB_SCHEMA.md](DB_SCHEMA.md) 描述，API/DTO 见 [API_CONTRACTS.md](API_CONTRACTS.md)，运行时调用与工具边界由 P04/P08 实测。完整来源血缘遵循 [DATA_PROVENANCE.md](DATA_PROVENANCE.md)，纸面计划版本批准和交易边界遵循 [FR-Trade](../requirements/FR_TRADE.md)。
 
 | 需求                                                      | 本文约束                                                         | 后续实现/验收                                               |
 | --------------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------- |

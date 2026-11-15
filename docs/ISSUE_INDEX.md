@@ -122,7 +122,7 @@
 - [x] [P03-02 — API/DTO 与状态机契约](https://github.com/OYLPY/stock-monitor/issues/29) · 交付：[API_CONTRACTS.md](design/API_CONTRACTS.md)（Route Handler、Zod DTO、错误码、分页、回测/报告/任务/计划/纸面订单状态图） · 覆盖：RQ-001/018/019/020/025/031、FR-Research-006/010/011、FR-Trade-001/002/009、NFR-001/008 · 依赖：P02-01, P03-01
 - [x] [P03-03 — 风险算法与订单仓位计算](https://github.com/OYLPY/stock-monitor/issues/30) · 交付：[RISK_ENGINE.md](design/RISK_ENGINE.md)（权益/JPY 与 USD FX/风险单位/费用滑点跳空/20%回撤/集中度/透支决策表） · 覆盖：RQ-002/016–019/022、FR-Trade-003–010、NFR-006/009/010 · 依赖：P03-01
 - [x] [P03-04 — 指标/回测与评分详细设计](https://github.com/OYLPY/stock-monitor/issues/31) · 交付：[BACKTEST_ENGINE.md](design/BACKTEST_ENGINE.md) · 依赖：P03-01, P01-03
-- [ ] [P03-05 — 任务调度、事件指纹、通知与上下文状态机](https://github.com/OYLPY/stock-monitor/issues/32) · 依赖：P02-04, P03-02
+- [ ] [P03-05 — 任务调度、事件指纹、通知与上下文状态机](https://github.com/OYLPY/stock-monitor/issues/32) · 交付：[SCHEDULER.md](design/SCHEDULER.md)、[WORKFLOW_STATE.md](design/WORKFLOW_STATE.md) · 覆盖：RQ-003/005/006/023/024/029、FR-Research-001–006、UC-03/09、NFR-004/005/013 · 依赖：P02-04, P03-02
 
 ### [P04 技术可行性验证](https://github.com/OYLPY/stock-monitor/issues/5)
 

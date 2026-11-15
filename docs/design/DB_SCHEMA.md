@@ -1,5 +1,7 @@
 # SQLite Schema、迁移与账本不变量
 
+> Doc ID: DOC-0013 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
+
 > 状态：P03-01 设计基线；逻辑 Schema 和初始迁移草案，尚未接入产品运行时。SQLite 驱动、Drizzle 版本与实际迁移执行由 P04-02/P05 验证。
 >
 > 上位契约：[架构](ARCHITECTURE.md)、[数据溯源](DATA_PROVENANCE.md)、[AI 工作流](AI_WORKFLOW.md)、[纸面交易与风控](../requirements/FR_TRADE.md)、[研究工作流](../requirements/FR_RESEARCH.md)、[非功能需求](../requirements/NFR.md)。
@@ -42,10 +44,14 @@ erDiagram
     FX_OBSERVATIONS ||--o{ FX_CONVERSION_DETAILS : used
     LEDGER_EVENTS ||--o| FX_CONVERSION_DETAILS : converts
     SOURCE_RECORDS ||--o{ MARKET_EVENT_EVIDENCE : documents
-    MARKET_EVENTS ||--o{ MARKET_EVENT_EVIDENCE : supported_by
+    MARKET_EVENTS ||--o{ MARKET_EVENT_REVISIONS : versions
+    MARKET_EVENT_REVISIONS ||--o{ MARKET_EVENT_EVIDENCE : supported_by
     MARKET_CALENDAR_VERSIONS ||--o{ MARKET_SESSIONS : defines
     RESEARCH_RUNS ||--o| RESEARCH_REPORTS : produces
     TASK_RUNS o|--o| RESEARCH_RUNS : executes
+    TASK_RUNS ||--o{ TASK_RUN_STEPS : checkpoints
+    TASK_RUNS ||--o{ SOURCE_SCAN_WATERMARKS : advances
+    SOURCES ||--o{ SOURCE_SCAN_WATERMARKS : scanned
     RESEARCH_REPORTS ||--o{ RESEARCH_ITEMS : contains
     RESEARCH_ITEMS ||--o{ RESEARCH_EVIDENCE_LINKS : cites
     SOURCE_RECORDS ||--o{ RESEARCH_EVIDENCE_LINKS : supports
@@ -72,6 +78,9 @@ erDiagram
     SOURCE_RECORDS ||--o{ EQUITY_VALUATION_EVIDENCE : supports
     MARKET_QUOTES ||--o{ EQUITY_VALUATION_EVIDENCE : supports
     FX_OBSERVATIONS ||--o{ EQUITY_VALUATION_EVIDENCE : supports
+    TASK_RUNS ||--o{ NOTIFICATION_DECISIONS : evaluates
+    MARKET_EVENT_REVISIONS ||--o{ NOTIFICATION_DECISIONS : considered
+    NOTIFICATION_DECISIONS ||--o| NOTIFICATIONS : may_emit
     TASK_RUNS ||--o{ NOTIFICATIONS : emits
     RESEARCH_REPORTS ||--o{ NOTIFICATIONS : emits
 ```
@@ -97,7 +106,7 @@ erDiagram
 | `fx_observations`                                      | base/quote 币种、整数汇率尾数与 scale、市场/采集时间、来源记录、类别/新鲜度。FX 方向显式保存，不通过货币字符串猜测倒数。                                                                                                                                                                                                                                                                                                                |
 | `fx_conversion_details`                                | 唯一 ledger event、实际兑换的两币金额、使用的 FX observation、精确汇率和费用规则版本；与同一 event 的两侧现金流水一致。FX 不可用时不产生外币购买力。                                                                                                                                                                                                                                                                                    |
 | `market_calendar_versions` / `market_sessions`         | 日历来源及版本、市场、有效区间与 IANA 时区；按版本记录当地日期、开收市 UTC 时刻、午休/例外/休市状态。结算和监测使用被引用版本，不硬编码偏移。                                                                                                                                                                                                                                                                                           |
-| `market_events` / `market_event_evidence`              | 稳定事件指纹、事件修订号、市场/证券、类别、发生/发布时间、标题/事实摘要、核验状态；关联多条来源记录。迟到发现、修订和撤回均可追溯。                                                                                                                                                                                                                                                                                                     |
+| `market_events` / `market_event_revisions` / `market_event_evidence` | 稳定事件簇、按版本保存的不可变事实修订及多来源证据；保存指纹算法版本、市场/证券、类别、发生/发布时间、首次发现时刻、重大性判断与规则版本。新增来源只追加证据；实质修订追加 revision，不改写已通知事实。 |
 
 来源记录保留来源收到的内容摘要和时间。规范化报价、OHLCV、FX、日历与事件各自使用强类型列，不把大量业务事实塞进一个无约束 JSON 字段。
 
@@ -134,12 +143,15 @@ erDiagram
 
 ### 调度和通知
 
-| 表              | 关键字段与约束                                                                                                                                                                   |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `task_runs`     | 稳定任务 ID、类型、唯一幂等键、预定/开始/结束时刻、执行状态、尝试次数、错误码和结果引用。租约、窗口生成、有限重试和休眠后补跑规则归 P03-05/P11；没有运行的窗口不能伪造扫描记录。 |
-| `notifications` | 唯一 dedupe key、关联事件/报告/任务、生成时刻、阅读状态及真实来源/结果引用。V1 只保存本机 UI 通知，不提前建云推送用户/设备模型。                                                 |
+| 表                        | 关键字段与约束 |
+| ------------------------- | --- |
+| `task_runs`               | 稳定任务 ID、唯一幂等键、规范化输入 hash、计划/日历/规则版本、市场窗口、执行状态、总尝试数、租约 owner/expiry/fencing generation、结果码和错误。相同计划槽位只创建一行；恢复只接管已过期 lease。 |
+| `task_run_steps`          | `task_run_id`、稳定 step key/顺序、attempt、状态、输入 hash、输出 schema version/hash、经验证结构化输出或领域产物引用、错误码和时间；`UNIQUE(task_run_id, step_key, attempt_no)`。成功检查点不可覆写；不存隐藏推理、秘密或完整模型对话。 |
+| `source_scan_watermarks`  | 来源、市场、事件类别、scope/config hash、游标或最后成功可见时刻及 task 引用。仅记录完整成功来源；使用追加历史行并按自然键取最新值。事件证据和 step checkpoint 与水位在同一短事务提交。 |
+| `notification_decisions` | task、事件 revision、决策码、稳定排序位置、规则版本和原因；追加记录 `NOTIFIED`、`DEFERRED_LIMIT`、`EXPIRED_UNNOTIFIED` 或 `NOT_SIGNIFICANT`。仍新鲜的 deferred 和无决策候选可在后续扫描重新评估。 |
+| `notifications`           | 唯一事件 revision dedupe key、选中 decision、生成时刻和本机阅读状态。只保存已选中的本机 UI 通知，不提前建云推送用户/设备模型。 |
 
-任务/报告状态用 `CHECK` 限制到需求枚举。无网络或无可选凭据不阻止本地记录读取；来源尝试在任务/来源覆盖中记为 `BLOCKED_EXTERNAL`、`UNAVAILABLE` 或具体错误。若有合法历史数据，可以产出带 `HISTORICAL` 的回测；没有数据则 `NOT_VERIFIED`。Fixture 结果保留隔离标记，且无到正式 `paper_fills` / ledger 的写入路径。
+任务/报告状态用 `CHECK` 限制到需求枚举。无网络或无可选凭据不阻止本地记录读取；来源尝试在任务/来源覆盖中记为 `BLOCKED_EXTERNAL`、`UNAVAILABLE` 或具体错误。只有显式 resume 命令能在外部前置条件恢复后重开 `BLOCKED_EXTERNAL` 任务；失败预算耗尽后的 `FAILED` 不原地重试。最终通知、通知决策、任务最后检查点与 `DONE` 状态同事务提交。来源水位可能先提交，但未决的重大事件 revision 必须能独立于水位查询，避免崩溃后漏通知。若有合法历史数据，可以产出带 `HISTORICAL` 的回测；没有数据则 `NOT_VERIFIED`。Fixture 结果保留隔离标记，且无到正式 `paper_fills` / ledger 的写入路径。
 
 ## 不变量与最小 SQL 草案
 

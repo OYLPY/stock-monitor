@@ -1,5 +1,7 @@
 # P01-01 用户用例与交互流程
 
+> Doc ID: DOC-0024 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
+
 > 产品范围依据：[PRD.md](PRD.md)。用例 ID 在本文件内稳定，后续设计/测试使用相同编号；以下均是**拟实现和应验收行为**，不表示现已实现。
 
 ## 参与者
@@ -164,10 +166,10 @@ flowchart LR
 | 主参与者 | Worker、Owner |
 | 触发 | 本地服务重启、网络断连、AI超时、设备从休眠恢复、用户查看任务日志 |
 | 前置 | 任务状态和幂等键已持久化 |
-| 输入 | 最近一次任务状态、开始/完成时间、上次成功水位、失败原因、是否仍在交易时段 |
-| 正常输出 | 可审计的运行历史；可安全重试任务；任务编号不变且无双重账本副作用 |
-| 异常路径 | 错过交易时间：仅记错过/已跳过，不倒填“当时在线监测”；额度耗尽：BLOCKED_EXTERNAL；状态不完整：安全校验后恢复 |
-| 验收 | Given Worker 在通知前崩溃；When 重新启动；Then 依事件指纹和通知历史保证不重复告警 |
+| 输入 | 最近任务状态/输入 hash、已完成步骤、来源水位、lease、失败原因及市场窗口 |
+| 正常输出 | 可审计的运行历史；安全重试沿用同一任务 ID，并从最后已提交检查点继续；无重复账本或通知副作用 |
+| 异常路径 | 错过交易时间：`SKIPPED` / `MISSED_WINDOW`，不倒填在线监测；外部条件缺失：`BLOCKED_EXTERNAL` 且不自动重试；状态不完整：只按持久检查点恢复 |
+| 验收 | Given 来源水位已提交但通知选择前 Worker 崩溃；When 重启并恢复/执行后续扫描；Then pending 重大事件仍可决策且只产生一条通知。Given 通知与 DONE 已原子提交后崩溃；When 重复恢复；Then 不重复通知 |
 
 ## UC-10 备份与恢复
 
@@ -229,15 +231,16 @@ stateDiagram-v2
   PENDING --> RUNNING: 前置条件满足
   PENDING --> SKIPPED: 市场双休市/任务不适用
   RUNNING --> DONE: 实际成功并持久化
-  RUNNING --> FAILED: 可恢复的运行错误
+  RUNNING --> PENDING: 可重试且预算未耗尽
+  RUNNING --> FAILED: 永久错误或重试预算耗尽
   RUNNING --> BLOCKED_EXTERNAL: 认证/付费/权限/上游不可用
-  FAILED --> PENDING: 有限次数且满足重试条件
-  BLOCKED_EXTERNAL --> PENDING: 获得授权或条件恢复
+  BLOCKED_EXTERNAL --> PENDING: 显式本机 resume 且条件恢复
   SKIPPED --> [*]
   DONE --> [*]
+  FAILED --> [*]
 ```
 
-`SKIPPED_CLOSED`、`DATA_STALE` 等是面向事件/诊断的原因码，不一定是任务顶层状态。具体状态机与数据库持久化契约在 P03-05 细化。
+`SKIPPED_CLOSED`、`MISSED_WINDOW`、`DATA_STALE` 等是面向事件/诊断的原因码，不一定是任务顶层状态。任务和步骤检查点、lease 接管、事件水位与通知原子提交见 [SCHEDULER.md](../design/SCHEDULER.md) 与 [WORKFLOW_STATE.md](../design/WORKFLOW_STATE.md)。
 
 ## 审计与需求追踪
 

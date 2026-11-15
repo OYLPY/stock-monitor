@@ -1,5 +1,7 @@
 # API、DTO 与状态机契约
 
+> Doc ID: DOC-0009 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
+
 > 状态：P03-02 设计基线；路由和 Zod Schema 尚未接入产品运行时。应用只有 Next.js 最小主页，运行时授权、SQLite/Drizzle 与 Worker 仍由 P04/P05 验证/实现。
 >
 > 上位契约：[系统架构](ARCHITECTURE.md)、[威胁模型](THREAT_MODEL.md)、[AI 工作流](AI_WORKFLOW.md)、[数据溯源](DATA_PROVENANCE.md)、[DB Schema](DB_SCHEMA.md)、[研究需求](../requirements/FR_RESEARCH.md)、[纸面交易需求](../requirements/FR_TRADE.md)、[非功能需求](../requirements/NFR.md)。
@@ -41,6 +43,7 @@
 | `GET /api/v1/instruments/{instrumentId}/bars?interval=&from=&to=&cursor=&limit=`        | 返回来源可追溯的 OHLCV bar。                                                                                                                                                                 | UTC 起止合法、区间上限受控；每个结果含调整口径、来源、时间与数据类别。                                                                                                     |
 | `POST /api/v1/research-runs`                                                            | 创建晨报/研究/异常扫描等持久任务，返回 `202 Accepted` 和 `TaskDto`。                                                                                                                         | `Idempotency-Key` 必填；无凭据或来源离线由真实任务状态表达，不伪造成功报告。                                                                                               |
 | `GET /api/v1/tasks?cursor=&limit=` / `GET /api/v1/tasks/{taskId}`                       | 查询任务列表或任务状态。                                                                                                                                                                     | `DONE` 只表示执行完成，不表示 `VERIFIED` 或有策略候选。                                                                                                                    |
+| `POST /api/v1/tasks/{taskId}/resume`                                                    | 显式恢复一个外部条件已修复的任务，返回 `202 Accepted` 和同一 `TaskDto`。                                                                                                                     | `Idempotency-Key` 必填；只接受 `BLOCKED_EXTERNAL` 且仍有总尝试预算的任务，原任务输入/hash 不变，服务端先复核前置条件并原子转回 `PENDING`；不能通过此路由重试终态 `FAILED`。 |
 | `GET /api/v1/reports?type=&from=&to=&cursor=&limit=` / `GET /api/v1/reports/{reportId}` | 查询不可变研究报告。                                                                                                                                                                         | DTO 保留 `executionStatus`、`verificationLevel`、`resultCode`、`sourceCoverage`、`dataClass`、`limitations`、as-of 和策略证据；策略可为 0–3 项。                           |
 | `POST /api/v1/backtests` / `GET /api/v1/backtests/{backtestRunId}`                      | POST 返回 `202 Accepted` 并创建历史回测任务；GET 返回不可变结果。输入引用策略版本、证券池、历史窗口和 P03-04 验证方案；`Idempotency-Key` 必填。响应保留运行状态、输入 hash、覆盖与验证等级。 | 服务器解析实际历史数据、点时宇宙、费用/FX 和规则版本；无固定“几十年”覆盖承诺，覆盖不够则 `NOT_VERIFIED`。不按最高胜率自动挑选或批准“赢家”；指标、样本外和评分契约见 [BACKTEST_ENGINE.md](BACKTEST_ENGINE.md)。 |
 | `POST /api/v1/paper-account/initialize`                                                 | 显式初始化本地模拟账户，返回 `201 Created` 和账户 DTO。                                                                                                                                      | `Idempotency-Key` 和 `confirmed: true` 必填；固定 1,000,000 JPY 由服务端写入，不接受金额/币种参数；已有账本返回冲突，不重置。                                              |
@@ -101,7 +104,7 @@
 | `400` | `VALIDATION_FAILED`、`INVALID_CURSOR`、`INVALID_JSON`                                                                     | 请求格式/字段/分页游标无效；按字段提示修正，不重试原请求。                                     |
 | `403` | `LOCAL_ORIGIN_REQUIRED`                                                                                                   | Host/Origin/Referer 不匹配或状态变更请求缺少可验证来源；拒绝操作，不提供登录绕过。             |
 | `404` | `RESOURCE_NOT_FOUND`                                                                                                      | 稳定 ID 不存在；不返回内部文件/SQL 路径。                                                      |
-| `409` | `STATE_CONFLICT`、`IDEMPOTENCY_KEY_REUSED`、`PLAN_VERSION_MISMATCH`、`ACCOUNT_ALREADY_INITIALIZED`、`PLAN_NOT_APPROVABLE` | 当前状态、hash、批准、幂等键载荷或资源版本冲突；返回稳定业务码和可重新读取的资源 ID。          |
+| `409` | `STATE_CONFLICT`、`IDEMPOTENCY_KEY_REUSED`、`TASK_NOT_RESUMABLE`、`PLAN_VERSION_MISMATCH`、`ACCOUNT_ALREADY_INITIALIZED`、`PLAN_NOT_APPROVABLE` | 当前状态、剩余尝试预算、hash、批准、幂等键载荷或资源版本冲突；返回稳定业务码和可重新读取的资源 ID。 |
 | `413` | `REQUEST_TOO_LARGE`                                                                                                       | JSON body 超过路由上限；在解析/模型调用前拒绝。                                                |
 | `415` | `UNSUPPORTED_MEDIA_TYPE`                                                                                                  | 变更接口不是 JSON。                                                                            |
 | `429` | `LOCAL_RATE_LIMITED`                                                                                                      | 本地工作队列或查询保护限流；有界等待后可重试，返回整数 `Retry-After`。不得透传供应商响应正文。 |
@@ -120,17 +123,20 @@ stateDiagram-v2
     PENDING --> RUNNING
     PENDING --> BLOCKED_EXTERNAL
     PENDING --> SKIPPED
+    RUNNING --> PENDING: 可重试且预算未耗尽
     RUNNING --> DONE
     RUNNING --> FAILED
     RUNNING --> BLOCKED_EXTERNAL
     RUNNING --> SKIPPED
+    BLOCKED_EXTERNAL --> PENDING: 显式 resume 且条件已恢复
     DONE --> [*]
     FAILED --> [*]
-    BLOCKED_EXTERNAL --> [*]
     SKIPPED --> [*]
 ```
 
-任务枚举严格沿用 FR-Research，不新增 `CANCELLED` / `RETRYING` 等状态。当前任务记录不可由客户端直接 PATCH 状态；相同幂等键与相同输入返回原 task，键相同而规范化输入 hash 不同返回 `409 IDEMPOTENCY_KEY_REUSED`。用户明确重跑使用新幂等键并产生新 task；有限自动重试和进程崩溃恢复由 P03-05 定义。HTTP 连接断开不取消已持久化任务。
+任务枚举严格沿用 FR-Research，不新增 `CANCELLED` / `RETRYING` 等状态。当前任务记录不可由客户端直接 PATCH 状态；相同幂等键与相同输入返回原 task，键相同而规范化输入 hash 不同返回 `409 IDEMPOTENCY_KEY_REUSED`。瞬时错误在有限预算内回到 `PENDING`；凭据、授权、费用、权限等外部阻断不自动重试，只能由 `POST /tasks/{taskId}/resume` 在服务端确认前置条件恢复后对原任务显式恢复，不重置该任务的总尝试预算。预算耗尽时 `TASK_NOT_RESUMABLE`，须用新幂等键创建并关联新任务。终态 `FAILED` 的新运行须使用新幂等键。HTTP 连接断开不取消已持久化任务。
+
+`TaskDto` 至少返回 `taskId`、`runType`、`executionStatus`、`resultCode`、`attemptCount`、`nextAttemptAt`、`lastCompletedStep`、`submittedAt`、`startedAt`、`finishedAt`、`sourceCoverage` 和 `errorCode`；不适用的时间、步骤或错误字段为 `null`。DTO 不含凭据、完整提示词、隐藏推理或未校验模型原文。
 
 ### 研究结果与证据状态
 
@@ -170,7 +176,7 @@ stateDiagram-v2
 | 契约                             | 需求 / 后续落地                                                                                           |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | 本地同源、服务端校验、无产品身份 | RQ-001/025、NFR-001/008、AC-NFR-002/012/022；P05 路由入口、P06 页面、P12-05 安全验证。                    |
-| 报告/证据 DTO 与异步任务         | FR-Research-006/010/011、AC-RES-010/011/017/022；P03-05 持久调度、P08 研究运行、P12-02/03。               |
+| 报告/证据 DTO 与异步任务         | FR-Research-006/010/011、AC-RES-010/011/017/022；[SCHEDULER](SCHEDULER.md)、[WORKFLOW_STATE](WORKFLOW_STATE.md)、P08 研究运行、P12-02/03。 |
 | 版本化纸面批准和仅模拟订单       | FR-Trade-001/002/008/009/010、AC-TRD-004/013/014；P03-03 风控、P05 仓储、P10 模拟交易、P12-01/02。        |
 | 定点数、时间、来源与不可验证状态 | FR-Trade-011/013、NFR-009/010/011、AC-NFR-013–017；DB_SCHEMA、P03-04 回测契约、P07 数据适配器、P09 实现。 |
 
