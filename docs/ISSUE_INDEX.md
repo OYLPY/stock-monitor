@@ -109,8 +109,8 @@
 
 - [x] [P02-01 — 系统上下文、容器及模块分层](https://github.com/OYLPY/stock-monitor/issues/24) · 交付：[ARCHITECTURE.md](design/ARCHITECTURE.md) · 覆盖：RQ-001、RQ-018、RQ-023–025、NFR-001/003/005/008 · 依赖：P01-04
 - [x] [P02-02 — 市场数据与证据溯源架构](https://github.com/OYLPY/stock-monitor/issues/25) · 交付：[DATA_PROVENANCE.md](design/DATA_PROVENANCE.md)、[来源核验记录](research/P02-02-DATA-SOURCE-FINDINGS.md) · 覆盖：RQ-010/011/028、NFR-003/009/010、FR-Research-006/010/011、FR-Trade-008 · 依赖：P02-01
-- [ ] [P02-03 — AI 六角色编排与确定性风控边界](https://github.com/OYLPY/stock-monitor/issues/26) · 交付：[AI_WORKFLOW.md](design/AI_WORKFLOW.md)（串行角色 I/O、权限矩阵与否决/失败门禁） · 覆盖：RQ-009/019/020、NFR-003、FR-Research-008/010/011、FR-Trade-001/002/013、AC-RES-020、AC-TRD-004 · 依赖：P02-01
-- [ ] [P02-04 — ADR 与安全/运行故障设计](https://github.com/OYLPY/stock-monitor/issues/27) · 依赖：P02-01, P02-02, P02-03
+- [x] [P02-03 — AI 六角色编排与确定性风控边界](https://github.com/OYLPY/stock-monitor/issues/26) · 交付：[AI_WORKFLOW.md](design/AI_WORKFLOW.md)（串行角色 I/O、权限矩阵与否决/失败门禁） · 覆盖：RQ-009/019/020、NFR-003、FR-Research-008/010/011、FR-Trade-001/002/013、AC-RES-020、AC-TRD-004 · 依赖：P02-01
+- [ ] [P02-04 — ADR 与安全/运行故障设计](https://github.com/OYLPY/stock-monitor/issues/27) · 交付：[ADR-0001–0003](decisions/)、[THREAT_MODEL.md](design/THREAT_MODEL.md)、[FAILURE_MODES.md](design/FAILURE_MODES.md) · 覆盖：RQ-001/018/023–026/031、NFR-001/003–008 · 依赖：P02-01, P02-02, P02-03
 
 ### [P03 详细设计](https://github.com/OYLPY/stock-monitor/issues/4)
 

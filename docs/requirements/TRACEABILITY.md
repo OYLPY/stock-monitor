@@ -20,7 +20,7 @@ RQ-029 的基线实现已在 [P00-04 / #18](https://github.com/OYLPY/stock-monit
 
 | RQ     | 功能细化 / NFR                                     | 设计和实现责任                                            | 验收编号                                         | 后续验证类型/阶段                                   | 状态                                        |
 | ------ | -------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------- | ------------------------------------------- |
-| RQ-001 | NFR-001/002/003/008/011/012                        | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01、P02-04、P05、P06 | AC-NFR-001–004、012、016–020                     | P12-03 E2E、P12-05 security、P12-06 performance     | SPECIFIED / IMPLEMENTATION_PENDING          |
+| RQ-001 | NFR-001/002/003/008/011/012                        | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01；[THREAT_MODEL.md](../design/THREAT_MODEL.md) / P02-04；P05/P06 | AC-NFR-001–004、012、016–020 | P12-03 E2E、P12-05 security、P12-06 performance | SPECIFIED / IMPLEMENTATION_PENDING |
 | RQ-002 | FR-Trade-003                                       | P03-03、P10                                               | AC-TRD-003、009                                  | P12-01 unit、P12-02 integration                     | SPECIFIED / IMPLEMENTATION_PENDING          |
 | RQ-003 | FR-Research-001/002                                | P02-02、P07-01、P11-02                                    | AC-RES-001–006                                   | P12-01 unit、P12-02 integration                     | SPECIFIED / IMPLEMENTATION_PENDING          |
 | RQ-004 | FR-Research-007                                    | P08-04、P11-04                                            | AC-RES-013/014/021                               | P12-03 E2E                                          | SPECIFIED / IMPLEMENTATION_PENDING          |
@@ -42,15 +42,15 @@ RQ-029 的基线实现已在 [P00-04 / #18](https://github.com/OYLPY/stock-monit
 | RQ-020 | FR-Trade-001/002/009/010                           | [AI_WORKFLOW.md](../design/AI_WORKFLOW.md) / P02-03、P03-01/02、P10 | AC-TRD-004/013/014 | P12-02 integration                                  | SPECIFIED / IMPLEMENTATION_PENDING          |
 | RQ-021 | FR-Trade-004/010、NFR-005/006                      | P03-01、P05、P10                                          | AC-TRD-001/002/014、AC-NFR-009/010               | P12-02 integration、P12-05 recovery                 | SPECIFIED / IMPLEMENTATION_PENDING          |
 | RQ-022 | FR-Trade-005/006/008/011                           | P03-03/04、P09、P10                                       | AC-TRD-005/006/008–012/016/017                   | P12-01 unit、P12-02 integration、P12-04 quant audit | SPECIFIED / IMPLEMENTATION_PENDING          |
-| RQ-023 | FR-Research-009、NFR-004/005                       | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01、P04-04、P11-01/02/04 | AC-NFR-007–009                                   | P12-02 integration、P12-05 recovery                 | SPECIFIED / IMPLEMENTATION_PENDING          |
-| RQ-024 | NFR-004/005                                        | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01、P03-05、P05-01、P11-01/03 | AC-NFR-005–008                                   | P12-02 integration                                  | SPECIFIED / IMPLEMENTATION_PENDING          |
-| RQ-025 | NFR-008                                            | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01、P02-04、P03-02、P05、P08-05 | AC-NFR-002/012/022                               | P12-05 security                                     | SPECIFIED / IMPLEMENTATION_PENDING          |
-| RQ-026 | NFR-007                                            | P03-01、P05-05                                            | AC-NFR-011                                       | P12-02 integration、P12-05 recovery                 | SPECIFIED / IMPLEMENTATION_PENDING          |
+| RQ-023 | FR-Research-009、NFR-004/005                       | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01；[ADR-0003](../decisions/0003-independent-worker-for-schedules.md) / P02-04；P04-04、P11-01/02/04 | AC-NFR-007–009 | P12-02 integration、P12-05 recovery | SPECIFIED / IMPLEMENTATION_PENDING |
+| RQ-024 | NFR-004/005                                        | [FAILURE_MODES.md](../design/FAILURE_MODES.md) / P02-04；[ARCHITECTURE.md](../design/ARCHITECTURE.md) / P03-05、P05-01、P11-01/03 | AC-NFR-005–008 | P12-02 integration | SPECIFIED / IMPLEMENTATION_PENDING |
+| RQ-025 | NFR-008                                            | [THREAT_MODEL.md](../design/THREAT_MODEL.md) / P02-04；P03-02、P05、P08-05 | AC-NFR-002/012/022 | P12-05 security | SPECIFIED / IMPLEMENTATION_PENDING |
+| RQ-026 | NFR-007                                            | [ADR-0001](../decisions/0001-sqlite-system-of-record.md) / P02-04；P03-01、P05-05 | AC-NFR-011 | P12-02 integration、P12-05 recovery | SPECIFIED / IMPLEMENTATION_PENDING |
 | RQ-027 | NFR-011/012                                        | P06                                                       | AC-NFR-016–020                                   | P12-03 E2E/accessibility                            | SPECIFIED / IMPLEMENTATION_PENDING          |
 | RQ-028 | FR-Research-011、FR-Trade-013、NFR-003/010         | [DATA_PROVENANCE.md](../design/DATA_PROVENANCE.md) / P02-02、P04、P07、P08、P09、P10 | AC-RES-010/017、AC-TRD-019、AC-NFR-013–015       | P12-03 E2E、P12-04 quant audit                      | SPECIFIED / IMPLEMENTATION_PENDING          |
 | RQ-029 | NFR-013                                            | P00-04、P08-05                                            | AC-NFR-021                                       | P12-05 security/recovery regression                 | IMPLEMENTED / REGRESSION_VALIDATION_PENDING |
 | RQ-030 | FR-Research-012、NFR-011                           | P06、P08-04                                               | AC-RES-018、AC-NFR-016/017                       | P12-03 E2E                                          | SPECIFIED / IMPLEMENTATION_PENDING          |
-| RQ-031 | NFR-001/008                                        | 不实现多用户、云同步、付费结算或真实交易；P02-04 威胁建模 | AC-NFR-002/012；P12-05 endpoint/dependency audit | P12-05 security、P13-03 release audit               | OUT_OF_SCOPE                                |
+| RQ-031 | NFR-001/008                                        | 不实现多用户、云同步、付费结算或真实交易；[THREAT_MODEL.md](../design/THREAT_MODEL.md) / P02-04 | AC-NFR-002/012；P12-05 endpoint/dependency audit | P12-05 security、P13-03 release audit | OUT_OF_SCOPE |
 
 ## FR-Research 明细矩阵
 
@@ -91,14 +91,14 @@ RQ-029 的基线实现已在 [P00-04 / #18](https://github.com/OYLPY/stock-monit
 
 | NFR     | 设计责任                      | 验收编号           | 后续验证阶段  | 状态                                        |
 | ------- | ----------------------------- | ------------------ | ------------- | ------------------------------------------- |
-| NFR-001 | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01、P02-04、P06 | AC-NFR-001/002     | P12-03/P12-05 | SPECIFIED / IMPLEMENTATION_PENDING          |
+| NFR-001 | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01；[THREAT_MODEL.md](../design/THREAT_MODEL.md) / P02-04；P06 | AC-NFR-001/002 | P12-03/P12-05 | SPECIFIED / IMPLEMENTATION_PENDING |
 | NFR-002 | P02/P05/P06                   | AC-NFR-003/004     | P12-06        | SPECIFIED / IMPLEMENTATION_PENDING          |
-| NFR-003 | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01、P02-04；[DATA_PROVENANCE.md](../design/DATA_PROVENANCE.md) / P02-02；[AI_WORKFLOW.md](../design/AI_WORKFLOW.md) / P02-03、P04、P07/P08/P09/P10 | AC-NFR-005/013/014 | P12-02/P12-03 | SPECIFIED / IMPLEMENTATION_PENDING |
-| NFR-004 | P04、P11                      | AC-NFR-005/006     | P12-02        | SPECIFIED / IMPLEMENTATION_PENDING          |
-| NFR-005 | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01、P03-01、P04-04、P05、P10、P11 | AC-NFR-007–009     | P12-02/P12-05 | SPECIFIED / IMPLEMENTATION_PENDING          |
+| NFR-003 | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01；[FAILURE_MODES.md](../design/FAILURE_MODES.md) / P02-04；[DATA_PROVENANCE.md](../design/DATA_PROVENANCE.md) / P02-02；[AI_WORKFLOW.md](../design/AI_WORKFLOW.md) / P02-03、P04、P07/P08/P09/P10 | AC-NFR-005/013/014 | P12-02/P12-03 | SPECIFIED / IMPLEMENTATION_PENDING |
+| NFR-004 | [FAILURE_MODES.md](../design/FAILURE_MODES.md) / P02-04；P04、P11 | AC-NFR-005/006 | P12-02 | SPECIFIED / IMPLEMENTATION_PENDING |
+| NFR-005 | [FAILURE_MODES.md](../design/FAILURE_MODES.md) / P02-04；[ARCHITECTURE.md](../design/ARCHITECTURE.md) / P03-01、P04-04、P05、P10、P11 | AC-NFR-007–009 | P12-02/P12-05 | SPECIFIED / IMPLEMENTATION_PENDING |
 | NFR-006 | P03/P05/P08/P10               | AC-NFR-010         | P12-04/P12-05 | SPECIFIED / IMPLEMENTATION_PENDING          |
-| NFR-007 | P03-01、P05-05                | AC-NFR-011         | P12-02/P12-05 | SPECIFIED / IMPLEMENTATION_PENDING          |
-| NFR-008 | [ARCHITECTURE.md](../design/ARCHITECTURE.md) / P02-01、P02-04、P03-02、P05、P08-05 | AC-NFR-002/012/022 | P12-05        | SPECIFIED / IMPLEMENTATION_PENDING          |
+| NFR-007 | [ADR-0001](../decisions/0001-sqlite-system-of-record.md) / P02-04；[FAILURE_MODES.md](../design/FAILURE_MODES.md)；P03-01、P05-05 | AC-NFR-011 | P12-02/P12-05 | SPECIFIED / IMPLEMENTATION_PENDING |
+| NFR-008 | [THREAT_MODEL.md](../design/THREAT_MODEL.md) / P02-04；[ARCHITECTURE.md](../design/ARCHITECTURE.md) / P03-02、P05、P08-05 | AC-NFR-002/012/022 | P12-05 | SPECIFIED / IMPLEMENTATION_PENDING |
 | NFR-009 | [DATA_PROVENANCE.md](../design/DATA_PROVENANCE.md) / P02-02、P03、P07/P08/P09/P10 | AC-NFR-013/014 | P12-02/P12-04 | SPECIFIED / IMPLEMENTATION_PENDING          |
 | NFR-010 | [DATA_PROVENANCE.md](../design/DATA_PROVENANCE.md) / P02-02、P04、P06/P08/P09/P10 | AC-NFR-015 | P12-03/P12-04 | SPECIFIED / IMPLEMENTATION_PENDING          |
 | NFR-011 | P06/P08                       | AC-NFR-016/017     | P12-03        | SPECIFIED / IMPLEMENTATION_PENDING          |

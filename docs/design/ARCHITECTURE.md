@@ -1,6 +1,6 @@
 # V1 系统架构
 
-> 状态：P02-01 架构基线。本文定义本机运行容器、依赖方向和权限边界；不表示 Codex、外部数据或 SQLite 驱动已在生产配置中验证。数据与证据契约见 P02-02，AI 工作流与角色权限见 P02-03；安全 ADR 和运行故障由 P02-04 细化，API/Schema 由 P03 细化，运行时可用性由 P04 验证。
+> 状态：P02-01/P02-04 架构基线。本文定义本机运行容器、依赖方向和权限边界；不表示 Codex、外部数据或 SQLite 驱动已在产品中接入或验证。数据与证据契约见 P02-02，AI 工作流与角色权限见 P02-03，ADR/威胁模型/失效恢复见 P02-04；API/Schema 由 P03 细化，运行时可用性由 P04 验证。
 >
 > 需求入口：[PRD](../requirements/PRD.md)、[非功能需求](../requirements/NFR.md)、[需求追踪矩阵](../requirements/TRACEABILITY.md)、[UI 设计](UI_DESIGN.md)。
 
@@ -128,7 +128,7 @@ src/server/                      服务端配置和依赖组合根
 - Codex 只能产生结构化研究结果/候选，不接收 SQLite/账本端口。模型文本、网页、新闻、公告、Fixture 均视为不可信输入，不能改变系统指令、扩展工具权限或生成资金副作用。
 - SQLite Repository 只能由服务端 Infrastructure 调用。研究 Worker 更新任务/研究数据与纸面账本写入走不同的 Application 用例；数据库事务、事件唯一性和跨进程并发约束由 P03-01/P03-05 给出可测细则。
 - Codex 与行情凭据只在经授权的服务端适配器/Worker 进程可用；不得进入客户端 bundle、浏览器存储、HTTP 响应、日志、报告、备份或 Git。P04 验证产品运行时的 Codex 鉴权和可用性；开发 CLI 的登录不能替代该验证。
-- Next.js 只监听 `127.0.0.1`，页面和状态变更 API 禁用跨源访问；P02-04 补齐 Host/Origin/CSRF 威胁模型及防护。无登录不代表允许网络上的其他设备访问。
+- Next.js 只监听 `127.0.0.1`，页面和状态变更 API 禁用跨源访问；Host、Origin/Referer、CSRF 与本地 OS 账户边界遵循[威胁模型](THREAT_MODEL.md)。无登录不代表允许网络上的其他设备访问，也不能区分同一 OS 账户下的本地调用方。
 - 不提供券商适配器或真实交易 API；外部文本和 AI 结果都不能创建真实订单。
 
 ## 无网、无凭据和故障行为
@@ -144,23 +144,30 @@ src/server/                      服务端配置和依赖组合根
 
 `OFFLINE` 不是 V1 的报告或任务状态码。数据质量状态、来源可用状态、任务状态和报告验证等级相互独立，沿用 [FR-Research 状态契约](../requirements/FR_RESEARCH.md)。
 
-## P02-01 决策与后续责任
+启动、休眠、网络/存储故障和任务恢复的目标行为见[故障模式设计](FAILURE_MODES.md)。以下决策仅选定架构方向，不替代 P03/P04/P05/P11 的可执行契约和运行验收：
+
+- [ADR-0001](../decisions/0001-sqlite-system-of-record.md)：SQLite 文件作为本机 Web 与独立 Worker 的权威存储，不以 IndexedDB 承载账本或任务。
+- [ADR-0002](../decisions/0002-codex-sdk-for-bounded-research.md)：Codex SDK 作为有界后台研究流程的首选执行入口，必须先通过 P04-01 的授权、隔离、网络和输出校验 PoC。
+- [ADR-0003](../decisions/0003-independent-worker-for-schedules.md)：计划任务由独立本机 Worker 调度，不依赖浏览器或 Next.js 请求进程存活。
+
+## 架构决策与后续责任
 
 | 本任务确定                                                                                        | 后续阶段细化                                                                                 |
 | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 单机模块化应用：Next.js Node 服务 + 独立 Worker + SQLite 文件；浏览器只使用本机同源 Web 界面/API  | P02-04 威胁模型、启动与休眠行为、SQLite/IndexedDB 取舍                                       |
+| 单机模块化应用：Next.js Node 服务 + 独立 Worker + SQLite 文件；浏览器只使用本机同源 Web 界面/API  | [ADR-0001](../decisions/0001-sqlite-system-of-record.md)、[FAILURE_MODES.md](FAILURE_MODES.md) |
 | Feature/Application、Domain、Infrastructure 依赖方向；页面和 Worker 共用经授权的 Application 用例 | P03-01 Schema/迁移/并发事务；P03-02 HTTP DTO 和错误契约；P03-05 队列、认领、重试与恢复状态机 |
-| Codex 和数据源通过服务端异步适配器；没有可用依赖时继续查看本地材料，并明确标记缺口                | [DATA_PROVENANCE.md](DATA_PROVENANCE.md)；[AI_WORKFLOW.md](AI_WORKFLOW.md)；P04 Codex SDK/App Server、凭据、供应商和运行时 PoC |
-| 不新增应用登录、用户管理、云服务、真实交易路由或券商连接                                          | P02-04/P13 对安全边界和非目标进行最终审计                                                    |
+| Codex 和数据源通过服务端异步适配器；没有可用依赖时继续查看本地材料，并明确标记缺口                | [DATA_PROVENANCE.md](DATA_PROVENANCE.md)；[AI_WORKFLOW.md](AI_WORKFLOW.md)；[ADR-0002](../decisions/0002-codex-sdk-for-bounded-research.md)；P04-01/P04-03 PoC |
+| 不新增应用登录、用户管理、云服务、真实交易路由或券商连接                                          | [THREAT_MODEL.md](THREAT_MODEL.md)；P12-05/P13 最终安全边界审计                              |
 
 ## 需求与设计追踪
 
 | 需求                                      | 本文设计位置                                 | 后续验证                                  |
 | ----------------------------------------- | -------------------------------------------- | ----------------------------------------- |
-| RQ-001、NFR-001                           | 本机边界、Loopback、无登录/用户管理          | P02-04 / P06 / P12-03、P12-05             |
-| RQ-023、NFR-005                           | 独立 Worker 与持久任务，不依赖浏览器         | P03-05 / P04-04 / P11 / P12-02、P12-05    |
-| RQ-024、NFR-004                           | SQLite 持久任务、后台认领和有限失败语义      | P03-05 / P11 / P12-02                     |
-| RQ-025、NFR-008                           | 浏览器和不可信文本信任边界、服务端凭据       | P02-04 / P03-02 / P08-05 / P12-05         |
+| RQ-001、NFR-001                           | 本机边界、Loopback、无登录/用户管理          | [THREAT_MODEL.md](THREAT_MODEL.md) / P06 / P12-03、P12-05 |
+| RQ-023、NFR-005                           | [ADR-0003](../decisions/0003-independent-worker-for-schedules.md)、独立 Worker 与持久任务 | [FAILURE_MODES.md](FAILURE_MODES.md) / P03-05 / P04-04 / P11 / P12-02、P12-05 |
+| RQ-024、NFR-004                           | SQLite 持久任务、后台认领和有限失败语义      | [FAILURE_MODES.md](FAILURE_MODES.md) / P03-05 / P11 / P12-02 |
+| RQ-025、NFR-008                           | [THREAT_MODEL.md](THREAT_MODEL.md) / 浏览器和不可信文本边界、服务端凭据 | P03-02 / P08-05 / P12-05 |
+| RQ-026、NFR-007                           | [ADR-0001](../decisions/0001-sqlite-system-of-record.md) / SQLite 一致性存储与备份 | [FAILURE_MODES.md](FAILURE_MODES.md) / P03-01 / P05-05 / P12-02、P12-05 |
 | RQ-011、RQ-028、NFR-003、NFR-009、NFR-010 | 外部适配器、来源状态、Fixture 隔离和离线降级 | P02-02 / P04 / P07–P10 / P12              |
 | FR-Trade-001–010、AC-TRD-001–015          | 服务端纸面计划用例、确定性风控和账本权限     | [AI_WORKFLOW.md](AI_WORKFLOW.md) / P02-03 / P03-01–03 / P10 / P12-01、P12-02 |
 
