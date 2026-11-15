@@ -85,6 +85,16 @@
 | 来源时间戳、验证等级、Fixture 隔离及降级状态 | docs/requirements/FR_RESEARCH.md：FR-Research-006/010/011 | AC-RES-009–017；P07/P08/P12 实施后进行运行时验证 |
 | 用例与产品需求可追踪至明细 FR | docs/requirements/REQUIREMENTS_INDEX.md、docs/requirements/USE_CASES.md | RQ-003–012、RQ-023、RQ-028、RQ-030 映射到 FR 和 AC-RES-001–018 |
 
+#### P01-03 需求—设计—验证追踪
+
+| 要求 | 设计入口 | 验收入口 |
+|---|---|---|
+| 账户初始化、可核验权益、现金与结算 | docs/requirements/FR_TRADE.md：FR-Trade-004/005/008/010 | AC-TRD-001/002/006/011/012/014/015；P03/P10/P12 运行时验证 |
+| 计划版本、本地批准、证券范围与确定性风险 | docs/requirements/FR_TRADE.md：FR-Trade-001/002/003/006/007 | AC-TRD-003–009；P09/P10/P12 运行时验证 |
+| 模拟订单、成交与只追加账本 | docs/requirements/FR_TRADE.md：FR-Trade-009/010 | AC-TRD-013/014；P10/P12 运行时验证 |
+| 回测可复算、防未来函数、五维评分和 Fixture 降级 | docs/requirements/FR_TRADE.md：FR-Trade-008/011/012/013 | AC-TRD-006/010/016–019；P09/P12 运行时验证 |
+| RQ—用例—明细契约完整映射 | docs/requirements/REQUIREMENTS_INDEX.md、USE_CASES.md | RQ-002、RQ-013–022 → UC-04/07/08 → FR-Trade → AC-TRD-001–019 |
+
 ### [P02 系统基本设计](https://github.com/OYLPY/stock-monitor/issues/3)
 
 - [ ] [P02-01 — 系统上下文、容器及模块分层](https://github.com/OYLPY/stock-monitor/issues/24) · 依赖：P01-04
