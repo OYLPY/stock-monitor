@@ -11,4 +11,6 @@
 {"check":"document-index audit","exitCode":0,"docIds":35,"uniqueDocIds":true,"registeredTags":true,"indexedPathsExist":true,"changedDocumentLinksValid":true,"jsonlValid":true}
 {"check":"pnpm exec drizzle-kit generate --config=poc/sqlite/drizzle.config.ts --name=verify","exitCode":0,"result":"No schema changes, nothing to migrate"}
 {"check":"pnpm install --frozen-lockfile","exitCode":0,"result":"Already up to date"}
+{"check":"quality-ci","runId":43737070633,"commit":"9b9c22b6ad8f86c4cee206f2d6c7b8eb242bd503","conclusion":"success","url":"https://github.com/OYLPY/stock-monitor/actions/runs/43737070633"}
+{"check":"github-issue","issue":34,"state":"closed","reason":"completed","url":"https://github.com/OYLPY/stock-monitor/issues/34"}
 {"check":"integration","status":"not_applicable","reason":"No standalone integration command exists; the SQLite PoC smoke script executes its database checks directly."}
