@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0008 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P02-03 设计基线。定义一个 Codex 研究任务内的六个串行职责步骤、输入输出、应用层验证与确定性风控边界；不表示 Codex 运行时、模型授权或纸面模拟器已接入。Codex/数据来源 PoC 由 P04 验证，任务运行实现由 P08 落地，持久步骤状态与恢复契约见 [WORKFLOW_STATE.md](WORKFLOW_STATE.md)，DTO 见 P03-02。
+> 状态：P02-03 设计基线。定义一个 Codex 研究任务内的六个串行职责步骤、输入输出、应用层验证与确定性风控边界；不表示 Codex 运行时、模型授权或纸面模拟器已接入。P04-01 的本地调用证据见 [Codex SDK 调研](../research/p04-01-codex-sdk-findings.md)：真实成功调用通过，但离线请求数与 NFR-004 的重试上限冲突，当前 SDK 路径不得视为可接受的运行时接入。Codex/数据来源 PoC 由 P04 验证，任务运行实现由 P08 落地，持久步骤状态与恢复契约见 [WORKFLOW_STATE.md](WORKFLOW_STATE.md)，DTO 见 P03-02。
 >
 > 六个角色是同一模型工作流中的职责划分，不是六个独立 Agent。来源时间、质量和 `DEMO_ONLY` 规则沿用[数据溯源设计](DATA_PROVENANCE.md)；系统信任边界见[系统架构](ARCHITECTURE.md)。
 
