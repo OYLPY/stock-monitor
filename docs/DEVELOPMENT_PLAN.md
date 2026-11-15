@@ -214,7 +214,7 @@
 |---|---|---|---|
 | [`P12-01`](https://github.com/OYLPY/stock-monitor/issues/74) | **单元测试覆盖风险、时间、价量与计算**：针对 TSE 午休、NYSE DST/假日、JPY精度、2%风险、20%回撤、ATR、缺数据和事件指纹进行边界与性质测试。 | tests/unit、覆盖报告 | 关键不变量覆盖可追溯且通过；不降低测试阈值掩盖失败；依赖：P07-01, P09-01, P10-03 |
 | [`P12-02`](https://github.com/OYLPY/stock-monitor/issues/75) | **集成测试覆盖数据库与各数据源故障**：测试迁移、事务、幂等入账、双写争用、API校验、数据源断开/限流和过时行情拒绝。 | tests/integration、DB Fixture | 重复执行不双成交/双通知；掉线有状态并可恢复；无泄露凭据；依赖：P07-05, P10-05, P11-03 |
-| [`P12-03`](https://github.com/OYLPY/stock-monitor/issues/76) | **Playwright 完整 E2E 研究与模拟计划**：UI 开展登录无需远端用户系统、本地初始化、晨报、证据查看、策略草案、风控拒绝、账本/设置/备份完整路径；使用显著 Fixture 模式。 | tests/e2e、截图与失败记录 | 重要按钮都有效；无行情时不出现伪实时/成交；导航和错误态可操作；依赖：P06-06, P10-05, P11-04 |
+| [`P12-03`](https://github.com/OYLPY/stock-monitor/issues/76) | **Playwright 完整 E2E 研究与模拟计划**：UI 覆盖无需登录的本地初始化、晨报、证据查看、策略草案、风控拒绝、账本/设置/备份完整路径；使用显著 Fixture 模式。 | tests/e2e、截图与失败记录 | 重要按钮都有效；无行情时不出现伪实时/成交；导航和错误态可操作；依赖：P06-06, P10-05, P11-04 |
 | [`P12-04`](https://github.com/OYLPY/stock-monitor/issues/77) | **回测与研究结果可重复性审计**：检查样本外与 2020/2022 压力流程、成本/FX敏感性、数据溯源、未来函数防护及五维评分门禁。 | tests/quant-audit、验算数据 | 已声明的实测结果均可复算；无数据明确 NOT_VERIFIED，不上报虚假战绩；依赖：P09-06 |
 | [`P12-05`](https://github.com/OYLPY/stock-monitor/issues/78) | **安全与故障恢复演练**：检查无真实订单路由、无凭据泄漏、最小权限、提示注入、请求滥用、数据库损坏恢复、Codex额度/认证中断。 | docs/testing/SECURITY_AUDIT.md、故障恢复证据 | 不可突破沙盒/权限；外部不可信文本不改变规则；异常下安全暂停；依赖：P00-05, P05-05, P08-05, P11-05 |
 | [`P12-06`](https://github.com/OYLPY/stock-monitor/issues/79) | **最终系统质量门禁与缺陷清零**：执行冻结依赖安装、lint、typecheck、unit、integration、E2E、build、完整离线演示；出具问题分级和证据路径。 | docs/testing/RELEASE_GATE.md、缺陷登记 | 阻断级缺陷0；失败不宣布完成；已知外部限制逐项说明；依赖：P12-01, P12-02, P12-03, P12-04, P12-05 |
@@ -233,7 +233,7 @@
 
 ## 统一验收与发布判定
 
-- 代码：受控分支 + PR；TypeScript strict、Lint、Vitest、集成测试、Playwright、构建与独立质量门禁有实际运行日志。
+- 代码：Issue 跟踪工作项；直接在 `main` 开发。TypeScript strict、Lint、Vitest、集成测试、Playwright、构建与独立质量门禁须有真实运行日志；全部通过后提交并 push，确认 main CI 成功再关闭 Issue。
 - 金融：开闭市/DST/午休、数据时效和去重；2%/20%极限、FX、滑点、现金守恒、不可验证报价拒绝成交；没有真实下单能力。
 - 研究：真实行情足够才允许回测实绩；2020/2022 和样本外不能完成时明确写 NOT_VERIFIED。18/25 仅用于验证候选而非自动交易批准。
 - 可靠性：任务幂等、单实例、数据库备份恢复、上下文压缩交接、中断重启；无凭据/联网错误安全降级。
@@ -241,7 +241,7 @@
 
 ## 如何从 Issue 继续
 
-先看阶段 Issue 的前置门禁，再按原子任务 ID 选择依赖已完成项。保持一个工作项一个受控开发分支；PR 描述关联 Issue 和实际测试证据。变更需求或安全边界先记录 ADR 并调整相关 Issue 与测试追踪矩阵。
+先看阶段 Issue 的前置门禁，再按原子任务 ID 选择依赖已完成项。每次只执行一个 Issue，直接在 `main` 完成设计、编码和验证；提交说明包含工作项 ID，push 后核对自动检查与 Issue 验收证据。变更需求或安全边界先记录 ADR 并调整相关 Issue 与测试追踪矩阵。
 
 ## GitHub Issues 导航
 

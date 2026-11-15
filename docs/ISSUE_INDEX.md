@@ -1,6 +1,6 @@
 # GitHub Issue 索引
 
-> 原子任务与阶段门禁的单一导航入口。所有 Issue 默认 Open；关闭须附真实 PR/测试证据。
+> 原子任务与阶段门禁的单一导航入口。关闭 Issue 前须有真实验证记录和已 push 到 `main` 的提交 SHA。
 
 **总计** 14 个阶段、69 个原子任务、83 个 Issues（包含原有 P00 主单）。
 
@@ -39,6 +39,15 @@
 | 质量命令可在 PR 自动执行 | `package.json`、`.github/workflows/quality.yml` | `pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build` |
 | scaffold 不依赖凭据或行情数据 | `README.md`、`.env.example`、`src/app/page.tsx` | `src/app/page.test.tsx` 静态渲染冒烟测试 |
 | 本地密钥不进入版本控制 | `.gitignore` | `git check-ignore -v .env .env.local` |
+
+#### P00-03 需求—设计—验证追踪
+
+| 要求 | 设计/实现入口 | 验证入口 |
+|---|---|---|
+| 任务来自受控 backlog，依赖未完成时不得启动 | `scripts/autopilot.ts`、`docs/backlog/*.json`、`harness/tasks.json` | `scripts/autopilot.test.ts`；`pnpm autopilot --task <id>` |
+| 单实例、原子状态、崩溃恢复和 DONE 幂等 | `scripts/autopilot.ts`、`harness/tasks.schema.json` | `scripts/autopilot.test.ts`；P00-05 故障恢复验收 |
+| 无凭据阻断、超时与最多 3 次修复 | `scripts/autopilot.ts`、`harness/logs/` | 隔离 CODEX_HOME 无凭据执行；修复上限单测；日志中的实际退出码 |
+| 命令安全、离线行情边界和执行记录 | `scripts/autopilot.ts`、`docs/CONTEXT_ENGINEERING.md` | sandbox 网络配置；离线/无数据用例；`harness/logs/<task>-<run-id>.json` |
 
 ### [P01 需求设计](https://github.com/OYLPY/stock-monitor/issues/2)
 
@@ -145,6 +154,6 @@
 
 ## 规则
 
-- 任何 PR 需要关联对应 Issue ID，并保存具体测试命令和退出码；不能以手写勾选代替 GitHub 当前状态。
+- 每项工作关联一个 GitHub Issue；保存具体验证命令、实际退出码和 main 提交 SHA；不能以手写勾选代替 GitHub 当前状态。
 - P00 独立根任务（#1）尚未提交工程代码，后续子任务不能误报 DONE。
-- 自动执行器可读取机器可读 backlog JSON，但应再核对 GitHub Issue 实际状态与前置依赖。
+- 自动执行器从 backlog JSON 读取受控任务内容并检查本地依赖状态；协调会话在启动前核对 GitHub Issue 仍开放且其依赖已关闭。执行器不持有 GitHub 凭据，也不修改 Issue。

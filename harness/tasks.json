@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "tasks": {
+    "P00-01": {
+      "status": "DONE",
+      "attempts": 0,
+      "repairAttempts": 0,
+      "runId": null,
+      "startedAt": null,
+      "updatedAt": "2026-11-15T14:21:27+09:00",
+      "completedAt": "2026-11-15T14:21:27+09:00",
+      "exitCode": 0,
+      "reason": null,
+      "source": "Merged commit 344d0d50; Issue #15 closed after verification."
+    },
+    "P00-02": {
+      "status": "DONE",
+      "attempts": 0,
+      "repairAttempts": 0,
+      "runId": null,
+      "startedAt": null,
+      "updatedAt": "2026-11-15T14:23:10+09:00",
+      "completedAt": "2026-11-15T14:23:10+09:00",
+      "exitCode": 0,
+      "reason": null,
+      "source": "Merged commit 4ac2af37; Issue #16 closed after verification."
+    },
+    "P00-03": {
+      "status": "DONE",
+      "attempts": 0,
+      "repairAttempts": 0,
+      "runId": null,
+      "startedAt": null,
+      "updatedAt": "2026-11-15T06:39:44Z",
+      "completedAt": "2026-11-15T06:39:44Z",
+      "exitCode": 0,
+      "reason": null,
+      "source": "Issue #17 implementation passed local checks; no-credentials run 698503e3-e233-4035-ac89-9bce44279fcf returned BLOCKED_EXTERNAL (runner exit 3)."
+    }
+  }
+}

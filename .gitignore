@@ -78,6 +78,11 @@ web_modules/
 .next
 out
 
+# Autopilot runtime files
+/harness/logs/
+/harness/state/autopilot.lock*
+/harness/tasks.json.tmp-*
+
 # Nuxt.js build / generate output
 .nuxt
 dist

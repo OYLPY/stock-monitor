@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" package.json README.md docs/design/UI_DESIGN.md .github/workflows/quality.yml"
+    "autopilot": "node --experimental-strip-types scripts/autopilot.ts",
+    "format:check": "prettier --check --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"harness/**/*.json\" package.json README.md docs/design/UI_DESIGN.md docs/CONTEXT_ENGINEERING.md .github/workflows/quality.yml"
   },
   "dependencies": {
     "next": "16.4.6",
@@ -17,6 +18,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@openai/codex-sdk": "0.169.0",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^22.20.5",
     "@types/react": "^19",

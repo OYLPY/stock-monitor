@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OYLPY/stock-monitor/blob/main/harness/tasks.schema.json",
+  "title": "Autopilot task state",
+  "type": "object",
+  "required": ["schemaVersion", "tasks"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tasks": {
+      "type": "object",
+      "propertyNames": { "pattern": "^P\\d{2}-\\d{2}$" },
+      "additionalProperties": { "$ref": "#/$defs/task" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "task": {
+      "type": "object",
+      "required": [
+        "status",
+        "attempts",
+        "repairAttempts",
+        "runId",
+        "startedAt",
+        "updatedAt",
+        "completedAt",
+        "exitCode",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "PENDING",
+            "RUNNING",
+            "DONE",
+            "BLOCKED",
+            "BLOCKED_EXTERNAL",
+            "FAILED"
+          ]
+        },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "repairAttempts": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "runId": { "type": ["string", "null"] },
+        "startedAt": { "type": ["string", "null"], "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": ["string", "null"], "format": "date-time" },
+        "exitCode": { "type": ["integer", "null"] },
+        "reason": { "type": ["string", "null"] },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
