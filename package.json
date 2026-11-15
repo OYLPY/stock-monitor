@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" package.json README.md docs/design/UI_DESIGN.md .github/workflows/quality.yml"
   },
   "dependencies": {
     "next": "16.4.6",
@@ -21,8 +23,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.6",
+    "prettier": "3.10.1",
     "tailwindcss": "4.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "5.1.0"
   },
   "packageManager": "pnpm@11.25.0",
   "engines": {

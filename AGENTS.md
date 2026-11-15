@@ -1,15 +1,21 @@
 # AGENTS.md — stock-monitor 工程执行规约
 
 > 适用范围：整个仓库。冲突时遵循平台/用户明确指令；不得因为本文件而扩大工具或系统权限。
-> 本项目由 Codex 分阶段自主开发；GitHub Issues 是任务追踪入口，`docs/DEVELOPMENT_PLAN.md` 是阶段路线图，`docs/ISSUE_BACKLOG.json` 是任务编号及依赖的基线。
+> 本项目由 Codex 分阶段自主开发；GitHub Issues 是任务追踪入口，`docs/DEVELOPMENT_PLAN.md` 是阶段路线图，`docs/backlog/part-00-06.json` 与 `docs/backlog/part-07-13.json` 是任务编号及依赖的基线。
 
 ## 核心目标与红线
 - 本地优先：Next.js App Router / React / strict TypeScript / pnpm / Tailwind + shadcn/ui / SQLite + Drizzle / Codex SDK / 独立 Node Worker / Vitest + Playwright。不得擅自改成真实交易平台。
 - 仅研究美日上市股票与非杠杆 ETF。纸面初始本金 1,000,000 JPY；单笔预计最大损失 ≤ 可核验当期权益 2%；权益相对历史峰值回撤 ≥20% 必须停止新开仓。
 - 禁止杠杆、卖空、期权、真实下单、连接真实证券账户、付费服务或未经授权的外部部署。不得读取无关私人文件、提交凭据、关闭沙盒、直接推送生产部署。
 - AI 负责分析/提出候选；行情数据须保留来源、采集时间、市场时间、币种、延迟状态；风控、资金、账本和模拟成交只能由可测试的确定性代码执行。缺少可信数据时输出 NOT_VERIFIED，不虚构事实或交易。
-- 修改代码走功能分支和 PR，不直接推送 main；不要自动合并。操作范围仅当前仓库及获授权的免费开发依赖。外部授权缺失标记 BLOCKED_EXTERNAL，不能私自绕过。
+- 修改代码走功能分支和 PR，不直接推送 main；分支名使用 `<type>/<issue-id>-<slug>`，PR 标题包含工作项 ID，并记录变更、设计理由和真实验证命令。PR 关联单一 GitHub Issue；验收通过并合并后才关闭 Issue。默认不自动合并；用户明确授权无人值守时，只要验收通过且分支保护允许，就直接合并、关闭对应 Issue 并继续依赖任务。操作范围仅当前仓库及获授权的免费开发依赖。外部授权缺失标记 BLOCKED_EXTERNAL，不能私自绕过。
 - GitHub Issue 作为单任务事实入口。任务应有前置依赖、明确验收和验证日志；未实际验证不得关闭 Issue / 声称通过。单写入者修改工作树、数据库迁移及运行状态。
+
+## UI 与现代 Web 指南
+- UI 视觉与交互约定以 `docs/design/UI_DESIGN.md` 为准。
+- 开始 UI、CSS 或客户端 JavaScript 实现前，先阅读 `.agents/skills/modern-web-guidance/SKILL.md`，用 `pnpx modern-web-guidance@latest search "<2–5 个英文词的具体 UI 能力>" --skill-version 2026_11_09-5bcc021b` 检索，再对匹配结果执行 `pnpx modern-web-guidance@latest retrieve "<guide-id>"`；按需拆分多个主题，只应用与当前任务相关的指导。
+- 默认采用 Baseline Widely available 能力；对更新的浏览器能力遵循指南中的回退建议，除非项目另有明确兼容策略。优先考虑原生 HTML/CSS/DOM 能力，但需遵循本项目的安全、可访问性和 TypeScript 规范。
+- 不为单个功能运行全仓库 `legacy-scan`；仅在明确要求广泛现代化审计时使用。UI 变更完成后按任务要求验证桌面/窄屏、键盘与焦点状态，并核对空态、错误、数据来源和时效表达。
 
 ## 执行循环
 1. 每次新会话只读本文件、`docs/DEVELOPMENT_PLAN.md` 的相关阶段、当前 Issue、`harness/state/current.md`（如已建立）、相关源码目录。不要一次性加载整个仓库/全部 Issue。

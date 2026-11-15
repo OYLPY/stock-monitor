@@ -31,6 +31,15 @@
 - [ ] [P00-04 — NVIDIA 短上下文压缩与交接能力](https://github.com/OYLPY/stock-monitor/issues/18) · 依赖：P00-03
 - [ ] [P00-05 — P00 故障恢复与阶段验收](https://github.com/OYLPY/stock-monitor/issues/19) · 依赖：P00-03, P00-04
 
+#### P00-02 需求—设计—验证追踪
+
+| 要求 | 设计/实现入口 | 验证入口 |
+|---|---|---|
+| UI 开发按 Modern Web Guidance 实施 | `AGENTS.md`、`docs/design/UI_DESIGN.md`、`.agents/skills/modern-web-guidance/` | 后续 UI Issue 按功能检索并验证；本任务检查文档与安装锁文件 |
+| 质量命令可在 PR 自动执行 | `package.json`、`.github/workflows/quality.yml` | `pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build` |
+| scaffold 不依赖凭据或行情数据 | `README.md`、`.env.example`、`src/app/page.tsx` | `src/app/page.test.tsx` 静态渲染冒烟测试 |
+| 本地密钥不进入版本控制 | `.gitignore` | `git check-ignore -v .env .env.local` |
+
 ### [P01 需求设计](https://github.com/OYLPY/stock-monitor/issues/2)
 
 - [ ] [P01-01 — PRD 与用户场景/范围](https://github.com/OYLPY/stock-monitor/issues/20) · 依赖：P00-02
