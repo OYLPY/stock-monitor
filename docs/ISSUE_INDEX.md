@@ -23,7 +23,7 @@
 
 ## 跨阶段 PMO 工作项
 
-- [ ] [PMO-01 — 设计文档编号、索引与标签治理](https://github.com/OYLPY/stock-monitor/issues/88) · 入口：[文档索引](INDEX.md)
+- [x] [PMO-01 — 设计文档编号、索引与标签治理](https://github.com/OYLPY/stock-monitor/issues/88) · 入口：[文档索引](INDEX.md)
 
 ## 全部任务
 

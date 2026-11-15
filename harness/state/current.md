@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–04 / #28–31 已完成并关闭；当前执行跨阶段 PMO-01 / #88。P03-05 / #32 已开始并暂停于未提交设计草稿，PMO 文档规则确定后恢复；P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–04 / #28–31 已完成并关闭；PMO-01 / #88 文档交付和首轮 CI 已通过，等待最终证据提交 CI 后关闭。P03-05 / #32 已开始并暂停于未提交设计草稿，PMO 完成后恢复；P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
 - **依赖**：P03-04 / #31 的 P03-01 / #28 与 P01-03 / #22 均已关闭；P00-05 不在当前依赖中。
 - **同步状态**：历史阶段基线和开始记录见下文各交接条目；进入 P03-05 / #32 与 PMO-01 / #88 前均确认无开放 PR并执行 `git fetch --prune origin` / `git pull --ff-only origin main`，当前工作基线 `c9e542ccd33d13e22722f1620dc39e715818d5dd`。
@@ -35,4 +35,5 @@
 - **P03-05 暂存进度**：未提交的 `docs/design/SCHEDULER.md` 草稿保留在工作区；P03-05 尚未完成验收，不纳入 PMO-01 变更。
 - **PMO-01 开始证据**：Issue #88；检索未发现既有文档治理规范；开放 PR 检查为空，`git fetch --prune origin` / `git pull --ff-only origin main` 后基线 `c9e542ccd33d13e22722f1620dc39e715818d5dd`；已在 #88 留开始评论。
 - **PMO-01 本地验收**：文档索引覆盖 31 个 Doc ID；ID、路径、类型、authority、受控 tags、相关文档链接、docs/ 覆盖和本地 Markdown 链接自检通过。`pnpm format:check`、定向 Prettier、`pnpm lint`、`pnpm typecheck`、`pnpm test`（3 files / 19 tests）、`pnpm build` 均通过；文档变更无独立 integration 命令。
-- **下一步具体操作**：本地 PMO 文档和项目质量门禁已通过；提交/push main 并确认 Quality CI，再补交最终 Issue/状态证据，确认 CI 后关闭 #88，然后恢复 P03-05 / #32。
+- **PMO-01 远端验收**：提交 `16011b6057bb332dca3a51eb2b57630cf2fdf9ab` 已 push；[Quality CI run 43722032781](https://github.com/OYLPY/stock-monitor/actions/runs/43722032781) 成功。
+- **下一步具体操作**：提交/push PMO 最终交接与索引状态，确认 Quality CI 后更新并关闭 #88，然后恢复 P03-05 / #32。

@@ -16,13 +16,14 @@
 - `docs/pmo/DOCUMENT_INDEX.md` 为现有 31 份 `docs/` 长期 Markdown 登记唯一 Doc ID、类型、lifecycle、authority、tags、关键词、旧编号、关联 Doc ID 和路径；原文件名与 RQ/FR/AC/ADR/Pxx 编号保留。
 - `docs/pmo/TAG_TAXONOMY.md` 建立 domain/phase/market/concern 受控词表；`docs/templates/DOCUMENT_TEMPLATES.md` 覆盖 PMO、产品/需求、用例、架构/领域设计、ADR、契约、研究、运维/恢复、验收证据和 Issue handoff。
 - `docs/INDEX.md` 提供文档快速入口和检索/RAG metadata 说明；`AGENTS.md` 增加短指针；`docs/ISSUE_INDEX.md` 将 PMO-01 独立列为跨阶段工作项。
+- 首轮 main 提交 `16011b6057bb332dca3a51eb2b57630cf2fdf9ab` 已推送，Quality CI run `43722032781` 成功。
 
 ## Verification
 
 - 自定义 PowerShell 自检通过：31 个 Doc ID 唯一；类型、authority、tags 均在受控集合中；tag 数量、目录文件覆盖、主路径、Related Doc IDs 和本地 Markdown 链接均有效。
 - `pnpm format:check`：exit 0；`pnpm lint`：exit 0；`pnpm typecheck`：exit 0；`pnpm test`：exit 0（3 files / 19 tests）；`pnpm build`：exit 0。
 - `pnpm exec prettier --check`（新增 PMO/模板/索引与 handoff）：exit 0；`git diff --cached --check`：exit 0。
-- 远端 Quality CI 尚待提交推送后确认；文档变更无独立 integration 命令。
+- [Quality CI run 43722032781](https://github.com/OYLPY/stock-monitor/actions/runs/43722032781)：success；文档变更无独立 integration 命令。
 
 ## Dead ends
 
@@ -32,5 +33,5 @@
 ## Remaining plan
 
 1. 定向检查本次新增文档格式，stage PMO 相关文件并运行 `git diff --cached --check`；确认未包含 P03-05 草稿。
-2. 提交/push main，确认 Quality CI；补齐交接和索引完成状态，再次 push 并确认 Quality CI。
+2. 将 Issue 索引和交接标记为完成，提交/push main 并确认最终 Quality CI。
 3. 更新并关闭 Issue #88，然后恢复 P03-05 / #32。
