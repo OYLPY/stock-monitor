@@ -47,7 +47,7 @@
       "completedAt": "2026-11-15T16:15:33+09:00",
       "exitCode": 0,
       "reason": null,
-      "source": "Issue #18 implementation passed local checks; isolated no-credentials run returned BLOCKED_EXTERNAL as expected (runner exit 3)."
+      "source": "Issue #18 implementation commit c7d764712333b73f886beac1d0c53b7d396a1923 passed local checks and main Quality run 43689402274; isolated no-credentials run returned BLOCKED_EXTERNAL as expected (runner exit 3)."
     }
   }
 }
