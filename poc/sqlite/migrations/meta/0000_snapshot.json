@@ -1,0 +1,101 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "551e67f2-765a-412a-816d-b78c592e261d",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "precision_records": {
+      "name": "precision_records",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "jpy_minor": {
+          "name": "jpy_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "usd_minor": {
+          "name": "usd_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "usd_jpy_mantissa": {
+          "name": "usd_jpy_mantissa",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "usd_jpy_scale": {
+          "name": "usd_jpy_scale",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "price_mantissa": {
+          "name": "price_mantissa",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "price_scale": {
+          "name": "price_scale",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "share_quantity": {
+          "name": "share_quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "precision_records_usd_jpy_scale": {
+          "name": "precision_records_usd_jpy_scale",
+          "value": "\"precision_records\".\"usd_jpy_scale\" BETWEEN 0 AND 8"
+        },
+        "precision_records_price_mantissa": {
+          "name": "precision_records_price_mantissa",
+          "value": "\"precision_records\".\"price_mantissa\" > 0"
+        },
+        "precision_records_price_scale": {
+          "name": "precision_records_price_scale",
+          "value": "\"precision_records\".\"price_scale\" BETWEEN 0 AND 8"
+        },
+        "precision_records_share_quantity": {
+          "name": "precision_records_share_quantity",
+          "value": "\"precision_records\".\"share_quantity\" > 0"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

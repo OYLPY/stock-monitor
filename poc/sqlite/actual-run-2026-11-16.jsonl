@@ -1,0 +1,14 @@
+{"mode":"sqlite-feasibility","command":"node --experimental-strip-types poc/sqlite/smoke.ts","exitCode":0,"outcome":"passed","node":"v22.14.0","betterSqlite3":"13.2.0","drizzleOrm":"0.45.4","drizzleKit":"0.31.11","sqlite":"3.54.1","journalMode":"wal","migrated":true,"idempotentMigration":true,"migrationChecksumEnforced":true,"userVersionSynchronized":true,"rollbackAtomic":true,"writeRollbackAtomic":true,"jpyAndUsdBigIntRoundTrip":true,"returningPreservesBigInt":true,"sqliteInt64OverflowRejected":true,"crossProcessLock":"SQLITE_BUSY","writeAfterLockRelease":true,"restartRead":true,"foreignKeysEnabled":true,"integrityCheck":"ok","externalRequests":0,"credentials":"not_required","marketData":"none","fixture":"synthetic numeric boundary values"}
+{"check":"pnpm typecheck","parallelExitCode":2,"failure":"Ran concurrently with pnpm build while Next.js regenerated .next/types; validator.ts temporarily referenced missing routes.js"}
+{"check":"pnpm typecheck","mode":"serial retry after build","exitCode":0}
+{"check":"pnpm exec eslint poc/sqlite/smoke.ts poc/sqlite/schema.ts poc/sqlite/drizzle.config.ts","exitCode":0}
+{"check":"pnpm lint","exitCode":0}
+{"check":"pnpm test","exitCode":0,"testFiles":3,"tests":19}
+{"check":"pnpm build","exitCode":0}
+{"check":"pnpm format:check","exitCode":0}
+{"check":"targeted prettier on changed code and navigation/research documents","exitCode":0}
+{"check":"git diff --check","exitCode":0}
+{"check":"document-index audit","exitCode":0,"docIds":35,"uniqueDocIds":true,"registeredTags":true,"indexedPathsExist":true,"changedDocumentLinksValid":true,"jsonlValid":true}
+{"check":"pnpm exec drizzle-kit generate --config=poc/sqlite/drizzle.config.ts --name=verify","exitCode":0,"result":"No schema changes, nothing to migrate"}
+{"check":"pnpm install --frozen-lockfile","exitCode":0,"result":"Already up to date"}
+{"check":"integration","status":"not_applicable","reason":"No standalone integration command exists; the SQLite PoC smoke script executes its database checks directly."}

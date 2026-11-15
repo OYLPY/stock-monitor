@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0013 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P03-01 设计基线；逻辑 Schema 和初始迁移草案，尚未接入产品运行时。SQLite 驱动、Drizzle 版本与实际迁移执行由 P04-02/P05 验证。
+> 状态：P03-01 设计基线；逻辑 Schema 和初始迁移草案，尚未接入产品运行时。P04-02 已核验一组 SQLite/Drizzle/driver 版本及其精度和迁移边界，见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)；产品运行时集成与恢复验证仍由 P05/P12 完成。
 >
 > 上位契约：[架构](ARCHITECTURE.md)、[数据溯源](DATA_PROVENANCE.md)、[AI 工作流](AI_WORKFLOW.md)、[纸面交易与风控](../requirements/FR_TRADE.md)、[研究工作流](../requirements/FR_RESEARCH.md)、[非功能需求](../requirements/NFR.md)。
 
@@ -14,9 +14,9 @@ Schema 服务于单机、本地、单一使用者的研究和纸面账本。没�
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 主键 | 由服务端生成 UUIDv4 字符串；证券代码、新闻 URL、任务名和 SQLite 隐式 rowid 都不作领域主键。外部代码变化时通过 `instrument_identifiers` 保存时效映射。                                                                                                                                                                     |
 | 时间 | 绝对时刻存 UTC Unix 毫秒整数；市场业务日存 ISO `YYYY-MM-DD`，并同时保存 IANA 时区。来源发布、事实发生、策略最早可获知和本机采集是不同时间；未知时间保持 `NULL`，原始时间文本可留在来源记录中，不推测时区。                                                                                                                |
-| 数值 | SQLite 不使用 `REAL`/浮点数保存钱、价格、汇率或数量。金额为有符号整数最小货币单位并带币种/小数位；价格和 FX 汇率为整数尾数加 `scale`（0–8）。数量存为整数股数，交易单位单独记录。应用层用精确整数/十进制运算，禁止 JS `number` 金融舍入。USD/JPY 的舍入和 FX 规则由领域规则版本明确；驱动的 64 位整数映射由 P04-02 验证。 |
+| 数值 | SQLite 不使用 `REAL`/浮点数保存钱、价格、汇率或数量。金额为有符号整数最小货币单位并带币种/小数位；价格和 FX 汇率为整数尾数加 `scale`（0–8）。数量存为整数股数，交易单位单独记录。应用层用精确整数/十进制运算，禁止 JS `number` 金融舍入。USD/JPY 的舍入和 FX 规则由领域规则版本明确；P04-02 已在 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md) 验证 better-sqlite3 默认安全整数读取与 Drizzle 自定义 INTEGER/BigInt 映射，产品集成仍由 P05 完成。 |
 | 删除 | 有审计、证据或金融引用的行使用 `ON DELETE RESTRICT`。来源更正、撤回、风险复核、计划变更和账本纠错都追加新记录并链接旧记录，不覆写历史。可重建的缓存/读模型可清空重建，但不能成为事实源。                                                                                                                                  |
-| 类型 | 迁移草案使用 SQLite `STRICT` 表和 `CHECK` / 外键 / 唯一索引。`STRICT` 至少要求 SQLite 3.37；P04-02 必须核对最终驱动实际绑定的版本。SQLite 外键需在每条连接建立时显式启用。                                                                                                                                                |
+| 类型 | 迁移草案使用 SQLite `STRICT` 表和 `CHECK` / 外键 / 唯一索引。`STRICT` 至少要求 SQLite 3.37；P04-02 在 better-sqlite3 13.2.0 运行时核验为 SQLite 3.54.1。SQLite 外键需在每条连接建立时显式启用；完整业务外键集合仍待 P05/P12 验证。                                                                                                                                                |
 
 报告执行状态、报告验证级别、来源状态、数据类别和新鲜度是不同字段，不合并为一个 `status`。统一允许值见 `FR_RESEARCH.md`；关键业务表用 `CHECK` 限定可写值。缓存缺失、离线、无凭据和无报价都记录真实状态；不能写成空结果或“无新事件”。Fixture / 派生演示标记为 `DEMO_ONLY`，纸面成交表禁止 `HISTORICAL`、`FIXTURE` 和 `NOT_VERIFIED` 输入。
 
@@ -155,7 +155,7 @@ erDiagram
 
 ## 不变量与最小 SQL 草案
 
-初始迁移应为一次向前的 `0001_initial`：创建表/唯一约束/索引/只追加触发器、写入迁移哈希和版本。以下 SQL 展示金融账本核心列与 DB 能强制的门禁；完整字段表和引用关系以上表为准，驱动 API 语法由 P04-02 实测。
+初始迁移是一次向前的迁移：Drizzle Kit 0.31.11 生成固定文件名 `0000_initial.sql`，数据库逻辑版本和 `schema_migrations.version` / `PRAGMA user_version` 从 1 开始；文件序号与逻辑版本不混用。迁移创建表/唯一约束/索引/只追加触发器并写入迁移哈希和版本。以下 SQL 展示金融账本核心列与 DB 能强制的门禁；完整字段表和引用关系以上表为准，驱动 API 语法由 P04-02 实测。
 
 ```sql
 PRAGMA foreign_keys = ON;
@@ -285,21 +285,21 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 4. 备份使用 SQLite Online Backup API 或驱动已验证的等价一致性快照；不直接复制运行中的主数据库文件，特别是 WAL 模式下不能只复制 `.db`。备份包有 sidecar manifest：应用版本、Schema 版本、创建时刻、文件长度、SHA-256。密钥只存 OS 本机安全配置，不进入 DB/manifest/备份。
 5. 恢复先将备份和 manifest 放到临时目录，校验 SHA-256、应用/Schema 兼容性、migration hashes、`integrity_check` 和外键；再对临时副本做需要的前向迁移。所有检查完成后才在服务停止写入的条件下原子切换；失败保留当前数据库及原备份不变。恢复日志记录结果和版本，不记录秘密值。
 
-这份草案满足 NFR-007 的版本/校验摘要、临时校验和不覆盖规则；100,000 事件恢复 60 秒目标仍由 P05-05/P12-02 实测。WAL 模式、同步等级、实际驱动及备份 API 选择由 P04-02/P05 根据最终 SQLite 构建验证，不在本任务声称已运行。
+这份草案满足 NFR-007 的版本/校验摘要、临时校验和不覆盖规则；P04-02 PoC 实际验证了最小迁移 runner 的 SHA-256、幂等、事务回滚和 `user_version` 同步，但不包含产品备份恢复。100,000 事件恢复 60 秒目标仍由 P05-05/P12-02 实测。PoC 使用 WAL、`synchronous=FULL` 和 better-sqlite3；产品连接选项及备份 API 仍由 P05 根据产品运行时验证。
 
 ## 决策取舍与待后续验证
 
 | 决策                                                    | 替代方案                         | 选择原因 / 失败行为                                                      |
 | ------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------ |
 | 稳定 UUID ID；行情代码为有时效的唯一标识                | 用 ticker 或表行号做业务主键     | 代码可变、复用、跨市场重名；标识变更追加区间映射，未知映射阻止使用。     |
-| 精确整数尾数/scale，不用 REAL                           | SQLite REAL 或浮点十进制 NUMERIC | 二进制浮点无法精确表达金额；scale 不符或溢出在输入边界拒绝，不隐式取整。 |
+| 精确整数尾数/scale，不用 REAL                           | SQLite REAL 或浮点十进制 NUMERIC | 二进制浮点无法精确表达金额；scale 不符或溢出在输入边界拒绝，不隐式取整。Drizzle 常规 integer 映射为 JS number，其 BigInt 模式使用 BLOB；P05 采用 SQLite INTEGER 时须使用经验证的 BigInt customType，见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。 |
 | 独立 append-only 账本事件 + 现金/持仓流水，读模型可重建 | 直接覆盖 cash/position 当前余额  | 不能复核历史或处理重放/冲正；事件和 postings 任一失败则事务回滚。        |
 | 报告、研究 item、证据关系分别存                         | 把所有结果压成无结构报告文本     | 无法逐条回链事实和来源；缺来源时降级，Fixture 继续隔离。                 |
 | 本机 SQLite 文件作为权威记录                            | IndexedDB / 远端 DB              | IndexedDB 不由独立 Node Worker 共享；远端 DB 超出本地工具边界。          |
 
 | 后续任务             | 必须完成的运行验证                                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| P04-02               | 锁定免费合规的 SQLite/Drizzle driver；验证 SQLite 版本、STRICT、外键、整数精度、RETURNING/事务支持与跨进程竞争。 |
+| P04-02               | 已由 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md) 完成 driver 版本、STRICT、BigInt INTEGER、INSERT RETURNING、事务与跨进程竞争 PoC；P05 仍须接入产品 Schema 和完整外键约束。 |
 | P03-02/P03-03/P03-04 | 细化 DTO、状态机/错误码、资金/风险舍入、OHLCV 调整、回测输入清单与费用模型。                                     |
 | P03-05/P11           | 细化任务唯一键、窗口、租约、恢复、重试、事件指纹、通知去重。                                                     |
 | P05/P05-05           | 实施迁移/连接/备份/恢复并验证崩溃安全和真实数据目录权限。                                                        |
@@ -307,7 +307,7 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 
 ## 来源与追踪
 
-- [SQLite STRICT tables](https://www.sqlite.org/stricttables.html)：STRICT 从 SQLite 3.37 起可用，表列类型受限；最终运行时版本由 P04-02 核对。
+- [SQLite STRICT tables](https://www.sqlite.org/stricttables.html)：STRICT 从 SQLite 3.37 起可用，表列类型受限；本地运行时实测证据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
 - [SQLite foreign key support](https://www.sqlite.org/foreignkeys.html) 与 [foreign_keys PRAGMA](https://www.sqlite.org/pragma.html#pragma_foreign_keys)：外键约束默认关闭，连接须显式开启；事务开始后切换为 no-op。
 - [SQLite transactions](https://www.sqlite.org/lang_transaction.html)：可有多个并发读取事务，但同时只允许一个写事务；`BEGIN IMMEDIATE` 尝试立即取得写事务。
 - [SQLite user_version PRAGMA](https://www.sqlite.org/pragma.html#pragma_user_version)：为应用保留的数据库头版本字段，SQLite 本身不解释它。

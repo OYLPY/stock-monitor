@@ -20,4 +20,10 @@
 3. 再用全文搜索定位细节，例如 `rg -n 'walk-forward|退市' docs -g '*.md'`。
 4. 发生冲突时按 PMO 治理文档中的权威层级处理，并在对应 Issue 里更新来源文档和追踪关系。
 
+常用检索示例：
+
+- 按主题 tag 或关键词从目录筛选：`rg -n 'concern/storage|SQLite' docs/pmo/DOCUMENT_INDEX.md`。
+- 按历史任务编号找对应文档：`rg -n 'P04-02|#34' docs/pmo/DOCUMENT_INDEX.md`。
+- 按正文概念查找并保留文件/行号：`rg -n 'foreign key|外键' docs -g '*.md'`。
+
 > 本目录面向人和未来检索器；当前使用 Markdown、受控 tags 和全文搜索，不要求本地向量数据库。
