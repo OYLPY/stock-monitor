@@ -1,0 +1,18 @@
+{
+  "fixtureId": "synthetic-us-eod-v1",
+  "sourceId": "fixture.synthetic",
+  "publisher": "Synthetic sample created for P04-03; not a market source",
+  "market": "US",
+  "symbol": "SYNTHETIC-US-0001",
+  "currency": "USD",
+  "dataCategory": "EOD_OHLCV",
+  "marketTime": "2026-11-13T16:00:00-05:00",
+  "collectedAt": "2026-11-16T00:00:00.000Z",
+  "open": "100.00",
+  "high": "102.00",
+  "low": "99.50",
+  "close": "101.25",
+  "volume": "123456",
+  "dataStatus": "FIXTURE",
+  "verificationLevel": "DEMO_ONLY"
+}

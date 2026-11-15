@@ -1,0 +1,13 @@
+{"check":"pnpm install --frozen-lockfile","exitCode":0,"result":"Already up to date","pnpm":"11.25.0"}
+{"check":"pnpm format:check","exitCode":0}
+{"check":"pnpm lint","exitCode":0}
+{"check":"pnpm typecheck","exitCode":0,"run":"serial before build"}
+{"check":"pnpm test","exitCode":0,"testFiles":3,"tests":19}
+{"check":"pnpm build","exitCode":0,"next":"16.4.6"}
+{"check":"pnpm typecheck","exitCode":0,"run":"serial after build"}
+{"check":"pnpm exec eslint poc/market-data/smoke.ts","exitCode":0}
+{"check":"pnpm exec prettier --check docs/research/data-sources.md poc/market-data/README.md poc/market-data/smoke.ts poc/market-data/fixtures/synthetic-us-eod.json","exitCode":0}
+{"mode":"offline-market-data","command":"node --experimental-strip-types poc/market-data/smoke.ts","exitCode":0,"outcome":"passed","node":"v22.14.0","fixture":{"id":"synthetic-us-eod-v1","sourceId":"fixture.synthetic","dataStatus":"FIXTURE","verificationLevel":"DEMO_ONLY"},"providerProbe":"NOT_RUN","providerStateExample":{"sourceId":"edinet-v2","sourceStatus":"UNAVAILABLE","taskStatus":"BLOCKED_EXTERNAL","reason":"credential_not_supplied_to_offline_poc","record":null,"externalRequests":0},"credentialsRead":false,"externalRequests":0,"realMarketData":"none","warnings":["Node ExperimentalWarning for type stripping","Node MODULE_TYPELESS_PACKAGE_JSON warning"]}
+{"check":"document-index-and-link-audit","exitCode":0,"docIds":36,"uniqueDocIds":true,"registeredTags":true,"indexedPathsExist":true,"localLinksChecked":312}
+{"check":"git diff --check","exitCode":0}
+{"check":"integration","status":"not_applicable","reason":"package.json defines no standalone integration command; this feasibility PoC remains offline."}
