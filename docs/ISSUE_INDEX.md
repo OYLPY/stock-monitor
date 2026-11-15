@@ -70,10 +70,20 @@
 
 ### [P01 需求设计](https://github.com/OYLPY/stock-monitor/issues/2)
 
-- [ ] [P01-01 — PRD 与用户场景/范围](https://github.com/OYLPY/stock-monitor/issues/20) · 依赖：P00-02
+- [x] [P01-01 — PRD 与用户场景/范围](https://github.com/OYLPY/stock-monitor/issues/20) · 依赖：P00-02
 - [ ] [P01-02 — 晨报、异常监控与 AI 研究功能需求](https://github.com/OYLPY/stock-monitor/issues/21) · 依赖：P01-01
 - [ ] [P01-03 — 纸面交易、回测、风控需求](https://github.com/OYLPY/stock-monitor/issues/22) · 依赖：P01-01
 - [ ] [P01-04 — 非功能需求与验收追踪矩阵](https://github.com/OYLPY/stock-monitor/issues/23) · 依赖：P01-02, P01-03
+
+#### P01-02 需求—设计—验证追踪
+
+| 要求 | 设计入口 | 验收入口 |
+|---|---|---|
+| 交易日历、DST/假日/午休、盘中监测窗口和日历失败关闭 | docs/requirements/FR_RESEARCH.md：FR-Research-001/002；PRD BR-06/07 | AC-RES-001–006：常规时段、休市、午休、DST、提前收盘、日历不可用 |
+| 重大性、新事件、迟到发现、去重和每轮最多 3 项 | docs/requirements/FR_RESEARCH.md：FR-Research-003/004/005 | AC-RES-007–012：无新事件、旧/重复事件、过期数据、缺少来源、超额事件 |
+| 晨报、经济日历、研究候选、风控与账本字段 | docs/requirements/FR_RESEARCH.md：FR-Research-007/008/009 | AC-RES-013–016：未完成交易日、经济日历、空策略、风控输入不足 |
+| 来源时间戳、验证等级、Fixture 隔离及降级状态 | docs/requirements/FR_RESEARCH.md：FR-Research-006/010/011 | AC-RES-009–017；P07/P08/P12 实施后进行运行时验证 |
+| 用例与产品需求可追踪至明细 FR | docs/requirements/REQUIREMENTS_INDEX.md、docs/requirements/USE_CASES.md | RQ-003–012、RQ-023、RQ-028、RQ-030 映射到 FR 和 AC-RES-001–018 |
 
 ### [P02 系统基本设计](https://github.com/OYLPY/stock-monitor/issues/3)
 

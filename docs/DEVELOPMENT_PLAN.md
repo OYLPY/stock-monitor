@@ -58,7 +58,7 @@
 | ID | 任务与实施重点 | 交付物 | 验收/依赖 |
 |---|---|---|---|
 | [`P00-01`](https://github.com/OYLPY/stock-monitor/issues/15) | **创建 Next.js 应用与可复现环境**：检查 main 的现存文件；采用 Next.js App Router、TypeScript strict、Tailwind、pnpm 创建工程；锁定 Node LTS 与依赖版本；不得覆盖现有内容。 | package.json、pnpm-lock.yaml、tsconfig、src/app 页面、启动说明 | 新克隆后 pnpm install --frozen-lockfile、pnpm dev、build 和类型检查通过；禁止硬编码开发机绝对路径；依赖：无 |
-| [`P00-02`](https://github.com/OYLPY/stock-monitor/issues/16) | **建立质量、安全和仓库协作规范**：确认根目录 AGENTS.md 的红线；实现 Lint、格式检查、单测命令、.env.example、Git 忽略规则和 PR 分支策略；不提交密钥。 | package scripts、配置、README、.gitignore、质量检查工作流 | lint/typecheck/test 可运行；敏感文件不被追踪；变更只进入功能分支与 PR；依赖：P00-01 |
+| [`P00-02`](https://github.com/OYLPY/stock-monitor/issues/16) | **建立质量、安全和仓库协作规范**：确认根目录 AGENTS.md 的红线；实现 Lint、格式检查、单测命令、.env.example、Git 忽略规则和仓库交付策略；不提交密钥。 | package scripts、配置、README、.gitignore、质量检查工作流 | lint/typecheck/test 可运行；敏感文件不被追踪；按当前授权直接推送 main，检查成功后关闭关联 Issue；依赖：P00-01 |
 | [`P00-03`](https://github.com/OYLPY/stock-monitor/issues/17) | **实现 Codex 自动任务执行器**：使用当前可用 Codex SDK 及受控任务列表；实现任务依赖、单实例锁、子任务超时、原子任务状态写入、最多3次修复、可恢复状态机；禁止自动放宽权限。 | scripts/autopilot、harness/state、任务 Schema、执行记录 | 重复启动不并发写入；无凭据明确 BLOCKED_EXTERNAL；DONE 不重复执行；每步有实际退出码；依赖：P00-02 |
 | [`P00-04`](https://github.com/OYLPY/stock-monitor/issues/18) | **NVIDIA 短上下文压缩与交接能力**：落实 AGENTS.md 与 docs/CONTEXT_ENGINEERING.md；任务上下文按需读取；六字段交接、上下文重启、重新验证证据；EoCC 默认、SAC 仅实验评估。 | harness/handoffs 模板、上下文构造器、恢复示例 | 跨会话保留目标/事实/改动/验证/死路/下步动作；不丢安全规则；不杜撰截断日志；依赖：P00-03 |
 | [`P00-05`](https://github.com/OYLPY/stock-monitor/issues/19) | **P00 故障恢复与阶段验收**：故障注入测试进程中断、锁、退出码、重复任务、状态损坏与超时；验证可完成一次离线样本任务。 | tests/autopilot、恢复报告、P00 完成证据 | 重启后能按任务继续，不重复 DONE；失败不被标记成功；记录命令和耗时；依赖：P00-03, P00-04 |

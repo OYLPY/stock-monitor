@@ -21,9 +21,9 @@
         {
           "id": "P00-02",
           "title": "建立质量、安全和仓库协作规范",
-          "scope": "确认根目录 AGENTS.md 的红线；实现 Lint、格式检查、单测命令、.env.example、Git 忽略规则和 PR 分支策略；不提交密钥。",
+          "scope": "确认根目录 AGENTS.md 的红线；实现 Lint、格式检查、单测命令、.env.example、Git 忽略规则和仓库交付策略；不提交密钥。",
           "deliverables": "package scripts、配置、README、.gitignore、质量检查工作流",
-          "acceptance": "lint/typecheck/test 可运行；敏感文件不被追踪；变更只进入功能分支与 PR",
+          "acceptance": "lint/typecheck/test 可运行；敏感文件不被追踪；直接推送 main，关联检查通过且 main Quality CI 成功后关闭 Issue",
           "depends": [
             "P00-01"
           ]
