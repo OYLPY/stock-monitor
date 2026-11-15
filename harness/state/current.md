@@ -17,4 +17,5 @@
 - **P02-03 远端验收**：`be3ebb7eaf6460ee9a4bf37139af64ea2020d306` 与证据提交 `7e3d65c9b58605e637d4d136d869a73bf9c20463` 已 push；匹配的 [Quality CI run 43706496767](https://github.com/OYLPY/stock-monitor/actions/runs/43706496767) 与 [43706594346](https://github.com/OYLPY/stock-monitor/actions/runs/43706594346) 均成功；#26 已更新并关闭。
 - **P02-04 开始证据**：#27 起始评论已记录；其旧 PR 交付项按用户后续授权改为 direct-main/no-PR。已核验 Codex SDK/App Server、SQLite/WAL/备份、IndexedDB、Node v22.14 和 localhost CSRF 官方资料。
 - **P02-04 本地验收**：`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（3 files / 19 tests）、`pnpm build`、定向 Prettier、11 份 Markdown 链接检查和 `git diff --check` 均通过；无独立 integration 命令。详见 `harness/handoffs/P02-04.md`。
-- **下一步具体操作**：完成最终 diff 审查并提交/push `main`；核对匹配 Quality CI 后更新并关闭 #27。
+- **P02-04 远端验收**：设计提交 `99b5b2fb30b6473fa367fd35f5b880455dc60e6e` 已 push；匹配的 [Quality CI run 43708452188](https://github.com/OYLPY/stock-monitor/actions/runs/43708452188) 成功。当前交接证据提交的 CI 与 Issue 状态同步待完成。
+- **下一步具体操作**：push 交接证据提交并等匹配 Quality CI 成功；随后更新/关闭 #27 与父 Issue #3。开始 #28 前再检查开放 PR，有则先合并再 fetch/pull `main`。
