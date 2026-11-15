@@ -48,6 +48,18 @@
       "exitCode": 0,
       "reason": null,
       "source": "Issue #18 implementation commit c7d764712333b73f886beac1d0c53b7d396a1923 passed local checks and main Quality run 43689402274; isolated no-credentials run returned BLOCKED_EXTERNAL as expected (runner exit 3)."
+    },
+    "P00-05": {
+      "status": "BLOCKED_EXTERNAL",
+      "attempts": 1,
+      "repairAttempts": 0,
+      "runId": "2292b770-bcb8-41ea-8abc-ec694c7dcf84",
+      "startedAt": "2026-11-15T07:34:39.898Z",
+      "updatedAt": "2026-11-15T07:57:05Z",
+      "completedAt": null,
+      "exitCode": null,
+      "reason": "Codex provider returned model_not_found for the configured model; no command execution occurred.",
+      "source": "Local run 2292b770-bcb8-41ea-8abc-ec694c7dcf84; failure confirmed by minimal CLI diagnostic; offline fixture and classifier tests pass."
     }
   }
 }

@@ -235,7 +235,7 @@ export function evaluateChecks(commands: CommandResult[]): CheckReport {
 }
 
 export function classifyCodexFailure(message: string) {
-  return /not logged in|authentication required|unauthenticated|invalid api key|missing credentials|login required|rate limit|quota|usage limit|billing|connection|network|offline|fetch failed|timed out|timeout|temporarily unavailable|service unavailable|\b50[023]\b|\b40[13]\b/i.test(
+  return /not logged in|authentication required|unauthenticated|invalid api key|missing credentials|login required|model_not_found|model.{0,40}(?:not supported|not available|unsupported)|rate limit|quota|usage limit|billing|connection|network|offline|fetch failed|timed out|timeout|temporarily unavailable|service unavailable|\b50[023]\b|\b40[13]\b/i.test(
     message,
   )
     ? "BLOCKED_EXTERNAL"
@@ -621,8 +621,8 @@ function reconcileInterruptedRuns(state: TaskState) {
   return recovered;
 }
 
-function addCommandStep(
-  record: ExecutionRecord,
+export function addCommandStep(
+  record: { steps: Array<Record<string, unknown>> },
   command: CommandResult,
   turn: number,
 ) {
@@ -663,7 +663,7 @@ function usage() {
   return "Usage: pnpm autopilot --task P00-03";
 }
 
-async function main(args: string[]) {
+export async function main(args: string[], root = process.cwd()) {
   const [option, taskId] = args;
   if (
     args.length !== 2 ||
@@ -674,7 +674,6 @@ async function main(args: string[]) {
     console.error(usage());
     return 2;
   }
-  const root = process.cwd();
   const catalog = await readTaskCatalog(root);
   const task = catalog.get(taskId);
   if (!task) {

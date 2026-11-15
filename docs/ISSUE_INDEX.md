@@ -25,10 +25,10 @@
 
 ### [P00 工程创建与自主执行基础](https://github.com/OYLPY/stock-monitor/issues/1)
 
-- [ ] [P00-01 — 创建 Next.js 应用与可复现环境](https://github.com/OYLPY/stock-monitor/issues/15) · 依赖：无
-- [ ] [P00-02 — 建立质量、安全和仓库协作规范](https://github.com/OYLPY/stock-monitor/issues/16) · 依赖：P00-01
-- [ ] [P00-03 — 实现 Codex 自动任务执行器](https://github.com/OYLPY/stock-monitor/issues/17) · 依赖：P00-02
-- [ ] [P00-04 — NVIDIA 短上下文压缩与交接能力](https://github.com/OYLPY/stock-monitor/issues/18) · 依赖：P00-03
+- [x] [P00-01 — 创建 Next.js 应用与可复现环境](https://github.com/OYLPY/stock-monitor/issues/15) · 依赖：无
+- [x] [P00-02 — 建立质量、安全和仓库协作规范](https://github.com/OYLPY/stock-monitor/issues/16) · 依赖：P00-01
+- [x] [P00-03 — 实现 Codex 自动任务执行器](https://github.com/OYLPY/stock-monitor/issues/17) · 依赖：P00-02
+- [x] [P00-04 — NVIDIA 短上下文压缩与交接能力](https://github.com/OYLPY/stock-monitor/issues/18) · 依赖：P00-03
 - [ ] [P00-05 — P00 故障恢复与阶段验收](https://github.com/OYLPY/stock-monitor/issues/19) · 依赖：P00-03, P00-04
 
 #### P00-02 需求—设计—验证追踪
@@ -57,6 +57,16 @@
 | 六字段短交接与跨会话恢复 | `harness/handoffs/TEMPLATE.md`、`harness/handoffs/P00-04.md` | 模板字段检查；上下文重建测试；恢复后重新读取文件并执行质量检查 |
 | 保留原始验收、安全边界和日志证据；截断内容不得推断 | `docs/CONTEXT_ENGINEERING.md`、`scripts/context.ts` | `scripts/context.test.ts` 检查安全规则与重验提示，且不加载日志内容 |
 | 记录上下文来源和 Codex 每轮 token 用量；不臆造窗口阈值 | `scripts/autopilot.ts`、`harness/logs/<task>-<run-id>.json` | `scripts/autopilot.test.ts` usage 事件测试；无凭据运行在 SDK/行情访问前阻断 |
+
+#### P00-05 需求—设计—验证追踪
+
+| 要求 | 设计/实现入口 | 验证入口 |
+|---|---|---|
+| 进程中断和陈旧锁可恢复；并发执行仍受单实例锁阻止 | `scripts/autopilot.ts`、`harness/tasks.json` | `scripts/autopilot.test.ts`：中断 RUNNING 状态、退出锁 owner 后恢复、并发锁拒绝 |
+| DONE 幂等；损坏状态或失败不能变成 DONE | `scripts/autopilot.ts`、`harness/tasks.schema.json` | `scripts/autopilot.test.ts`：DONE 跳过且不改状态、损坏 JSON 原样保留、失败门禁 |
+| 超时、外部模型/授权阻断、命令退出码与耗时可审计 | `scripts/autopilot.ts`、`harness/logs/` | `scripts/autopilot.test.ts`：超时、BLOCKED_EXTERNAL、离线事件 Fixture 的退出码/耗时记录 |
+| 离线样本不得冒充真实推理或行情数据 | `scripts/autopilot.test.ts`、`docs/testing/P00_RECOVERY_REPORT.md` | `OFFLINE_FIXTURE_ONLY` 事件测试；报告区分模拟 Fixture 与真实 runner 阻断记录 |
+| P00 全阶段验收有可追溯证据 | `docs/testing/P00_RECOVERY_REPORT.md`、`harness/handoffs/P00-05.md` | P00 子 Issue 状态、main 提交和 Quality CI 运行记录 |
 
 ### [P01 需求设计](https://github.com/OYLPY/stock-monitor/issues/2)
 
@@ -164,5 +174,5 @@
 ## 规则
 
 - 每项工作关联一个 GitHub Issue；保存具体验证命令、实际退出码和 main 提交 SHA；不能以手写勾选代替 GitHub 当前状态。
-- P00 独立根任务（#1）尚未提交工程代码，后续子任务不能误报 DONE。
+- P00 根 Issue（#1）是阶段门禁；只有五个子 Issue 均关闭且根 Issue 验收证据齐全时，才关闭该父 Issue。
 - 自动执行器从 backlog JSON 读取受控任务内容并检查本地依赖状态；协调会话在启动前核对 GitHub Issue 仍开放且其依赖已关闭。执行器不持有 GitHub 凭据，也不修改 Issue。
