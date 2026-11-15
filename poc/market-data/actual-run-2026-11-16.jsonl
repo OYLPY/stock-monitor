@@ -8,6 +8,8 @@
 {"check":"pnpm exec eslint poc/market-data/smoke.ts","exitCode":0}
 {"check":"pnpm exec prettier --check docs/research/data-sources.md poc/market-data/README.md poc/market-data/smoke.ts poc/market-data/fixtures/synthetic-us-eod.json","exitCode":0}
 {"mode":"offline-market-data","command":"node --experimental-strip-types poc/market-data/smoke.ts","exitCode":0,"outcome":"passed","node":"v22.14.0","fixture":{"id":"synthetic-us-eod-v1","sourceId":"fixture.synthetic","dataStatus":"FIXTURE","verificationLevel":"DEMO_ONLY"},"providerProbe":"NOT_RUN","providerStateExample":{"sourceId":"edinet-v2","sourceStatus":"UNAVAILABLE","taskStatus":"BLOCKED_EXTERNAL","reason":"credential_not_supplied_to_offline_poc","record":null,"externalRequests":0},"credentialsRead":false,"externalRequests":0,"realMarketData":"none","warnings":["Node ExperimentalWarning for type stripping","Node MODULE_TYPELESS_PACKAGE_JSON warning"]}
-{"check":"document-index-and-link-audit","exitCode":0,"docIds":36,"uniqueDocIds":true,"registeredTags":true,"indexedPathsExist":true,"localLinksChecked":312}
+{"check":"document-index-and-link-audit","exitCode":0,"docIds":36,"uniqueDocIds":true,"registeredTags":true,"indexedPathsExist":true,"localLinksChecked":332}
 {"check":"git diff --check","exitCode":0}
 {"check":"integration","status":"not_applicable","reason":"package.json defines no standalone integration command; this feasibility PoC remains offline."}
+{"check":"quality-ci","runId":43740121430,"commit":"2018c81bb77a18c23a4f9997379c3942a93f593d","conclusion":"success","url":"https://github.com/OYLPY/stock-monitor/actions/runs/43740121430"}
+{"check":"github-issue","issue":35,"state":"closed","reason":"completed","url":"https://github.com/OYLPY/stock-monitor/issues/35"}
