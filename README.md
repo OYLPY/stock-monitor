@@ -17,3 +17,5 @@ pnpm dev
 ```
 
 Open <http://localhost:3000>. Check the scaffold with `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
+
+The P00 scaffold is static and works without credentials or market data. Copy `.env.example` only when a later task documents required variables. Quality checks are `pnpm format:check` and `pnpm test`.
