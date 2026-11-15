@@ -65,6 +65,7 @@ describe("autopilot state and run controls", () => {
         return {
           outcome: "completed",
           durationMs: 0,
+          usage: null,
           commands: REQUIRED_CHECKS.map((name) => ({
             command: `pnpm ${name}`,
             exitCode: name === "test" ? 1 : 0,
@@ -93,6 +94,32 @@ describe("autopilot state and run controls", () => {
     };
     const result = await runCodexTurn(thread, "task", 5, async () => undefined);
     expect(result.outcome).toBe("timed_out");
+  });
+
+  it("records Codex token usage for later context calibration", async () => {
+    const usage = {
+      input_tokens: 1200,
+      cached_input_tokens: 200,
+      cache_write_input_tokens: 50,
+      output_tokens: 80,
+      reasoning_output_tokens: 25,
+    };
+    const thread: Pick<Thread, "runStreamed"> = {
+      runStreamed: async () => ({
+        events: (async function* () {
+          yield { type: "turn.completed", usage } as const;
+        })(),
+      }),
+    };
+
+    const result = await runCodexTurn(
+      thread,
+      "task",
+      1000,
+      async () => undefined,
+    );
+
+    expect(result.usage).toEqual(usage);
   });
 
   it("replaces JSON state atomically", async () => {

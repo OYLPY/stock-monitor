@@ -49,6 +49,15 @@
 | 无凭据阻断、超时与最多 3 次修复 | `scripts/autopilot.ts`、`harness/logs/` | 隔离 CODEX_HOME 无凭据执行；修复上限单测；日志中的实际退出码 |
 | 命令安全、离线行情边界和执行记录 | `scripts/autopilot.ts`、`docs/CONTEXT_ENGINEERING.md` | sandbox 网络配置；离线/无数据用例；`harness/logs/<task>-<run-id>.json` |
 
+#### P00-04 需求—设计—验证追踪
+
+| 要求 | 设计/实现入口 | 验证入口 |
+|---|---|---|
+| 只加载安全规则、当前状态、当前任务及直接依赖交接 | `scripts/context.ts`、`scripts/autopilot.ts` | `scripts/context.test.ts`：包含相关 handoff，排除无关交接和原始日志 |
+| 六字段短交接与跨会话恢复 | `harness/handoffs/TEMPLATE.md`、`harness/handoffs/P00-04.md` | 模板字段检查；上下文重建测试；恢复后重新读取文件并执行质量检查 |
+| 保留原始验收、安全边界和日志证据；截断内容不得推断 | `docs/CONTEXT_ENGINEERING.md`、`scripts/context.ts` | `scripts/context.test.ts` 检查安全规则与重验提示，且不加载日志内容 |
+| 记录上下文来源和 Codex 每轮 token 用量；不臆造窗口阈值 | `scripts/autopilot.ts`、`harness/logs/<task>-<run-id>.json` | `scripts/autopilot.test.ts` usage 事件测试；无凭据运行在 SDK/行情访问前阻断 |
+
 ### [P01 需求设计](https://github.com/OYLPY/stock-monitor/issues/2)
 
 - [ ] [P01-01 — PRD 与用户场景/范围](https://github.com/OYLPY/stock-monitor/issues/20) · 依赖：P00-02

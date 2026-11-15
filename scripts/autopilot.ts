@@ -7,7 +7,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { Codex } from "@openai/codex-sdk";
-import type { Thread } from "@openai/codex-sdk";
+import type { Thread, Usage } from "@openai/codex-sdk";
+import { buildPersistedContext } from "./context.ts";
 
 export const REQUIRED_CHECKS = [
   "format:check",
@@ -69,6 +70,7 @@ type CodexTurn = {
   outcome: "completed" | "failed" | "blocked_external" | "timed_out";
   commands: CommandResult[];
   durationMs: number;
+  usage: Usage | null;
   reason?: string;
 };
 type RepairResult = {
@@ -469,7 +471,7 @@ function permissionOverrides() {
   ];
 }
 
-function taskPrompt(task: TaskDefinition) {
+function taskPrompt(task: TaskDefinition, persistedContext: string) {
   return [
     `Implement the controlled work item ${task.id}: ${task.title}.`,
     task.issueUrl ? `Issue: ${task.issueUrl}` : "",
@@ -477,6 +479,8 @@ function taskPrompt(task: TaskDefinition) {
     `Deliverables: ${task.deliverables}`,
     `Acceptance: ${task.acceptance}`,
     `Dependencies: ${task.depends.length ? task.depends.join(", ") : "none"}`,
+    "Reconstructed context and safety rules:",
+    persistedContext,
     "Follow AGENTS.md and existing project patterns. Change only what this task needs.",
     "Do not access live market/news data, make real trades, widen permissions, use external network from commands, commit, push, merge, or change GitHub Issues.",
     `After implementation, run each command separately and capture its actual exit code: ${REQUIRED_CHECKS.map((check) => `pnpm ${check}`).join(", ")}.`,
@@ -514,6 +518,7 @@ export async function runCodexTurn(
   const signal = AbortSignal.timeout(timeoutMs);
   let completed = false;
   let failure = "";
+  let usage: Usage | null = null;
   try {
     const { events } = await thread.runStreamed(prompt, { signal });
     for await (const event of events) {
@@ -538,6 +543,7 @@ export async function runCodexTurn(
         await onCommand(command);
       } else if (event.type === "turn.completed") {
         completed = true;
+        usage = event.usage;
       } else if (event.type === "turn.failed" || event.type === "error") {
         failure =
           event.type === "turn.failed" ? event.error.message : event.message;
@@ -547,12 +553,13 @@ export async function runCodexTurn(
     failure = error instanceof Error ? error.message : "Codex SDK error";
   }
   const durationMs = Date.now() - startedAt;
-  if (completed) return { outcome: "completed", commands, durationMs };
+  if (completed) return { outcome: "completed", commands, durationMs, usage };
   if (signal.aborted)
     return {
       outcome: "timed_out",
       commands,
       durationMs,
+      usage,
       reason: "Codex turn timed out.",
     };
   const category = classifyCodexFailure(failure);
@@ -560,6 +567,7 @@ export async function runCodexTurn(
     outcome: category === "BLOCKED_EXTERNAL" ? "blocked_external" : "failed",
     commands,
     durationMs,
+    usage,
     reason: category === "BLOCKED_EXTERNAL" ? category : "Codex turn failed.",
   };
 }
@@ -643,8 +651,10 @@ type ExecutionRecord = {
     number: number;
     outcome: CodexTurn["outcome"];
     durationMs: number;
+    usage: Usage | null;
     reason?: string;
   }>;
+  contextSources: string[];
   validation?: CheckReport;
   reason?: string;
 };
@@ -698,6 +708,7 @@ async function main(args: string[]) {
     repairAttempts: 0,
     recoveredTasks: [],
     turns: [],
+    contextSources: [],
     steps: lock.recoveredStaleLock
       ? [
           {
@@ -777,6 +788,9 @@ async function main(args: string[]) {
           });
           resultCode = 3;
         } else {
+          const persistedContext = await buildPersistedContext(root, task);
+          record.contextSources = persistedContext.sources;
+          await flushRecord();
           const codex = new Codex({
             env,
             config: { default_permissions: "autopilot" },
@@ -798,7 +812,7 @@ async function main(args: string[]) {
               await atomicWriteJson(statePath, taskState);
               const prompt =
                 repairAttempt === 0
-                  ? taskPrompt(task)
+                  ? taskPrompt(task, persistedContext.text)
                   : repairPrompt(task, previousValidation);
               const remaining = deadline - Date.now();
               const turn =
@@ -807,6 +821,7 @@ async function main(args: string[]) {
                       outcome: "timed_out" as const,
                       commands: [],
                       durationMs: 0,
+                      usage: null,
                       reason: "Task exceeded its 30 minute timeout.",
                     }
                   : await runCodexTurn(
@@ -822,6 +837,7 @@ async function main(args: string[]) {
                 number: repairAttempt,
                 outcome: turn.outcome,
                 durationMs: turn.durationMs,
+                usage: turn.usage,
                 ...(turn.reason ? { reason: turn.reason } : {}),
               });
               await flushRecord();

@@ -36,6 +36,18 @@
       "exitCode": 0,
       "reason": null,
       "source": "Issue #17 implementation passed local checks; no-credentials run 698503e3-e233-4035-ac89-9bce44279fcf returned BLOCKED_EXTERNAL (runner exit 3)."
+    },
+    "P00-04": {
+      "status": "DONE",
+      "attempts": 0,
+      "repairAttempts": 0,
+      "runId": null,
+      "startedAt": null,
+      "updatedAt": "2026-11-15T16:15:33+09:00",
+      "completedAt": "2026-11-15T16:15:33+09:00",
+      "exitCode": 0,
+      "reason": null,
+      "source": "Issue #18 implementation passed local checks; isolated no-credentials run returned BLOCKED_EXTERNAL as expected (runner exit 3)."
     }
   }
 }
