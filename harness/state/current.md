@@ -1,9 +1,9 @@
 # 当前执行状态
 
-- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27 已完成并关闭，P02 父 Issue #3 已通过阶段验收并关闭；P03-01–04 / #28–31 已完成并关闭，下一项为 P03-05 / #32。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–04 / #28–31 已完成并关闭；当前执行跨阶段 PMO-01 / #88。P03-05 / #32 已开始并暂停于未提交设计草稿，PMO 文档规则确定后恢复；P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
 - **依赖**：P03-04 / #31 的 P03-01 / #28 与 P01-03 / #22 均已关闭；P00-05 不在当前依赖中。
-- **同步状态**：进入 #29/#30 前的基线分别为 `673c8d3c2624accf91ea8b0a1df3a9f02da97022` 和 `e3ec089bc7e5852389c43f1f87a9b1a46e702e5a`；进入 #31 前确认无开放 PR并执行 `git fetch --prune origin` 与 `git pull --ff-only origin main`（Already up to date），当前基线 `d92f535ecfd4baebfa8238765111d40013c90a81`。
+- **同步状态**：历史阶段基线和开始记录见下文各交接条目；进入 P03-05 / #32 与 PMO-01 / #88 前均确认无开放 PR并执行 `git fetch --prune origin` / `git pull --ff-only origin main`，当前工作基线 `c9e542ccd33d13e22722f1620dc39e715818d5dd`。
 - **产品边界**：本地即开即用，无应用登录、注册或用户管理；本地批准绑定不可变计划版本。UI 采用 shadcn/ui 设计基线，组件接入安排在 P06。Codex 产品运行授权仍待 P04-01 实测；开发执行器的 CLI 认证不代表产品已接通或需要产品登录。
 - **P01-03 结果**：FR-Trade/追踪文档已直接推送 main；本地 format、lint、typecheck、unit（3 文件/19 测试）、build、ID/链接检查通过；Issue #22 已在 Quality #19 成功后关闭。详见 `harness/handoffs/P01-03.md`。
 - **P01-04 本地验收**：NFR-001–013 / AC-NFR-001–022，RQ 全量矩阵和研究/交易功能 AC 映射已完成；补齐外部不可信文本权限边界与六字段上下文恢复验收。format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、编号/矩阵/本地链接自检均通过；integration 不适用（`package.json` 无独立命令）。详细记录见 `harness/handoffs/P01-04.md`。
@@ -29,5 +29,10 @@
 - **P03-03 远端验收**：`7ae994717cbd0c3d0e2e62196e2e70eb063b4684` 已推送，[Quality CI run 43716206667](https://github.com/OYLPY/stock-monitor/actions/runs/43716206667) 成功；#30 已附证据并关闭。
 - **P03-03 证据提交**：`d92f535ecfd4baebfa8238765111d40013c90a81` 已推送，[Quality CI run 43716442789](https://github.com/OYLPY/stock-monitor/actions/runs/43716442789) 成功；当前 `main` 已同步并在 #31 留开始记录。
 - **P03-04 开始证据**：#28 与 #22 均已关闭，开放 PR 检查为空；进入前 `main` 基线 `d92f535ecfd4baebfa8238765111d40013c90a81`，已在 #31 留开始评论。
-- **P03-04 本地验收**：`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（3 files / 19 tests）、`pnpm build`、目标设计/交接 Prettier、本地 Markdown 链接、Decimal 期望收益自检和 `git diff --check` 均通过；Integration N/A（无回测运行时服务/Route Handler）。远端 CI 待 push 后确认。
-- **下一步具体操作**：提交/push 阶段索引和最终交接证据，确认 CI 后检查开放 PR；若有先合并，再同步 main 并开始 P03-05 / #32。
+- **P03-04 本地验收**：`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（3 files / 19 tests）、`pnpm build`、目标设计/交接 Prettier、本地 Markdown 链接、Decimal 期望收益自检和 `git diff --check` 均通过；Integration N/A（无回测运行时服务/Route Handler）。远端 CI 结果见 P03-04 远端验收。
+- **P03-04 远端验收**：设计提交 `b800fe402354fbce0390a1a4fb3fbe28669cfb56` / [Quality CI 43717997513](https://github.com/OYLPY/stock-monitor/actions/runs/43717997513) 成功；交接索引提交 `c9e542ccd33d13e22722f1620dc39e715818d5dd` / [Quality CI 43718359640](https://github.com/OYLPY/stock-monitor/actions/runs/43718359640) 成功；#31 已关闭并更新父 Issue #4。
+- **P03-05 开始证据**：#27 与 #29 均已关闭；检查开放 PR 为空，`git fetch --prune origin` 和 `git pull --ff-only origin main` 后基线为 `c9e542ccd33d13e22722f1620dc39e715818d5dd`；已在 #32 留开始评论。
+- **P03-05 暂存进度**：未提交的 `docs/design/SCHEDULER.md` 草稿保留在工作区；P03-05 尚未完成验收，不纳入 PMO-01 变更。
+- **PMO-01 开始证据**：Issue #88；检索未发现既有文档治理规范；开放 PR 检查为空，`git fetch --prune origin` / `git pull --ff-only origin main` 后基线 `c9e542ccd33d13e22722f1620dc39e715818d5dd`；已在 #88 留开始评论。
+- **PMO-01 本地验收**：文档索引覆盖 31 个 Doc ID；ID、路径、类型、authority、受控 tags、相关文档链接、docs/ 覆盖和本地 Markdown 链接自检通过。`pnpm format:check`、定向 Prettier、`pnpm lint`、`pnpm typecheck`、`pnpm test`（3 files / 19 tests）、`pnpm build` 均通过；文档变更无独立 integration 命令。
+- **下一步具体操作**：本地 PMO 文档和项目质量门禁已通过；提交/push main 并确认 Quality CI，再补交最终 Issue/状态证据，确认 CI 后关闭 #88，然后恢复 P03-05 / #32。

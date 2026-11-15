@@ -12,6 +12,7 @@
 - GitHub Issue 管理每个工作项；直接在 `main` 设计、编码和验证，不创建 PR、不等待人工审查。所有相关检查通过后，使用包含工作项 ID 的提交说明提交并 push `main`；push 后确认 GitHub Actions 成功，再关闭 Issue 并继续依赖任务。不得在验证通过前提交或 push，也不得绕过分支保护或必需检查。操作范围仅当前仓库及获授权的免费开发依赖。外部授权缺失标记 `BLOCKED_EXTERNAL`，不能私自绕过。
 - Codex 自动执行器的子任务只负责所选 Issue 的代码和验证；当前协调会话负责 Issue 状态、提交和 push。
 - GitHub Issue 作为单任务事实入口。任务应有前置依赖、明确验收和验证日志；未实际验证不得关闭 Issue / 声称通过。单写入者修改工作树、数据库迁移及运行状态。
+- 文档检索从 `docs/INDEX.md` 开始；新增或实质修改 `docs/` 下长期文档时遵循 `docs/pmo/DOCUMENT_GOVERNANCE.md`，并同步文档目录、受影响的 tags 与需求追踪。
 
 ## UI 与现代 Web 指南
 - UI 视觉与交互约定以 `docs/design/UI_DESIGN.md` 为准。

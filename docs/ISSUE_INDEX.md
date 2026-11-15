@@ -2,7 +2,7 @@
 
 > 原子任务与阶段门禁的单一导航入口。关闭 Issue 前须有真实验证记录和已 push 到 `main` 的提交 SHA。
 
-**总计** 14 个阶段、69 个原子任务、83 个 Issues（包含原有 P00 主单）。
+**计划范围** 14 个阶段、69 个原子任务；跨阶段 PMO 工作项单独列出，不计入阶段任务数。
 
 | 阶段 | 父 Issue | 原子任务 |
 |---|---|---|
@@ -20,6 +20,10 @@
 | **P11 — 自动任务、监测与通知** | [#12](https://github.com/OYLPY/stock-monitor/issues/12) | 5 项 |
 | **P12 — 完整测试与安全质量审计** | [#13](https://github.com/OYLPY/stock-monitor/issues/13) | 6 项 |
 | **P13 — 本地发布与交付** | [#14](https://github.com/OYLPY/stock-monitor/issues/14) | 4 项 |
+
+## 跨阶段 PMO 工作项
+
+- [ ] [PMO-01 — 设计文档编号、索引与标签治理](https://github.com/OYLPY/stock-monitor/issues/88) · 入口：[文档索引](INDEX.md)
 
 ## 全部任务
 
