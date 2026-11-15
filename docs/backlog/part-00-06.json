@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 1,
+  "repository": "OYLPY/stock-monitor",
+  "createdAt": "2026-11-15",
+  "branch": "docs/autonomous-development-roadmap-20261115",
+  "phases": [
+    {
+      "id": "P00",
+      "name": "工程创建与自主执行基础",
+      "goal": "在现有空白仓库构建 Next.js 应用、Codex 自主执行器及持久化交接机制。保留 #1 为阶段主 Issue。",
+      "gate": "依赖锁定、基础构建、单写入者执行、断点续跑与上下文交接测试通过。",
+      "tasks": [
+        {
+          "id": "P00-01",
+          "title": "创建 Next.js 应用与可复现环境",
+          "scope": "检查 main 的现存文件；采用 Next.js App Router、TypeScript strict、Tailwind、pnpm 创建工程；锁定 Node LTS 与依赖版本；不得覆盖现有内容。",
+          "deliverables": "package.json、pnpm-lock.yaml、tsconfig、src/app 页面、启动说明",
+          "acceptance": "新克隆后 pnpm install --frozen-lockfile、pnpm dev、build 和类型检查通过；禁止硬编码开发机绝对路径",
+          "depends": []
+        },
+        {
+          "id": "P00-02",
+          "title": "建立质量、安全和仓库协作规范",
+          "scope": "确认根目录 AGENTS.md 的红线；实现 Lint、格式检查、单测命令、.env.example、Git 忽略规则和 PR 分支策略；不提交密钥。",
+          "deliverables": "package scripts、配置、README、.gitignore、质量检查工作流",
+          "acceptance": "lint/typecheck/test 可运行；敏感文件不被追踪；变更只进入功能分支与 PR",
+          "depends": [
+            "P00-01"
+          ]
+        },
+        {
+          "id": "P00-03",
+          "title": "实现 Codex 自动任务执行器",
+          "scope": "使用当前可用 Codex SDK 及受控任务列表；实现任务依赖、单实例锁、子任务超时、原子任务状态写入、最多3次修复、可恢复状态机；禁止自动放宽权限。",
+          "deliverables": "scripts/autopilot、harness/state、任务 Schema、执行记录",
+          "acceptance": "重复启动不并发写入；无凭据明确 BLOCKED_EXTERNAL；DONE 不重复执行；每步有实际退出码",
+          "depends": [
+            "P00-02"
+          ]
+        },
+        {
+          "id": "P00-04",
+          "title": "NVIDIA 短上下文压缩与交接能力",
+          "scope": "落实 AGENTS.md 与 docs/CONTEXT_ENGINEERING.md；任务上下文按需读取；六字段交接、上下文重启、重新验证证据；EoCC 默认、SAC 仅实验评估。",
+          "deliverables": "harness/handoffs 模板、上下文构造器、恢复示例",
+          "acceptance": "跨会话保留目标/事实/改动/验证/死路/下步动作；不丢安全规则；不杜撰截断日志",
+          "depends": [
+            "P00-03"
+          ]
+        },
+        {
+          "id": "P00-05",
+          "title": "P00 故障恢复与阶段验收",
+          "scope": "故障注入测试进程中断、锁、退出码、重复任务、状态损坏与超时；验证可完成一次离线样本任务。",
+          "deliverables": "tests/autopilot、恢复报告、P00 完成证据",
+          "acceptance": "重启后能按任务继续，不重复 DONE；失败不被标记成功；记录命令和耗时",
+          "depends": [
+            "P00-03",
+            "P00-04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P01",
+      "name": "需求设计",
+      "goal": "将美日股研究平台的四类自动任务、用户行为、风险与不可做事项转成可验收需求。",
+      "gate": "全部 V1 功能有 ID、优先级、验收案例；非功能需求和安全边界可追踪。",
+      "tasks": [
+        {
+          "id": "P01-01",
+          "title": "PRD 与用户场景/范围",
+          "scope": "定义本地个人研究用户、晨报/监测/研究审计/周审计闭环、六研究角色、UI导航、V1范围及非目标；拆分联机与离线能力。",
+          "deliverables": "docs/requirements/PRD.md、用例图、需求清单",
+          "acceptance": "每个用户旅程有触发、输入、预期结果和异常路径；不含真实交易服务",
+          "depends": [
+            "P00-02"
+          ]
+        },
+        {
+          "id": "P01-02",
+          "title": "晨报、异常监控与 AI 研究功能需求",
+          "scope": "定义市场日历、仅交易时段监测、重大事件判定、最多3个新事件、去重、来源时间戳；晨报经济日历、3策略、风险裁决、可验证性等级。",
+          "deliverables": "FR-Research 编号、工作流、报告契约",
+          "acceptance": "正常/休市/午休/无新闻/旧新闻/数据过期/缺少来源均有验收案例",
+          "depends": [
+            "P01-01"
+          ]
+        },
+        {
+          "id": "P01-03",
+          "title": "纸面交易、回测、风控需求",
+          "scope": "区分候选、计划、审批、模拟挂单/成交与账本；明确初始100万JPY、当前权益2%风险、历史峰值20%回撤；仅多头股票及非杠杆ETF。",
+          "deliverables": "FR-Trade、风控公式规范、交易状态图",
+          "acceptance": "测试覆盖权益不可核验、跳空、滑点、最小交易单位、汇率、禁止杠杆/期权/做空",
+          "depends": [
+            "P01-01"
+          ]
+        },
+        {
+          "id": "P01-04",
+          "title": "非功能需求与验收追踪矩阵",
+          "scope": "定义性能、可恢复性、离线降级、凭据保护、审计、备份、数据质量、语言和无障碍；为所有功能关联设计/测试编号。",
+          "deliverables": "NFR.md、docs/requirements/TRACEABILITY.md",
+          "acceptance": "不存在缺少验收标准的 MUST 功能；不能把 Fixture 结果当作真实外部联通",
+          "depends": [
+            "P01-02",
+            "P01-03"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P02",
+      "name": "系统基本设计",
+      "goal": "设计单机 Next.js + 独立 Worker + SQLite + Codex 的稳定边界。",
+      "gate": "进程、模块、数据流、信任边界、异常和失效模式均可审核。",
+      "tasks": [
+        {
+          "id": "P02-01",
+          "title": "系统上下文、容器及模块分层",
+          "scope": "确定浏览器UI、Next.js Node 运行时、独立 Worker、Codex SDK、数据适配器、SQLite；设计 feature/domain/infrastructure 分层。",
+          "deliverables": "docs/design/ARCHITECTURE.md、模块图、运行拓扑",
+          "acceptance": "明确每层职责、同步/异步接口、禁止浏览器直接接触凭据及账本写权限",
+          "depends": [
+            "P01-04"
+          ]
+        },
+        {
+          "id": "P02-02",
+          "title": "市场数据与证据溯源架构",
+          "scope": "设计行情快照、公司IR、EDINET、SEC、新闻、公告及经济日历适配器；区分市场时间/采集时间/来源发布时间、数据时效和可信等级。",
+          "deliverables": "docs/design/DATA_PROVENANCE.md、统一数据契约",
+          "acceptance": "可表达延时/历史/Fixture/缺失/冲突来源；无法核实的数据不能变成正式信号",
+          "depends": [
+            "P02-01"
+          ]
+        },
+        {
+          "id": "P02-03",
+          "title": "AI 六角色编排与确定性风控边界",
+          "scope": "明确统筹/侦察/结构/策略/风控/模拟员的输入输出，选择单模型分步骤编排；AI 输出先结构化校验再进入确定性计算；风险官有否决权。",
+          "deliverables": "docs/design/AI_WORKFLOW.md、角色权限矩阵",
+          "acceptance": "不能由模型自述变更订单、权益或风险限制；各判断可追溯到证据",
+          "depends": [
+            "P02-01"
+          ]
+        },
+        {
+          "id": "P02-04",
+          "title": "ADR 与安全/运行故障设计",
+          "scope": "记录 SQLite 与 IndexedDB、Codex SDK 与 App Server、定时 Worker 与前端定时器等权衡；威胁建模、启动/休眠/断网/重启行为。",
+          "deliverables": "docs/decisions/ ADR、THREAT_MODEL.md、FAILURE_MODES.md",
+          "acceptance": "关键决策有替代方案及失败处理；不依赖浏览器存活保证后台监控",
+          "depends": [
+            "P02-01",
+            "P02-02",
+            "P02-03"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P03",
+      "name": "详细设计",
+      "goal": "把架构转成表、接口、状态机、算法和可执行测试契约。",
+      "gate": "关键模型的边界、精度、异常语义与事务约束明确且可测试。",
+      "tasks": [
+        {
+          "id": "P03-01",
+          "title": "SQLite Schema、迁移与账本不变量",
+          "scope": "设计行情、证券、事件、研究、策略、订单、成交、现金流水、权益、通知、任务状态；约束外键、唯一键、审计不可变记录。",
+          "deliverables": "docs/design/DB_SCHEMA.md、迁移草案、ER图",
+          "acceptance": "主键稳定；模拟成交幂等；流水不可被 AI 直接覆盖；备份恢复有版本标识",
+          "depends": [
+            "P02-01",
+            "P01-03"
+          ]
+        },
+        {
+          "id": "P03-02",
+          "title": "API/DTO 与状态机契约",
+          "scope": "设计 Next.js Route Handlers、Zod Schema、错误码、分页、报告输出、任务执行、计划审批、时间/货币/数值精度；禁止开放真实交易API。",
+          "deliverables": "docs/design/API_CONTRACTS.md、状态图",
+          "acceptance": "请求参数和 AI 输出均可校验；异常有清晰 HTTP/业务码；权限不靠客户端校验",
+          "depends": [
+            "P02-01",
+            "P03-01"
+          ]
+        },
+        {
+          "id": "P03-03",
+          "title": "风险算法与订单仓位计算",
+          "scope": "精确定义初始与当前权益、JPY/USD FX、持仓估值、风险单位、佣金/滑点/缺口预算、峰值回撤、头寸集中度；禁止透支。",
+          "deliverables": "docs/design/RISK_ENGINE.md、边界决策表",
+          "acceptance": "2%与20%边界、非正权益、无报价、跳空和单价超资金等测试用例可复算",
+          "depends": [
+            "P03-01"
+          ]
+        },
+        {
+          "id": "P03-04",
+          "title": "指标/回测与评分详细设计",
+          "scope": "定义 OHLCV 复权、交易日边界、ATR/MA/实现波动、日内/日级成交语义、手续费模型、walk-forward、2020/2022 压力、五维评分与缺失状态。",
+          "deliverables": "docs/design/BACKTEST_ENGINE.md、评分契约",
+          "acceptance": "无未来函数、同根K线成交限制、样本不足 NOT_VERIFIED、18/25 不是自动交易许可",
+          "depends": [
+            "P03-01",
+            "P01-03"
+          ]
+        },
+        {
+          "id": "P03-05",
+          "title": "任务调度、事件指纹、通知与上下文状态机",
+          "scope": "定义市场时段判定、任务幂等键、失败重试、事件去重、重大性阈值、Codex 六字段交接和持久化恢复协议。",
+          "deliverables": "docs/design/SCHEDULER.md、WORKFLOW_STATE.md",
+          "acceptance": "周末/午休/夏令时不扫描；重复新闻不提醒；任务中断/压缩后保留可验证进度",
+          "depends": [
+            "P02-04",
+            "P03-02"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P04",
+      "name": "技术可行性验证",
+      "goal": "在大规模实现前证实关键外部依赖与离线降级路径。",
+      "gate": "四项 PoC 各有真实调用/测试证据或明确 BLOCKED_EXTERNAL，不以示例冒充成功。",
+      "tasks": [
+        {
+          "id": "P04-01",
+          "title": "Codex SDK 本地授权与流式调用 PoC",
+          "scope": "验证本地 Codex CLI/SDK 授权方式、基本调用、响应 Schema、失败/限额处理、允许的文件权限；不暴露令牌给浏览器。",
+          "deliverables": "poc/codex、实际日志（脱敏）、接入说明",
+          "acceptance": "有真实成功调用记录或明确外部阻断；过时文档差异登记 ADR",
+          "depends": [
+            "P03-02"
+          ]
+        },
+        {
+          "id": "P04-02",
+          "title": "SQLite/Drizzle 精度与迁移 PoC",
+          "scope": "测量整数JPY、定点USD和汇率精度方案；验证并发事务、迁移、回滚及单机锁竞争。",
+          "deliverables": "poc/sqlite、Schema 验证脚本",
+          "acceptance": "重启可读；无浮点资金漂移；重复迁移幂等；错误写入原子回滚",
+          "depends": [
+            "P03-01"
+          ]
+        },
+        {
+          "id": "P04-03",
+          "title": "美日历史/公告数据适配器 PoC",
+          "scope": "调研官方/可信来源的实际可访问性、授权、频率限制、数据时间戳、费用；避免臆造免费实时源；准备合法 Fixtures。",
+          "deliverables": "docs/research/DATA_SOURCES.md、poc/market-data",
+          "acceptance": "源支持的频度/许可有原始出处；缺少 Key 时离线样本可复现且显著标记",
+          "depends": [
+            "P02-02"
+          ]
+        },
+        {
+          "id": "P04-04",
+          "title": "后台 Worker、关闭浏览器及重启恢复 PoC",
+          "scope": "验证独立 Node 调度器、Next.js API 共用模块、系统睡眠/重启/异常退出处理，比较 macOS/Windows 本地调度方式。",
+          "deliverables": "poc/worker、运行手册、故障注入结果",
+          "acceptance": "关闭页面后 Worker 在进程仍运行条件下继续；PC 睡眠/关机不会谎称监控；恢复幂等",
+          "depends": [
+            "P03-05"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P05",
+      "name": "数据与工程基础实现",
+      "goal": "实现可持久化、可审计、可测试的跨模块基础设施。",
+      "gate": "迁移、输入校验、来源记录和故障恢复通过；本地开发运行稳定。",
+      "tasks": [
+        {
+          "id": "P05-01",
+          "title": "建立数据库、迁移及仓储层",
+          "scope": "实现 Drizzle schema/migrations、SQLite WAL 适用配置、主键唯一键及事务封装；版本化初始资金配置。",
+          "deliverables": "src/db、migrations、测试数据库工厂",
+          "acceptance": "新库迁移/重复启动/事务回滚/并发冲突测试通过；不生成虚假成交",
+          "depends": [
+            "P04-02"
+          ]
+        },
+        {
+          "id": "P05-02",
+          "title": "统一时间、金额、货币与市场标识",
+          "scope": "定义 Asia/Tokyo / America/New_York 时间工具、精确小数/整数金额、汇率单位、证券符号+交易所复合标识。",
+          "deliverables": "src/domain/primitives、单测",
+          "acceptance": "DST转换、JPY/USD舍入、时区日期与交易日跨日映射均可复算",
+          "depends": [
+            "P03-02"
+          ]
+        },
+        {
+          "id": "P05-03",
+          "title": "输入 Schema、API 基础设施与安全设置",
+          "scope": "实现 Zod 输入验证、统一错误处理、本地访问保护、密钥环境变量与日志脱敏、数据导入边界。",
+          "deliverables": "src/lib/api、src/lib/security、.env.example",
+          "acceptance": "恶意/过大输入拒绝，API 不回显密钥；没有任何真实下单路由",
+          "depends": [
+            "P05-01",
+            "P05-02"
+          ]
+        },
+        {
+          "id": "P05-04",
+          "title": "事件与来源仓储及审计历史",
+          "scope": "实现消息来源、行情引用、内容 hash、采集时间、版本与只追加审计日志；不可验证状态的显式表示。",
+          "deliverables": "src/features/evidence、仓储/单测",
+          "acceptance": "事件和引用可追溯、重启后仍在；缺来源不能被标记 VERIFIED",
+          "depends": [
+            "P05-01",
+            "P05-03"
+          ]
+        },
+        {
+          "id": "P05-05",
+          "title": "备份、恢复和数据库完整性验证",
+          "scope": "实现本地数据导出备份、导入预检、schema版本校验、事务性恢复及损坏报告；避免删除旧数据。",
+          "deliverables": "scripts/backup、scripts/restore、docs/operations/BACKUP.md",
+          "acceptance": "全新本地环境可恢复已知测试账本；错误备份不覆盖当前数据库",
+          "depends": [
+            "P05-01",
+            "P05-04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P06",
+      "name": "React UI 与体验实现",
+      "goal": "提供清晰的研究工作台、可用交互、错误与数据时效标识。",
+      "gate": "核心页面可用，Playwright 可走通无真实交易的主要流程。",
+      "tasks": [
+        {
+          "id": "P06-01",
+          "title": "设计系统和应用壳层",
+          "scope": "建立 typography/spacing/color/token、shadcn/ui、侧边栏、导航、响应式布局、中文文案；保持信息层次和可访问性。",
+          "deliverables": "src/components/ui、layout、design guidelines",
+          "acceptance": "桌面与窄屏无严重错位；键盘/焦点/空态有基本覆盖",
+          "depends": [
+            "P05-03"
+          ]
+        },
+        {
+          "id": "P06-02",
+          "title": "美日市场 Dashboard 与行情图表",
+          "scope": "实现市场开闭市状态、行情快照、更新时间、币种、来源、趋势与历史图；不展示假实时价格。",
+          "deliverables": "Dashboard 页面、K线/时间序列组件",
+          "acceptance": "无行情/延时/Fixture/历史数据有显著区别；时间点与时区正确",
+          "depends": [
+            "P06-01",
+            "P05-04"
+          ]
+        },
+        {
+          "id": "P06-03",
+          "title": "异常监测与事件证据中心",
+          "scope": "实现事件列表、重要性、发现时间、源链接、去重归并、风险评估与详情；仅新高等级事件才显示通知状态。",
+          "deliverables": "事件页面、来源详情、筛选",
+          "acceptance": "同事件重复消息合并；缺少证据不显示已验证徽标",
+          "depends": [
+            "P06-01",
+            "P05-04"
+          ]
+        },
+        {
+          "id": "P06-04",
+          "title": "晨报及六角色策略研究工作台",
+          "scope": "实现晨报阅读、候选策略、证据/推论/假设标注、六角色审计及风控否决原因；支持报告历史。",
+          "deliverables": "Reports/Strategies 页面",
+          "acceptance": "最多3策略可追踪；无数据/AI失败时不给虚假量化分数",
+          "depends": [
+            "P06-01",
+            "P05-04"
+          ]
+        },
+        {
+          "id": "P06-05",
+          "title": "回测与纸面模拟账户界面",
+          "scope": "实现参数配置、实验结果、费用/风险明细、账本流水、权益曲线、模拟订单状态；禁用所有真实交易按钮。",
+          "deliverables": "Backtests/Paper Ledger 页面",
+          "acceptance": "NOT_VERIFIED 正确显示；无账本明确“未建立”；禁止绕过风控直接写入",
+          "depends": [
+            "P06-01",
+            "P05-01"
+          ]
+        },
+        {
+          "id": "P06-06",
+          "title": "设置、任务日志、通知及 E2E 页面验收",
+          "scope": "实现数据源/模型设置、任务状态、执行日志、备份入口；统一错误提示与屏幕阅读语义；加入Playwright冒烟。",
+          "deliverables": "Settings/Tasks 页面、E2E",
+          "acceptance": "所有用户操作有实际行为和失败反馈；设置不泄露 token",
+          "depends": [
+            "P06-02",
+            "P06-03",
+            "P06-04",
+            "P06-05"
+          ]
+        }
+      ]
+    }
+  ]
+}

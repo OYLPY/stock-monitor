@@ -1,0 +1,469 @@
+{
+  "schemaVersion": 1,
+  "repository": "OYLPY/stock-monitor",
+  "createdAt": "2026-11-15",
+  "branch": "docs/autonomous-development-roadmap-20261115",
+  "phases": [
+    {
+      "id": "P07",
+      "name": "行情与公开信息采集实现",
+      "goal": "接入合法、可审计、可降级的美日行情、公告、宏观和交易日历。",
+      "gate": "交易时段/时效/来源/去重测试通过；无凭据时 Fixture 路径清晰。",
+      "tasks": [
+        {
+          "id": "P07-01",
+          "title": "NYSE/Nasdaq/JPX 交易日历与时段判定",
+          "scope": "实现本地交易所日历、周末、特休、提前收市、东京午休、美国DST；日历来源有版本和最近核查时间。",
+          "deliverables": "src/features/market-calendar、校验样本",
+          "acceptance": "覆盖 EST/EDT 切换、当地假日、周末、东京午休、临时休市覆盖规则",
+          "depends": [
+            "P05-02",
+            "P04-03"
+          ]
+        },
+        {
+          "id": "P07-02",
+          "title": "美股行情/历史数据适配器",
+          "scope": "建立 Provider 统一接口、时间戳、币种、数据延时和权限限制；支持来源替换、限流、缓存、失败降级与样本回放。",
+          "deliverables": "src/providers/us-market、Mock/Fixture、集成测试",
+          "acceptance": "不能把缓存当实时；价格及OHLCV校验；缺 API 凭据时标注不可用",
+          "depends": [
+            "P07-01",
+            "P05-04"
+          ]
+        },
+        {
+          "id": "P07-03",
+          "title": "日股行情/历史数据适配器",
+          "scope": "调研并实现 JPX / J-Quants / 合规数据源的可用接口；日元、100股单位与 ETF 交易单位按证券元信息确定；不得宣称 J-Quants 实时。",
+          "deliverables": "src/providers/jp-market、数据源说明",
+          "acceptance": "能够区分历史/延迟/Fixture，数据缺失不编造；交易日期转换准确",
+          "depends": [
+            "P07-01",
+            "P05-04"
+          ]
+        },
+        {
+          "id": "P07-04",
+          "title": "公司公告、财报与官方宏观采集",
+          "scope": "统一 SEC EDGAR、公司 IR、EDINET、TDnet、BOJ、Fed/BLS/BEA 官方原始材料的引用适配器；合规请求频率、去重、来源时间。",
+          "deliverables": "src/providers/disclosures、docs/research/SOURCES.md",
+          "acceptance": "同一公告多网址不重复；外部源不可用时明确降级；来源可靠性可追查",
+          "depends": [
+            "P07-01",
+            "P05-04"
+          ]
+        },
+        {
+          "id": "P07-05",
+          "title": "事件归一化、新旧判断与数据质量门禁",
+          "scope": "建立事件实体识别、证券映射、指纹/内容哈希、时区对齐、重大性候选、采集误差与新鲜度门禁；不凭 AI 断言唯一真实性。",
+          "deliverables": "src/features/events/normalizer、quality gate",
+          "acceptance": "旧新闻和重复报道不升级；不同事件不误合并；过期价量不能触发实时信号",
+          "depends": [
+            "P07-02",
+            "P07-03",
+            "P07-04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P08",
+      "name": "Codex 六角色研究执行",
+      "goal": "构建证据驱动的 AI 研究流程及受控输出，不把模型推断当成交结果。",
+      "gate": "以可核查样本生成晨报/异常/审计；无来源或工具失败时保持正确限制。",
+      "tasks": [
+        {
+          "id": "P08-01",
+          "title": "Codex SDK 服务封装与任务隔离",
+          "scope": "实现服务端 Codex 连接、会话/流式事件、重试/取消/调用审计、速率限制、权限边界；避免无界模型调用。",
+          "deliverables": "src/features/ai/codex-adapter、测试桩",
+          "acceptance": "成功输出有来源与调用追踪；失败/限额/超时可恢复，不泄露认证信息",
+          "depends": [
+            "P04-01",
+            "P05-03"
+          ]
+        },
+        {
+          "id": "P08-02",
+          "title": "六角色结构化研究工作流",
+          "scope": "实现统筹→情报→市场结构→策略研究→独立风控→模拟员的单进程可分步骤执行；定义角色输入/输出、独立否决点。",
+          "deliverables": "src/features/research/workflows、Zod 契约",
+          "acceptance": "AI角色不能写账本；角色未完成时报告显式不完整；否决阻止后续提案",
+          "depends": [
+            "P08-01",
+            "P07-05"
+          ]
+        },
+        {
+          "id": "P08-03",
+          "title": "研究证据引用与反幻觉校验",
+          "scope": "实现引文映射到实际采集证据、时间戳验证、事实/推论/假设区分、数字单位交叉检查与无来源降级；拒绝伪造 TradingView 实时读取。",
+          "deliverables": "src/features/research/evidence-checker、测试",
+          "acceptance": "伪造URL、错误时间、过期数字、缺失资料不会通过 VERIFIED",
+          "depends": [
+            "P08-02",
+            "P07-05"
+          ]
+        },
+        {
+          "id": "P08-04",
+          "title": "晨报/异常报告/每日与每周审计生成",
+          "scope": "按需求输出美日最新完成交易日、五行摘要、未来24小时事件、≤3策略及五维验证状态、风控裁决、账本状态；支持报告归档与再次生成。",
+          "deliverables": "src/features/reports、报告模板、测试",
+          "acceptance": "休市正确说明；未完成的美股交易日不可写成已完成；资料不足允许无候选",
+          "depends": [
+            "P08-02",
+            "P08-03"
+          ]
+        },
+        {
+          "id": "P08-05",
+          "title": "AI研究回归评估和上下文交接",
+          "scope": "建立固定证据集、语义状态压缩实验、重复运行评估、事实引用准确率及预算统计；验证 EoCC 优先、SAC 作为可选对照。",
+          "deliverables": "tests/ai-evals、harness/handoffs、评估报告",
+          "acceptance": "跨新会话不丢 Issue 验收/风控；短上下文和长上下文任务结果可核查比较",
+          "depends": [
+            "P08-03",
+            "P00-04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P09",
+      "name": "指标、回测与量化验证",
+      "goal": "用确定性算法验证统计优势，缺少历史数据不得产生虚假绩效。",
+      "gate": "可复算回测、成本/样本外/历史压力测试均通过单测，实际数据不足则保持 NOT_VERIFIED。",
+      "tasks": [
+        {
+          "id": "P09-01",
+          "title": "OHLCV 归一化与指标库",
+          "scope": "实现复权与缺口处理、连续交易日映射、ATR(14)、MA、收益、实现波动率/分位、相对强度；统一精度。",
+          "deliverables": "src/features/quant/indicators、单测数据",
+          "acceptance": "手算样本与代码一致；缺数据与分红/拆股变化有明确状态",
+          "depends": [
+            "P07-02",
+            "P07-03",
+            "P05-02"
+          ]
+        },
+        {
+          "id": "P09-02",
+          "title": "无未来函数的回测撮合引擎",
+          "scope": "定义信号时点、下一可交易价、订单成交规则、价差/滑点、手续费、资金与持仓、公司行为及缺口条件；可重播。",
+          "deliverables": "src/features/backtest/engine、Fixture",
+          "acceptance": "同K线先知交易被禁止；相同输入输出相同；现金/仓位不为负",
+          "depends": [
+            "P09-01",
+            "P03-04"
+          ]
+        },
+        {
+          "id": "P09-03",
+          "title": "三类初始策略与参数边界",
+          "scope": "实现财报后漂移、趋势/放量突破、过度反应均值回归或板块轮动的最小策略接口；参数是研究假设，不自动优化。",
+          "deliverables": "src/features/strategies、参数 Schema",
+          "acceptance": "至少三种不同逻辑可调用；规则有明确入场/退出/止损与缺数据路径",
+          "depends": [
+            "P09-01",
+            "P09-02"
+          ]
+        },
+        {
+          "id": "P09-04",
+          "title": "样本内/样本外与 Walk-forward 实验",
+          "scope": "实现时间序列划分、参数冻结、滚动窗口、重采样、避免数据窥探；记录交易次数、胜率、收益分布。",
+          "deliverables": "src/features/validation、测试报告",
+          "acceptance": "测试集不参与参数选择；小样本不通过；同一配置可重算结果",
+          "depends": [
+            "P09-02",
+            "P09-03"
+          ]
+        },
+        {
+          "id": "P09-05",
+          "title": "2020/2022 压力与费用/汇率敏感性",
+          "scope": "可取得真实历史数据时检验2020与2022环境、不同手续费/滑点/FX冲击、流动性容量；不可取得则 NOT_VERIFIED。",
+          "deliverables": "stress-test 脚本、真实证据与Fixture区分",
+          "acceptance": "不得虚构历史结果；费用/跳空增大时策略净值和风险按规则变化",
+          "depends": [
+            "P09-04"
+          ]
+        },
+        {
+          "id": "P09-06",
+          "title": "五维评分与 18/25 验证候选门禁",
+          "scope": "样本外稳定、扣费收益、最大回撤、成交可行性、跨环境稳健各1–5；缺项不打分；≥18仅标记待风控审批候选。",
+          "deliverables": "src/features/validation/scoring、契约/测试",
+          "acceptance": "缺实证不出现伪分数；分数及数据依据可追溯；分数高也不能绕过风控",
+          "depends": [
+            "P09-04",
+            "P09-05"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P10",
+      "name": "纸面模拟与独立风控",
+      "goal": "实现合规、不可伪造的纸面账户账本和单笔2%/峰值回撤20%硬限制。",
+      "gate": "权益/现金/FX/止损/幂等/否决的边界测试全部通过；无任何真实交易接口。",
+      "tasks": [
+        {
+          "id": "P10-01",
+          "title": "模拟账户及不可变资金流水",
+          "scope": "创建账户初始化明确标记 1,000,000 JPY；账本事件只追加；实现持仓、现金、费用、权益快照与来源。",
+          "deliverables": "src/features/paper/ledger、迁移/测试",
+          "acceptance": "初始账户不含虚构成交；重放账本一致；拒绝负现金与无依据流水",
+          "depends": [
+            "P05-01",
+            "P03-01"
+          ]
+        },
+        {
+          "id": "P10-02",
+          "title": "纸面计划审批与确定性风险官",
+          "scope": "建立研究候选→计划→已审批/否决状态；计算当前可核验权益、单笔最差计划损失、可买股数、资金与最小交易单位；拒绝失效数据。",
+          "deliverables": "src/features/risk/checker、风控记录",
+          "acceptance": "超过权益2%立即拒绝；权益不可核验时拒绝；AI不能覆盖否决",
+          "depends": [
+            "P10-01",
+            "P03-03"
+          ]
+        },
+        {
+          "id": "P10-03",
+          "title": "20%峰值回撤阻断及跨币种权益",
+          "scope": "按历史峰值计算回撤，权益按可核查 FX 折算 JPY；净值无法估值时禁止新头寸；支持单日缺失数据场景。",
+          "deliverables": "src/features/risk/drawdown、测试",
+          "acceptance": "恰好20%及以上阻断；历史峰值不会丢失；FX过期不生成可用权益",
+          "depends": [
+            "P10-01",
+            "P10-02"
+          ]
+        },
+        {
+          "id": "P10-04",
+          "title": "模拟成交引擎、手续费与滑点",
+          "scope": "只根据可核验行情、预定义撮合规则、订单状态与时间戳创建模拟成交；处理部分成交、跳空、拒绝成交、重复回放。",
+          "deliverables": "src/features/paper/fill-engine、回归集",
+          "acceptance": "无可核查价格不成交；幂等不双扣费；模拟而非真实broker API",
+          "depends": [
+            "P10-02",
+            "P10-03",
+            "P09-02"
+          ]
+        },
+        {
+          "id": "P10-05",
+          "title": "账本审计、指标及恢复",
+          "scope": "账本重放权益曲线、最大回撤和交易编号；完成断电恢复、备份恢复、错误记录及和 UI 的审计契约。",
+          "deliverables": "src/features/paper/audit、恢复测试",
+          "acceptance": "订单/成交/现金守恒；恢复前后同结果；无账本时显示未建立",
+          "depends": [
+            "P10-04",
+            "P05-05"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P11",
+      "name": "自动任务、监测与通知",
+      "goal": "在本机可靠执行四类任务，严格按日美常规交易窗口做盘中扫描，且只通知真正新信息。",
+      "gate": "交易日历、重试恢复、事件去重与重大通知均在故障注入测试中通过。",
+      "tasks": [
+        {
+          "id": "P11-01",
+          "title": "Worker 任务队列与调度器",
+          "scope": "实现独立本地进程、计划任务时区、任务锁、运行日志、恢复/取消、非重入及超时保护；保留本机运行边界。",
+          "deliverables": "worker/scheduler、持久化队列",
+          "acceptance": "浏览器关闭不影响运行中的 Worker；重启补偿，不重复任务副作用",
+          "depends": [
+            "P04-04",
+            "P05-01"
+          ]
+        },
+        {
+          "id": "P11-02",
+          "title": "美日市场时段扫描与假日异常",
+          "scope": "基于 P07 市场日历只在至少一个常规交易时段扫描；日本午休、DST、节假日、特别收市正确处理；快照陈旧不得触发信号。",
+          "deliverables": "worker/market-watch、日历测试",
+          "acceptance": "周末/双休无扫描；美东9:30–16:00/JST转换正确；午休不监控",
+          "depends": [
+            "P11-01",
+            "P07-01"
+          ]
+        },
+        {
+          "id": "P11-03",
+          "title": "重大新事件规则、去重与告警",
+          "scope": "多来源确认与置信级、先后比较、事件指纹、最多三项、只有独立新重大事项才通知；数据不可用不得推断无异常。",
+          "deliverables": "src/features/alerts、通知历史",
+          "acceptance": "同事件多源仅一次提醒；旧信息不会反复告警；无变化不通知",
+          "depends": [
+            "P07-05",
+            "P08-03",
+            "P11-02"
+          ]
+        },
+        {
+          "id": "P11-04",
+          "title": "晨报、日审计和周审计任务编排",
+          "scope": "调度四类固定任务：晨报、盘中扫描、每日策略研究/纸面审计、周度审计；运行结果持久化并附数据限制。",
+          "deliverables": "worker/jobs、任务参数与失败报告",
+          "acceptance": "仅在取得数据时报告结果；休市可做研究但不冒充盘中；失败状态可审查",
+          "depends": [
+            "P08-04",
+            "P11-01",
+            "P11-03"
+          ]
+        },
+        {
+          "id": "P11-05",
+          "title": "本地通知渠道与持续运行指南",
+          "scope": "实现系统支持的本地通知/页面通知及可控静默，明确电脑关闭和系统睡眠限制；生成 macOS launchd/Windows Task Scheduler 文档或脚本。",
+          "deliverables": "通知适配器、运维说明",
+          "acceptance": "仅重大新信息触达；无授权时不启用系统通知；不声称设备关机后继续运行",
+          "depends": [
+            "P11-03",
+            "P11-04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P12",
+      "name": "完整测试与安全质量审计",
+      "goal": "用可重复的自动化证据证明业务规则与本地运行可靠，发现阻断缺陷并修复。",
+      "gate": "typecheck/lint/build/单测/集成/E2E 完整通过，阻断级问题为零，外部阻断明确披露。",
+      "tasks": [
+        {
+          "id": "P12-01",
+          "title": "单元测试覆盖风险、时间、价量与计算",
+          "scope": "针对 TSE 午休、NYSE DST/假日、JPY精度、2%风险、20%回撤、ATR、缺数据和事件指纹进行边界与性质测试。",
+          "deliverables": "tests/unit、覆盖报告",
+          "acceptance": "关键不变量覆盖可追溯且通过；不降低测试阈值掩盖失败",
+          "depends": [
+            "P07-01",
+            "P09-01",
+            "P10-03"
+          ]
+        },
+        {
+          "id": "P12-02",
+          "title": "集成测试覆盖数据库与各数据源故障",
+          "scope": "测试迁移、事务、幂等入账、双写争用、API校验、数据源断开/限流和过时行情拒绝。",
+          "deliverables": "tests/integration、DB Fixture",
+          "acceptance": "重复执行不双成交/双通知；掉线有状态并可恢复；无泄露凭据",
+          "depends": [
+            "P07-05",
+            "P10-05",
+            "P11-03"
+          ]
+        },
+        {
+          "id": "P12-03",
+          "title": "Playwright 完整 E2E 研究与模拟计划",
+          "scope": "UI 开展登录无需远端用户系统、本地初始化、晨报、证据查看、策略草案、风控拒绝、账本/设置/备份完整路径；使用显著 Fixture 模式。",
+          "deliverables": "tests/e2e、截图与失败记录",
+          "acceptance": "重要按钮都有效；无行情时不出现伪实时/成交；导航和错误态可操作",
+          "depends": [
+            "P06-06",
+            "P10-05",
+            "P11-04"
+          ]
+        },
+        {
+          "id": "P12-04",
+          "title": "回测与研究结果可重复性审计",
+          "scope": "检查样本外与 2020/2022 压力流程、成本/FX敏感性、数据溯源、未来函数防护及五维评分门禁。",
+          "deliverables": "tests/quant-audit、验算数据",
+          "acceptance": "已声明的实测结果均可复算；无数据明确 NOT_VERIFIED，不上报虚假战绩",
+          "depends": [
+            "P09-06"
+          ]
+        },
+        {
+          "id": "P12-05",
+          "title": "安全与故障恢复演练",
+          "scope": "检查无真实订单路由、无凭据泄漏、最小权限、提示注入、请求滥用、数据库损坏恢复、Codex额度/认证中断。",
+          "deliverables": "docs/testing/SECURITY_AUDIT.md、故障恢复证据",
+          "acceptance": "不可突破沙盒/权限；外部不可信文本不改变规则；异常下安全暂停",
+          "depends": [
+            "P00-05",
+            "P05-05",
+            "P08-05",
+            "P11-05"
+          ]
+        },
+        {
+          "id": "P12-06",
+          "title": "最终系统质量门禁与缺陷清零",
+          "scope": "执行冻结依赖安装、lint、typecheck、unit、integration、E2E、build、完整离线演示；出具问题分级和证据路径。",
+          "deliverables": "docs/testing/RELEASE_GATE.md、缺陷登记",
+          "acceptance": "阻断级缺陷0；失败不宣布完成；已知外部限制逐项说明",
+          "depends": [
+            "P12-01",
+            "P12-02",
+            "P12-03",
+            "P12-04",
+            "P12-05"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P13",
+      "name": "本地发布与交付",
+      "goal": "交付可复现的离线优先本地应用和完整可审计文档。",
+      "gate": "新环境按文档安装运行成功；部署不含外部真实交易和任何虚假测试结论。",
+      "tasks": [
+        {
+          "id": "P13-01",
+          "title": "安装、配置与本地运行手册",
+          "scope": "编写 Node/pnpm/Codex SDK 的系统要求、环境变量、可选行情 API、Windows/macOS 启动、调度/休眠限制。",
+          "deliverables": "README.md、docs/operations/INSTALL.md、.env.example",
+          "acceptance": "干净环境按步骤部署；密钥不进入浏览器或Git；缺源时可离线演示",
+          "depends": [
+            "P12-06"
+          ]
+        },
+        {
+          "id": "P13-02",
+          "title": "产品使用手册与研究风险说明",
+          "scope": "编写行情来源等级、延时标签、六角色报告、回测与纸面记录、2%/20%限制、异常恢复、任何回测均非保证。",
+          "deliverables": "docs/USER_GUIDE.md、FAQ、风险说明",
+          "acceptance": "每个主页面有使用步骤；不误导为自动真实交易工具",
+          "depends": [
+            "P12-03"
+          ]
+        },
+        {
+          "id": "P13-03",
+          "title": "本地发布脚本、备份及重装验收",
+          "scope": "实现本地生产 build/start、Worker 生命周期、首次迁移、数据库备份与恢复、版本升级；运行干净环境验收。",
+          "deliverables": "scripts/release、smoke/restore scripts",
+          "acceptance": "重装/重启数据完整，任务不重复；无云端发布/自动合并；日志可核查",
+          "depends": [
+            "P13-01",
+            "P05-05"
+          ]
+        },
+        {
+          "id": "P13-04",
+          "title": "最终交付报告与未完成事项登记",
+          "scope": "核对需求-设计-测试矩阵、所有 Issue 验收、完整演示、测试摘要、无法接入的第三方源及后续路线；标记 READY 或 PARTIAL_DELIVERY。",
+          "deliverables": "docs/RELEASE_REPORT.md、已知限制清单",
+          "acceptance": "仅通过事实验收才 READY；阻断依赖注明责任与下一步；不编造收益或成交",
+          "depends": [
+            "P13-02",
+            "P13-03"
+          ]
+        }
+      ]
+    }
+  ]
+}
