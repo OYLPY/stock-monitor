@@ -114,7 +114,7 @@
 
 ### [P03 详细设计](https://github.com/OYLPY/stock-monitor/issues/4)
 
-- [ ] [P03-01 — SQLite Schema、迁移与账本不变量](https://github.com/OYLPY/stock-monitor/issues/28) · 交付：[DB_SCHEMA.md](design/DB_SCHEMA.md)（实体边界、迁移草案、ER 图） · 覆盖：FR-Research-006/010/011、FR-Trade-004/005/010、NFR-005/006/007 · 依赖：P02-01, P01-03
+- [x] [P03-01 — SQLite Schema、迁移与账本不变量](https://github.com/OYLPY/stock-monitor/issues/28) · 交付：[DB_SCHEMA.md](design/DB_SCHEMA.md)（实体边界、迁移草案、ER 图） · 覆盖：FR-Research-006/010/011、FR-Trade-004/005/010、NFR-005/006/007 · 依赖：P02-01, P01-03
 - [ ] [P03-02 — API/DTO 与状态机契约](https://github.com/OYLPY/stock-monitor/issues/29) · 依赖：P02-01, P03-01
 - [ ] [P03-03 — 风险算法与订单仓位计算](https://github.com/OYLPY/stock-monitor/issues/30) · 依赖：P03-01
 - [ ] [P03-04 — 指标/回测与评分详细设计](https://github.com/OYLPY/stock-monitor/issues/31) · 依赖：P03-01, P01-03
