@@ -1,13 +1,13 @@
 # 当前执行状态
 
-- **状态**：P01-01–04 / #20–23、P02-01–03 / #24–26 已完成并关闭；当前执行 P02-04 / #27。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27 已完成并关闭，P02 父 Issue #3 已通过阶段验收并关闭；当前执行 P03-01 / #28。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
-- **依赖**：#27 的 P02-01 / #24、P02-02 / #25、P02-03 / #26 均已关闭；P00-05 不在当前依赖中。
-- **同步状态**：进入 #27 前确认无开放 PR，并执行 `git fetch --prune origin`、`git pull --ff-only origin main`（Already up to date），基线 `7e3d65c`。
+- **依赖**：P03-01 的 P01-03 / #22、P02-01 / #24 及其设计输入 P02-02 / #25、P02-03 / #26、P02-04 / #27 均已关闭；P00-05 不在当前依赖中。
+- **同步状态**：进入 #28 前确认无开放 PR，并执行 `git fetch --prune origin`、`git pull --ff-only origin main`（Already up to date），基线 `828258642c7417b2e202bf134d4e5750477cfa9e`。
 - **产品边界**：本地即开即用，无应用登录、注册或用户管理；本地批准绑定不可变计划版本。UI 采用 shadcn/ui 设计基线，组件接入安排在 P06。Codex 产品运行授权仍待 P04-01 实测；开发执行器的 CLI 认证不代表产品已接通或需要产品登录。
 - **P01-03 结果**：FR-Trade/追踪文档已直接推送 main；本地 format、lint、typecheck、unit（3 文件/19 测试）、build、ID/链接检查通过；Issue #22 已在 Quality #19 成功后关闭。详见 `harness/handoffs/P01-03.md`。
 - **P01-04 本地验收**：NFR-001–013 / AC-NFR-001–022，RQ 全量矩阵和研究/交易功能 AC 映射已完成；补齐外部不可信文本权限边界与六字段上下文恢复验收。format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、编号/矩阵/本地链接自检均通过；integration 不适用（`package.json` 无独立命令）。详细记录见 `harness/handoffs/P01-04.md`。
-- **当前交付**：`docs/design/ARCHITECTURE.md` 定义本地运行拓扑、feature/domain/infrastructure 层、同步/异步契约、信任边界和降级行为；更新了需求追踪和任务索引。
+- **当前交付**：`docs/design/DB_SCHEMA.md` 定义本地 SQLite 实体与 ER 图、点时历史数据语义、不可变版本/账本、幂等约束、迁移和备份恢复草案；更新了需求追踪和任务索引。
 - **P02-01 验收**：format、lint、typecheck、unit（3 文件/19 测试）、build、目标 Markdown 格式、六份 Markdown 本地链接检查、`git diff --check` 及远端 Quality CI #22/#23 均通过；integration 不适用（无独立命令）。详见 `harness/handoffs/P02-01.md`。
 - **P02-02 当前交付**：新增 `docs/design/DATA_PROVENANCE.md` 与 `docs/research/P02-02-DATA-SOURCE-FINDINGS.md`，更新开发计划、Issue 索引及需求追踪。设计涵盖行情/披露/IR/新闻/日历来源、时间与状态维度、冲突和 Fixture 隔离，以及本地离线/无凭据的失败关闭行为。
 - **P02-02 本地验收**：format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、7 份 Markdown 本地链接检查及 `git diff --cached --check` 均通过；integration 不适用（无独立命令）。详见 `harness/handoffs/P02-02.md`。
@@ -17,5 +17,7 @@
 - **P02-03 远端验收**：`be3ebb7eaf6460ee9a4bf37139af64ea2020d306` 与证据提交 `7e3d65c9b58605e637d4d136d869a73bf9c20463` 已 push；匹配的 [Quality CI run 43706496767](https://github.com/OYLPY/stock-monitor/actions/runs/43706496767) 与 [43706594346](https://github.com/OYLPY/stock-monitor/actions/runs/43706594346) 均成功；#26 已更新并关闭。
 - **P02-04 开始证据**：#27 起始评论已记录；其旧 PR 交付项按用户后续授权改为 direct-main/no-PR。已核验 Codex SDK/App Server、SQLite/WAL/备份、IndexedDB、Node v22.14 和 localhost CSRF 官方资料。
 - **P02-04 本地验收**：`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（3 files / 19 tests）、`pnpm build`、定向 Prettier、11 份 Markdown 链接检查和 `git diff --check` 均通过；无独立 integration 命令。详见 `harness/handoffs/P02-04.md`。
-- **P02-04 远端验收**：设计提交 `99b5b2fb30b6473fa367fd35f5b880455dc60e6e` 已 push；匹配的 [Quality CI run 43708452188](https://github.com/OYLPY/stock-monitor/actions/runs/43708452188) 成功。当前交接证据提交的 CI 与 Issue 状态同步待完成。
-- **下一步具体操作**：push 交接证据提交并等匹配 Quality CI 成功；随后更新/关闭 #27 与父 Issue #3。开始 #28 前再检查开放 PR，有则先合并再 fetch/pull `main`。
+- **P02-04 远端验收**：设计提交 `99b5b2fb30b6473fa367fd35f5b880455dc60e6e` / [Quality CI run 43708452188](https://github.com/OYLPY/stock-monitor/actions/runs/43708452188) 与证据提交 `828258642c7417b2e202bf134d4e5750477cfa9e` / [43708809334](https://github.com/OYLPY/stock-monitor/actions/runs/43708809334) 均成功；#27 已更新验收证据并关闭。
+- **P02 阶段验收**：#24–#27 全部关闭，阶段交付和追踪关系已复核；父 Issue #3 已关闭。P00-05/#19 外部阻断不属于 P02 依赖链。
+- **P03-01 开始证据**：#22、#24–#27 依赖均已关闭；拉取前确认无开放 PR，执行 `git fetch --prune origin` 和 `git pull --ff-only origin main`（Already up to date），基线 `828258642c7417b2e202bf134d4e5750477cfa9e`；已在 #28 留下开始评论。按授权 direct-main/no-PR。
+- **下一步具体操作**：完成 DB_SCHEMA/交接格式检查、SQLite 核心迁移不变量自检及项目质量门；直接提交并 push `main`，确认匹配 Quality CI 成功后更新并关闭 #28，再检查开放 PR 后拉取 `main` 进入 P03-02 / #29。
