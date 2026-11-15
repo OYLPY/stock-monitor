@@ -14,4 +14,5 @@
 - **P02-02 远端验收**：设计提交 `2879115089fa84af527d15451be448cf7f727913` / CI run 43704987937 与证据提交 `a79ef663158bdfd239db1f2cf8e144fcf9a4ce0d` / CI run 43705129756 均成功；Issue #25 已更新验收证据并关闭。
 - **P02-03 当前交付**：`docs/design/AI_WORKFLOW.md` 定义单模型串行六角色、逐步结构/证据校验、模型风控否决与确定性交易门禁；追踪矩阵、计划、Issue 索引和交接均已更新。
 - **P02-03 本地验收**：format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、7 份 Markdown 本地链接检查及 `git diff --cached --check` 均通过；integration 不适用（无独立命令）。详见 `harness/handoffs/P02-03.md`。
-- **下一步具体操作**：复核已暂存差异后直接提交/push `main`；确认匹配 CI 成功，再更新并关闭 #26。
+- **P02-03 远端验收**：`be3ebb7eaf6460ee9a4bf37139af64ea2020d306` 已 push；匹配的 [Quality CI run 43706496767](https://github.com/OYLPY/stock-monitor/actions/runs/43706496767) 成功。
+- **下一步具体操作**：更新 #26 验收证据并关闭 Issue；随后检查开放 PR、同步 `main`，开始 P02-04 / #27。
