@@ -10,5 +10,6 @@
 - **当前交付**：`docs/design/ARCHITECTURE.md` 定义本地运行拓扑、feature/domain/infrastructure 层、同步/异步契约、信任边界和降级行为；更新了需求追踪和任务索引。
 - **P02-01 验收**：format、lint、typecheck、unit（3 文件/19 测试）、build、目标 Markdown 格式、六份 Markdown 本地链接检查、`git diff --check` 及远端 Quality CI #22/#23 均通过；integration 不适用（无独立命令）。详见 `harness/handoffs/P02-01.md`。
 - **P02-02 当前交付**：新增 `docs/design/DATA_PROVENANCE.md` 与 `docs/research/P02-02-DATA-SOURCE-FINDINGS.md`，更新开发计划、Issue 索引及需求追踪。设计涵盖行情/披露/IR/新闻/日历来源、时间与状态维度、冲突和 Fixture 隔离，以及本地离线/无凭据的失败关闭行为。
-- **P02-02 本地验收**：format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、7 份 Markdown 本地链接检查均通过；integration 不适用（无独立命令）。详细记录见 `harness/handoffs/P02-02.md`。
-- **下一步具体操作**：暂存并复核 P02-02 变更、通过 `git diff --cached --check` 后直接提交/push `main`；确认匹配提交的 Quality CI 成功，再更新并关闭 #25。
+- **P02-02 本地验收**：format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、7 份 Markdown 本地链接检查及 `git diff --cached --check` 均通过；integration 不适用（无独立命令）。详见 `harness/handoffs/P02-02.md`。
+- **P02-02 远端验收**：`2879115089fa84af527d15451be448cf7f727913` 已 push；匹配的 [Quality CI run 43704987937](https://github.com/OYLPY/stock-monitor/actions/runs/43704987937) 成功。
+- **下一步具体操作**：更新 #25 验收证据并关闭 Issue；随后检查 PR 状态、同步 `main`，开始 P02-03 / #26。
