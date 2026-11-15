@@ -57,4 +57,4 @@ The live runner attempt is recorded locally at `harness/logs/P00-05-2292b770-bcb
 
 ## Final main verification
 
-Pending: record the P00-05 main commit and its Quality CI result here. Issue #19 remains open as `BLOCKED_EXTERNAL`; the dependent P01-02 task can proceed because its declared dependency, P01-01 / #20, is already closed.
+Implementation commit `da74069cd6de3470d05803df041586e721ebeade` is on `main`; [Quality run #43692753061](https://github.com/OYLPY/stock-monitor/actions/runs/43692753061) passed. Issue #19 remains open as `BLOCKED_EXTERNAL` because the real controlled runner did not complete a task. P01-02 can proceed because its declared dependency, P01-01 / #20, is already closed.
