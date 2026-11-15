@@ -84,7 +84,7 @@
 |---|---|---|---|
 | [`P02-01`](https://github.com/OYLPY/stock-monitor/issues/24) | **系统上下文、容器及模块分层**：确定浏览器 UI、Next.js Node 运行时、独立 Worker、Codex SDK、数据适配器、SQLite；设计 feature/domain/infrastructure 分层。 | [ARCHITECTURE.md](design/ARCHITECTURE.md)：系统上下文、模块分层、运行拓扑及信任边界 | 明确每层职责、同步/异步接口、禁止浏览器直接接触凭据及账本写权限；本地即开即用、无登录/用户管理；UI 基线 shadcn/ui；依赖：P01-04 |
 | [`P02-02`](https://github.com/OYLPY/stock-monitor/issues/25) | **市场数据与证据溯源架构**：设计行情快照、公司IR、EDINET、SEC、新闻、公告及经济日历适配器；区分市场时间/采集时间/来源发布时间、数据时效和可信等级。 | [DATA_PROVENANCE.md](design/DATA_PROVENANCE.md)、[来源核验记录](research/P02-02-DATA-SOURCE-FINDINGS.md)、统一数据契约 | 可表达延时/历史/Fixture/缺失/冲突来源；无法核实的数据不能变成正式信号；依赖：P02-01 |
-| [`P02-03`](https://github.com/OYLPY/stock-monitor/issues/26) | **AI 六角色编排与确定性风控边界**：明确统筹/侦察/结构/策略/风控/模拟员的输入输出，选择单模型分步骤编排；AI 输出先结构化校验再进入确定性计算；风险官有否决权。 | docs/design/AI_WORKFLOW.md、角色权限矩阵 | 不能由模型自述变更订单、权益或风险限制；各判断可追溯到证据；依赖：P02-01 |
+| [`P02-03`](https://github.com/OYLPY/stock-monitor/issues/26) | **AI 六角色编排与确定性风控边界**：明确统筹/侦察/结构/策略/风控/模拟员的输入输出，选择单模型串行编排；AI 输出经结构和证据引用校验后才进入下一步；风险官有否决权。 | [AI_WORKFLOW.md](design/AI_WORKFLOW.md)：串行流程、角色 I/O 与权限矩阵、失败关闭及风险边界 | 模型不能变更订单、权益或风险限制；所有判断回链证据；确定性风险和本地同版本批准通过前不产生模拟交易副作用；依赖：P02-01 |
 | [`P02-04`](https://github.com/OYLPY/stock-monitor/issues/27) | **ADR 与安全/运行故障设计**：记录 SQLite 与 IndexedDB、Codex SDK 与 App Server、定时 Worker 与前端定时器等权衡；威胁建模、启动/休眠/断网/重启行为。 | docs/decisions/ ADR、THREAT_MODEL.md、FAILURE_MODES.md | 关键决策有替代方案及失败处理；不依赖浏览器存活保证后台监控；依赖：P02-01, P02-02, P02-03 |
 
 ### P03 — 详细设计

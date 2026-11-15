@@ -1,6 +1,6 @@
 # V1 系统架构
 
-> 状态：P02-01 设计基线。本文定义本机运行容器、依赖方向和权限边界；不表示 Codex、外部数据或 SQLite 驱动已在生产配置中验证。API、Schema、安全 ADR 和运行故障细节分别由 P02-02/P02-03/P02-04、P03 与 P04 完成。
+> 状态：P02-01 架构基线。本文定义本机运行容器、依赖方向和权限边界；不表示 Codex、外部数据或 SQLite 驱动已在生产配置中验证。数据与证据契约见 P02-02，AI 工作流与角色权限见 P02-03；安全 ADR 和运行故障由 P02-04 细化，API/Schema 由 P03 细化，运行时可用性由 P04 验证。
 >
 > 需求入口：[PRD](../requirements/PRD.md)、[非功能需求](../requirements/NFR.md)、[需求追踪矩阵](../requirements/TRACEABILITY.md)、[UI 设计](UI_DESIGN.md)。
 
@@ -150,7 +150,7 @@ src/server/                      服务端配置和依赖组合根
 | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | 单机模块化应用：Next.js Node 服务 + 独立 Worker + SQLite 文件；浏览器只使用本机同源 Web 界面/API  | P02-04 威胁模型、启动与休眠行为、SQLite/IndexedDB 取舍                                       |
 | Feature/Application、Domain、Infrastructure 依赖方向；页面和 Worker 共用经授权的 Application 用例 | P03-01 Schema/迁移/并发事务；P03-02 HTTP DTO 和错误契约；P03-05 队列、认领、重试与恢复状态机 |
-| Codex 和数据源通过服务端异步适配器；没有可用依赖时继续查看本地材料，并明确标记缺口                | P02-02 来源契约；P02-03 角色/能力矩阵；P04 Codex SDK/App Server、凭据、供应商和运行时 PoC    |
+| Codex 和数据源通过服务端异步适配器；没有可用依赖时继续查看本地材料，并明确标记缺口                | [DATA_PROVENANCE.md](DATA_PROVENANCE.md)；[AI_WORKFLOW.md](AI_WORKFLOW.md)；P04 Codex SDK/App Server、凭据、供应商和运行时 PoC |
 | 不新增应用登录、用户管理、云服务、真实交易路由或券商连接                                          | P02-04/P13 对安全边界和非目标进行最终审计                                                    |
 
 ## 需求与设计追踪
@@ -162,7 +162,7 @@ src/server/                      服务端配置和依赖组合根
 | RQ-024、NFR-004                           | SQLite 持久任务、后台认领和有限失败语义      | P03-05 / P11 / P12-02                     |
 | RQ-025、NFR-008                           | 浏览器和不可信文本信任边界、服务端凭据       | P02-04 / P03-02 / P08-05 / P12-05         |
 | RQ-011、RQ-028、NFR-003、NFR-009、NFR-010 | 外部适配器、来源状态、Fixture 隔离和离线降级 | P02-02 / P04 / P07–P10 / P12              |
-| FR-Trade-001–010、AC-TRD-001–015          | 服务端纸面计划用例、确定性风控和账本权限     | P02-03 / P03-01–03 / P10 / P12-01、P12-02 |
+| FR-Trade-001–010、AC-TRD-001–015          | 服务端纸面计划用例、确定性风控和账本权限     | [AI_WORKFLOW.md](AI_WORKFLOW.md) / P02-03 / P03-01–03 / P10 / P12-01、P12-02 |
 
 详细映射及实现状态见 [TRACEABILITY.md](../requirements/TRACEABILITY.md)。
 
