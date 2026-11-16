@@ -73,6 +73,12 @@
 
 请求需要 API key。供应商称免费 key 对多数数据集每天最多 25 次请求；其实时/15 分钟延迟行情通过付费 Premium 计划向个人非商业用户提供，商业用途需联系销售。[实时数据政策](https://www.alphavantage.co/realtime_data_policy/)、[API key 说明](https://www.alphavantage.co/support/api-key/) 本次未核实到适用于本地应用的具体价格，也没有确认本地长期保存、回测或再分发权。仅读取官方产品和政策页面，没有注册、取得 key、调用 API 或查看真实数据载荷；故不能将其标作“免费实时源”或已验证集成来源。
 
+#### P07-02 条款复核（2026-11-16）
+
+Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_service/) 允许个人、非商业用途，并将投资分析、研究、测试、监控及其他私人个人活动列为非商业使用范围；不能把个人本地研究本身直接判定为商业用途。其 [免费 API key 说明](https://www.alphavantage.co/support/api-key/) 对多数数据集列出每天 25 次请求；无限请求只面向经确认的开源或教育项目，本项目资格未获确认。官方 [日线 API 文档](https://www.alphavantage.co/documentation/) 说明免费 key 的 `TIME_SERIES_DAILY` 只返回最近 100 个数据点，完整 25 年以上日线需要 Premium；复权日线、实时及 15 分钟延迟行情也需 Premium。TOS 没有在本次核验中明确本地长期保存/缓存期限或离线回测保留权。
+
+**P07-02 / #49 当前结论：`BLOCKED_EXTERNAL`。** 当前路线要求跨数十年历史验证，但免费日线只返回最新 100 条；完整历史、复权日线和实时/延迟行情都需要付费，项目不允许购买数据服务。没有 API key，也没有注册、发起 API 请求或读取行情载荷。条款允许私人个人研究这一点已核实；阻断原因是完整历史数据和凭据不可用，不是将研究用途误判为商业用途。Nasdaq Data Link 与 NYSE 历史产品仍按各自订阅和许可条件处理。
+
 ## 发现、相反证据与结论
 
 ### 已由官方材料支持的事实
@@ -83,6 +89,7 @@
 - JPX 官方免费月度表覆盖最长 10 年，但月度频率无法替代逐交易日回测；同一目录卡注明外部再分发不可。[JPX 月间相场表目录卡](https://clientportal.jpx.co.jp/ClientPortal/s/datacatalog/a085j00000Ip94b/a037?language=ja)
 - JPX 日线历史可追溯到 1974 年，NYSE Daily TAQ 可追溯到 1993 年；这些支持多年代跨度的官方历史产品都有明确费用或订阅/许可门槛。[JPX Data Cloud 价表](https://db-ec.jpx.co.jp/client_info/JPX_DLSITE/html/price_en.pdf)、[NYSE 历史价表](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)
 - Nasdaq/NYSE 的延迟展示政策仍涉及产品级许可、展示提示或访问条件；“交易所网站可打开”不足以证明应用可建立免费、稳定、可保存的行情通道。
+- Alpha Vantage 服务条款允许个人非商业的投资研究/监控；但其免费美股日线 API 仅返回最近 100 条，完整 25 年以上历史及复权日线需要 Premium。P07-02 因数据跨度与付费边界标记 `BLOCKED_EXTERNAL`，不是因为个人研究被定义为商业用途。
 
 ### 基于上述材料的推论
 
@@ -95,6 +102,7 @@
 - 未测试任何生产/测试 API、注册流程、账号授权、当前网络地区可用性、请求限额之外的实际行为或具体返回字段。除 J-Quants/JPX 文档写明的更新表外，不把文档阅读等同于实际运行可达。
 - Nasdaq Data Link 的实时/延迟产品价格、个人用户实际费用、具体延迟级别、API 限额及本地单人使用许可需要按产品和账户确认；没有在本任务中申请或购买。
 - NYSE/JPX 行情合同下，内部单人本地工具的缓存期限、离线回测留存期限和导出权须按具体产品条款确认。网页公开延迟报价不自动授予这些权利。
+- Alpha Vantage 条款允许个人非商业投资研究/测试/监控；免费额度的本项目资格、长期本地保存/缓存期限和回测保留权未确认。本项目没有 API key；完整历史和复权日线需 Premium。
 - 发行人层级的公司公告、新闻源、经济日历和 ETF 专项数据不在这项行情/披露产品范围内；本文件没有选择其供应商。
 
 ## 决策影响与下一步
@@ -103,6 +111,7 @@
 2. 将 J-Quants Free 仅记录为个人开发/验证或有限近期日线研究的候选；它的数据延迟、窗口和个人使用条款不满足多年代跨市场回测验收。
 3. JPX/TDnet、JPX 延迟行情、NYSE TAQ、Nasdaq Data Link 属于收费或需要进一步许可的候选。本任务没有授权采购，也未尝试访问。
 4. P04-03 仅交付研究文档；没有选定生产供应商、写入配置、创建适配器或把示例/测试数据接入应用。实现前应对当前条款、账户类型、存储与展示范围、具体字段、时间戳、价格调整和实际连接能力重新核验。
+5. P07-02 / #49 在完整历史数据需要付费、项目未授权付费且没有 API key 时保持 `BLOCKED_EXTERNAL`；不以 Fixture 替代真实行情适配器的完成验收，继续处理其他已满足依赖的任务。
 
 ## 主要来源（访问日期均为 2026-11-16）
 
@@ -112,7 +121,7 @@
 - [J-Quants 官方网站与计划](https://jpx-jquants.com/en)；[JPX 计划价格、用途和数据渠道](https://www.jpx.co.jp/english/markets/paid-info-equities/historical/index.html)；[计划数据范围](https://jpx-jquants.com/en/spec/data-spec)；[更新时间](https://jpx-jquants.com/en/spec/data-update)；[限额](https://jpx-jquants.com/en/spec/rate-limits)；[服务条款](https://jpx-jquants.com/en/termsofservice)（日文原文为正式版本，英文为参考译文）。
 - [JPX 月间相场表](https://www.jpx.co.jp/markets/statistics-equities/price/index.html)；[JPX 数据目录卡](https://clientportal.jpx.co.jp/ClientPortal/s/datacatalog/a085j00000Ip94b/a037?language=ja)；[JPX Data Cloud 股票 OHLC 价表 PDF](https://db-ec.jpx.co.jp/client_info/JPX_DLSITE/html/price_en.pdf)；[JPX FLEX Historical](https://www.jpx.co.jp/english/markets/paid-info-equities/historical/01.html)。
 - [Nasdaq Data Link API](https://www.nasdaq.com/products/data/data-link/api)；[Nasdaq XNDQ API 产品文档](https://data.nasdaq.com/databases/NB/documentation?anchor=nasdaq-cloud-data-service-api)；[Nasdaq 展示要求政策](https://www.nasdaq.com/content/AdministrationSupport/Policy/DisplayRequirementsPolicy)；[Nasdaq.com Market Activity](https://www.nasdaq.com/market-activity)。
-- [Alpha Vantage API 文档](https://www.alphavantage.co/documentation/)；[实时数据政策](https://www.alphavantage.co/realtime_data_policy/)；[API key / 免费额度说明](https://www.alphavantage.co/support/api-key/)（供应商对自身产品条款的一手来源）。
+- [Alpha Vantage API 文档](https://www.alphavantage.co/documentation/)；[服务条款](https://www.alphavantage.co/terms_of_service/)；[实时数据政策](https://www.alphavantage.co/realtime_data_policy/)；[API key / 免费额度说明](https://www.alphavantage.co/support/api-key/)（供应商对自身产品条款的一手来源）。
 - [NYSE Market Data Pricing](https://www.nyse.com/market-data/pricing)；[NYSE Proprietary Market Data Policies PDF](https://www.nyse.com/publicdocs/nyse/data/NYSE_Proprietary_Market_Data_Comprehensive_Policy_Package.pdf)；[NYSE Historical Market Data Pricing PDF（2026-10）](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)。
 
 [^sec]: [SEC API 说明](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)；[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions)。
