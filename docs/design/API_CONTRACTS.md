@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0009 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P03-02 设计基线；路由和 Zod Schema 尚未接入产品运行时。应用只有 Next.js 最小主页，运行时授权、SQLite/Drizzle 与 Worker 仍由 P04/P05 验证/实现。
+> 状态：P03-02 设计基线；P05-03 / #39 已实现可复用的 JSON 请求解析、统一响应与本地来源校验工具，但尚无产品 API Route Handler 调用这些工具。应用只有 Next.js 最小主页；运行时授权、SQLite/Drizzle 与 Worker 仍待后续阶段实现。
 >
 > 上位契约：[系统架构](ARCHITECTURE.md)、[威胁模型](THREAT_MODEL.md)、[AI 工作流](AI_WORKFLOW.md)、[数据溯源](DATA_PROVENANCE.md)、[DB Schema](DB_SCHEMA.md)、[研究需求](../requirements/FR_RESEARCH.md)、[纸面交易需求](../requirements/FR_TRADE.md)、[非功能需求](../requirements/NFR.md)。
 
