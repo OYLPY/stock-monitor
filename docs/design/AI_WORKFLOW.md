@@ -2,9 +2,17 @@
 
 > Doc ID: DOC-0008 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P02-03 设计基线。定义一个 Codex 研究任务内的六个串行职责步骤、输入输出、应用层验证与确定性风控边界；不表示 Codex 运行时、模型授权或纸面模拟器已接入。P04-01 的本地调用证据见 [Codex SDK 调研](../research/p04-01-codex-sdk-findings.md)：真实成功调用通过，但离线请求数与 NFR-004 的重试上限冲突，当前 SDK 路径不得视为可接受的运行时接入。Codex/数据来源 PoC 由 P04 验证，任务运行实现由 P08 落地，持久步骤状态与恢复契约见 [WORKFLOW_STATE.md](WORKFLOW_STATE.md)，DTO 见 P03-02。
+> 状态：P02-03 设计基线，P08-01 增补 SDK 调用边界。本文定义六个串行职责步骤、输入输出、应用层验证与确定性风控边界；适配器和验证结果见下文。P04-01 裸 SDK 在 loopback 断连中请求 37 次；P08-01 为固定 Codex 0.169.0 CLI 使用独立 OpenAI-auth provider 配置，设置 `request_max_retries=0`、`stream_max_retries=0` 并关闭 WebSocket transport；断连、HTTP 429、flat SSE error 与 HTTP 401 四种 loopback 失败各实测 1 次 `/v1/responses` 请求，429 fixture 被分类为 `RATE_LIMITED`。SDK 没有请求计数/拦截接口，以上是固定版本和配置的回归证据，不推断其他认证恢复或后台调用路径；真实账户额度、认证恢复语义和远端取消效果仍为 `NOT_VERIFIED`。持久步骤状态与恢复契约见 [WORKFLOW_STATE.md](WORKFLOW_STATE.md)，DTO 见 P03-02。
 >
 > 六个角色是同一模型工作流中的职责划分，不是六个独立 Agent。来源时间、质量和 `DEMO_ONLY` 规则沿用[数据溯源设计](DATA_PROVENANCE.md)；系统信任边界见[系统架构](ARCHITECTURE.md)。
+
+## Codex SDK 服务适配器（P08-01）
+
+`src/features/ai/codex-adapter` 提供服务端 `runCodexTask`。调用方传入 prompt 与已存来源记录 ID；适配器只按 ID 从 SQLite 读取来源元数据，不读取数据库正文或账本。prompt 内容由调用方提供，后续研究工作流负责按证据边界组装。模型输出带稳定 `callId` 和来源引用，始终为 `NOT_VERIFIED`；若引用包含 `FIXTURE`，派生结果标为 `DEMO_ONLY`。
+
+每次调用使用全新空工作目录、只读沙箱、关闭沙箱网络访问与 web search、不附加其他目录，并通过共享配置禁用 shell/exec、浏览器、应用、电脑、插件、技能搜索、hook、memory、多 Agent、auth elicitation、图像工具及 MCP。服务端 SDK 的 Codex 模型连接仍可联网；其他模型工具取数能力关闭。子进程仅接收操作系统所需的 allowlist 环境变量和本机 `CODEX_HOME`；不传递 `CODEX_API_KEY` 或 `CODEX_ACCESS_TOKEN` 环境变量。返回的流事件不包含线程 ID 或 reasoning；`response_updated` 是尚未验证的模型文本，不能视为通过结构、证据或风险门禁。
+
+适配器为单个 Node 进程限制一个活动调用。它在首次 SDK 错误事件上取消当前 turn，并将 prompt/source IDs、输出摘要和 usage 或稳定错误码写入追加式审计链，不保存原始 prompt、模型输出或错误文本。Codex 0.169.0 禁止覆盖内置 `openai` provider 的配置，因此适配器使用临时 `stock_monitor_openai` provider，启用 Codex 本机 OpenAI 认证，设置 request/stream retry 为 0，并关闭 WebSocket fallback；它不改写用户的 `CODEX_HOME/config.toml`。这些配置字段与重试路径见 [Codex 0.169.0 provider definition](https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/model-provider-info/src/lib.rs) 和 [Responses retry handler](https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/src/responses_retry.rs)。断连、HTTP 429、flat SSE `error` 和 HTTP 401 的 loopback PoC 各记录 1 次 `/v1/responses` 请求，429 fixture 被分类为 `RATE_LIMITED`。SDK 未提供网络请求计数/拦截 API；该结果只验证固定 CLI 版本、provider 配置和四种本地错误样例。认证刷新、副作用请求和远端取消仍为 `NOT_VERIFIED`。`CODEX_HOME` 线程存储仍由 Codex CLI 管理；并发限制仅覆盖同一 Node 进程，跨 Next.js 与独立 Worker 的全局锁需由后续运行时集成验证。
 
 ## 设计决策
 
@@ -93,3 +101,7 @@ flowchart TD
 | RQ-011/028、FR-Research-011、FR-Trade-013、AC-RES-010/017 | 外部不可用和 Fixture 逐级降级；Fixture 结果隔离为 `DEMO_ONLY`    | P04/P07/P08 运行条件；P12-03/04 集成与审计                  |
 
 本文不决定供应商、Codex 模型 ID、工具 SDK、API/DTO 字段或六角色提示词内容；分别留给 P04、P03-02、P08-01/02 通过实际可用性、安全边界和样本验证后确定。
+
+## 修订记录
+
+- 2026-11-16（P08-01 / #53）：补充 Codex SDK 适配器运行边界与 0.169.0 provider 重试预算的 loopback 验证；真实认证、额度和远端取消仍未验证。

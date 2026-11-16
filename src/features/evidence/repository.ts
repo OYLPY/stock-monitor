@@ -257,6 +257,18 @@ function appendAuditEvent(
     .run();
 }
 
+export function recordAuditEvent(
+  database: AppDatabase,
+  input: {
+    entityType: string;
+    entityId: string;
+    action: string;
+    payload: unknown;
+  },
+): void {
+  withTransaction(database, () => appendAuditEvent(database, input));
+}
+
 export function registerSource(database: AppDatabase, input: SourceInput) {
   const parsed = sourceInputSchema.safeParse(input);
   if (!parsed.success) throw new Error("invalid_source_input");

@@ -1,6 +1,6 @@
 # Codex SDK local-auth PoC
 
-This proof of concept checks the installed `@openai/codex-sdk` against a fixed response contract and two isolated failure cases. It does not read project files or market data, call tools, or modify the repository.
+This proof of concept checks the installed `@openai/codex-sdk` against a fixed response contract and isolated failure modes. It does not read project files or market data, call tools, or modify the repository.
 
 ## Run
 
@@ -10,15 +10,19 @@ node --experimental-strip-types poc/codex/smoke.ts no-auth
 node --experimental-strip-types poc/codex/smoke.ts offline
 node --experimental-strip-types poc/codex/smoke.ts offline-host-stop
 node --experimental-strip-types poc/codex/smoke.ts simulated-429
+node --experimental-strip-types poc/codex/smoke.ts simulated-stream-error
+node --experimental-strip-types poc/codex/smoke.ts simulated-auth-error
 ```
 
 - `success` makes one real Codex request using the current user's saved local CLI authentication. It expects the JSON object `{"status":"READY"}`.
 - `no-auth` points the CLI to a temporary empty `CODEX_HOME` and excludes API key/token environment variables. It expects an authentication failure.
 - `offline` uses a temporary `CODEX_HOME`, a non-secret API-key placeholder, and a loopback endpoint that drops the connection. No external API request or saved credential is used in this mode.
-- `offline-host-stop` applies a candidate host policy that aborts the SDK turn on the first streamed network error, then asserts that no more than three loopback requests were made.
-- `simulated-429` uses the same isolated setup and returns a local HTTP 429 fixture. It checks SDK error classification and automatic retry behavior; it does not validate real account quota semantics.
+- `offline-host-stop` uses the adapter's shared configuration and aborts on the first streamed failure, then asserts the loopback request bound.
+- `simulated-429` uses the same isolated setup and returns a local HTTP 429 fixture. The pinned CLI reports the fixture as rate-limited; this is not a test of real account quota behavior.
+- `simulated-stream-error` returns the documented flat Responses `error` SSE ending that the pinned CLI can otherwise retry as a disconnect.
+- `simulated-auth-error` returns a local HTTP 401 with an invalid API key error.
 
-Each run prints one sanitized JSON line containing the mode, outcome, elapsed time, event types, schema result, and a coarse error category. Local failure modes also report request counts grouped by URL path. The PoC never prints the prompt, response text, thread ID, environment values, or raw error. Each run has a 90-second timeout and makes one application-level SDK call without application-level retries; the CLI may retry internally. The SDK receives `features.unbounded_connection_retries=false`. With a temporary `CODEX_HOME` and a non-secret key that only reaches loopback, the bare offline run still made 37 `/v1/responses` requests before failing, so it fails the three-attempt NFR-004 bound. The candidate host-stop policy aborted after the first streamed network error at three requests and passed the bound for this connection failure. A separate run using the local 429 fixture made two `/v1/responses` requests and surfaced as `network_unavailable`, not `rate_limited`. These observations show that the bare SDK call cannot currently be relied upon for required task-level retry and quota behavior; the host-stop result is limited to the tested offline connection failure and does not establish actual account quota handling.
+Each run prints one sanitized JSON line containing the mode, outcome, elapsed time, event types, schema result, and a coarse error category. Local failure modes also report request counts grouped by URL path. The PoC never prints the prompt, response text, thread ID, environment values, or raw error. Each run has a 90-second timeout and makes one application-level SDK call without application-level retries. The shared production configuration selects a temporary `stock_monitor_openai` provider with `request_max_retries=0`, `stream_max_retries=0`, and WebSocket support disabled, while requiring normal Codex/OpenAI authentication. It also disables shell, exec, browser, apps, plugins, skill search, hooks, memories, multi-agent, auth elicitation, tool suggestions, image tools, workspace access, MCP servers, and unbounded connection retries. The PoC points that provider at loopback and uses a placeholder key only for local cases; disconnect, HTTP 429, flat SSE error, and HTTP 401 each made one `/v1/responses` request. The 429 fixture is classified as rate-limited. The bare SDK baseline with default provider settings made 37 requests on disconnect. Real quota, auth-refresh behavior, and remote cancellation remain `NOT_VERIFIED`.
 
 The request uses `sandboxMode: "read-only"`, `networkAccessEnabled: false`, disabled web search, and no project directories. Codex CLI may retain its normal local session metadata under the configured `CODEX_HOME`; the PoC prompt and expected response contain no private data.
 

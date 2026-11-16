@@ -9,6 +9,7 @@ import { dirname, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { Codex } from "@openai/codex-sdk";
+import { CODEX_CONFIG_OVERRIDES } from "../../src/features/ai/codex-adapter/config.ts";
 
 const modes = [
   "success",
@@ -16,13 +17,15 @@ const modes = [
   "offline",
   "offline-host-stop",
   "simulated-429",
+  "simulated-stream-error",
+  "simulated-auth-error",
 ] as const;
 type Mode = (typeof modes)[number];
 
 const mode = process.argv[2] ?? "success";
 assert(
   modes.includes(mode as Mode),
-  "mode must be success, no-auth, offline, offline-host-stop, or simulated-429",
+  "mode must be success, no-auth, offline, offline-host-stop, simulated-429, simulated-stream-error, or simulated-auth-error",
 );
 
 const sdkEntry = fileURLToPath(import.meta.resolve("@openai/codex-sdk"));
@@ -132,7 +135,10 @@ function classifyError(error: unknown): {
   return { category: "other", code: "unclassified" };
 }
 
-async function startLocalFailureEndpoint(statusCode?: 429): Promise<{
+async function startLocalFailureEndpoint(
+  failureMode:
+    "disconnect" | "rate-limit" | "stream-error" | "auth-error" = "disconnect",
+): Promise<{
   server: Server;
   baseUrl: string;
   requests: { count: number; byPath: Record<string, number> };
@@ -142,12 +148,45 @@ async function startLocalFailureEndpoint(statusCode?: 429): Promise<{
     requests.count += 1;
     const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
     requests.byPath[path] = (requests.byPath[path] ?? 0) + 1;
-    if (statusCode === 429) {
+    if (failureMode === "rate-limit" || failureMode === "auth-error") {
       request.resume();
       request.once("end", () => {
-        response.writeHead(429, { "Content-Type": "application/json" });
+        response.writeHead(failureMode === "auth-error" ? 401 : 429, {
+          "Content-Type": "application/json",
+        });
         response.end(
-          '{"error":{"message":"local quota fixture","type":"rate_limit_error","code":"rate_limit_exceeded"}}',
+          failureMode === "auth-error"
+            ? '{"error":{"message":"local authentication fixture","type":"invalid_request_error","code":"invalid_api_key"}}'
+            : '{"error":{"message":"local quota fixture","type":"rate_limit_error","code":"rate_limit_exceeded"}}',
+        );
+      });
+    } else if (failureMode === "stream-error") {
+      request.resume();
+      request.once("end", () => {
+        const responseBody = {
+          type: "response.created",
+          response: {
+            id: "resp_local",
+            object: "response",
+            status: "in_progress",
+            model: "probe-model",
+            output: [],
+          },
+          sequence_number: 0,
+        };
+        response.writeHead(200, {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        });
+        response.write(
+          `event: response.created\ndata: ${JSON.stringify(responseBody)}\n\n`,
+        );
+        response.write(
+          `event: response.in_progress\ndata: ${JSON.stringify({ ...responseBody, type: "response.in_progress", sequence_number: 1 })}\n\n`,
+        );
+        response.end(
+          `event: error\ndata: ${JSON.stringify({ type: "error", code: "validation_error", message: "local invalid request", param: "", sequence_number: 2 })}\n\n`,
         );
       });
     } else {
@@ -178,17 +217,25 @@ let noAuthConfirmed: boolean | undefined;
 let turnCompleted = false;
 let failure: unknown;
 let networkErrorEventCount = 0;
-let retryBudgetAbort = false;
+let hostStopAbort = false;
 const hostPolicyAbort = new AbortController();
 
 try {
   if (
     mode === "offline" ||
     mode === "offline-host-stop" ||
-    mode === "simulated-429"
+    mode === "simulated-429" ||
+    mode === "simulated-stream-error" ||
+    mode === "simulated-auth-error"
   ) {
     offlineEndpoint = await startLocalFailureEndpoint(
-      mode === "simulated-429" ? 429 : undefined,
+      mode === "simulated-429"
+        ? "rate-limit"
+        : mode === "simulated-stream-error"
+          ? "stream-error"
+          : mode === "simulated-auth-error"
+            ? "auth-error"
+            : "disconnect",
     );
   }
   const codexHome =
@@ -206,14 +253,20 @@ try {
   if (
     mode === "offline" ||
     mode === "offline-host-stop" ||
-    mode === "simulated-429"
+    mode === "simulated-429" ||
+    mode === "simulated-stream-error" ||
+    mode === "simulated-auth-error"
   ) {
     environment.CODEX_API_KEY = "local-only-placeholder";
   }
   const codex = new Codex({
     env: environment,
-    baseUrl: offlineEndpoint?.baseUrl,
-    configOverrides: ["features.unbounded_connection_retries=false"],
+    configOverrides: offlineEndpoint
+      ? [
+          ...CODEX_CONFIG_OVERRIDES,
+          `model_providers.stock_monitor_openai.base_url=${JSON.stringify(offlineEndpoint.baseUrl)}`,
+        ]
+      : CODEX_CONFIG_OVERRIDES,
   });
   const thread = codex.startThread({
     workingDirectory,
@@ -249,13 +302,20 @@ try {
       failure =
         event.type === "turn.failed" ? event.error.message : event.message;
       if (
-        mode === "offline-host-stop" &&
-        event.type === "error" &&
-        classifyError(event.message).category === "network_unavailable"
+        (mode === "offline-host-stop" ||
+          mode === "simulated-429" ||
+          mode === "simulated-stream-error" ||
+          mode === "simulated-auth-error") &&
+        (event.type === "error" || event.type === "turn.failed")
       ) {
-        networkErrorEventCount += 1;
-        retryBudgetAbort = true;
+        const message =
+          event.type === "turn.failed" ? event.error.message : event.message;
+        if (classifyError(message).category === "network_unavailable") {
+          networkErrorEventCount += 1;
+        }
+        hostStopAbort = true;
         hostPolicyAbort.abort();
+        break;
       }
     }
   }
@@ -285,13 +345,19 @@ try {
   failure ??= error;
 }
 
-await rm(temporaryRoot, { recursive: true, force: true });
+// shortcut: the SDK kills its child without awaiting exit; upgrade when it exposes an awaitable close handle.
+await rm(temporaryRoot, {
+  recursive: true,
+  force: true,
+  maxRetries: 20,
+  retryDelay: 50,
+});
 
-const classification = failure
-  ? retryBudgetAbort
-    ? { category: "network_unavailable" as const, code: "retry_limit" }
-    : classifyError(failure)
-  : undefined;
+const classifiedFailure = failure ? classifyError(failure) : undefined;
+const classification =
+  hostStopAbort && classifiedFailure?.category === "other"
+    ? { category: "network_unavailable" as const, code: "host_stop" }
+    : classifiedFailure;
 const category = classification?.category;
 const offlineRequestCount = offlineEndpoint?.requests.count;
 const expectedFailure =
@@ -301,12 +367,21 @@ const expectedFailure =
     (offlineRequestCount ?? 0) > 0 &&
     (offlineRequestCount ?? Infinity) <= 3) ||
   (mode === "offline-host-stop" &&
-    retryBudgetAbort &&
+    hostStopAbort &&
     networkErrorEventCount === 1 &&
     (offlineRequestCount ?? 0) > 0 &&
     (offlineRequestCount ?? Infinity) <= 3) ||
   (mode === "simulated-429" &&
+    hostStopAbort &&
     category === "rate_limited" &&
+    (offlineRequestCount ?? 0) > 0 &&
+    (offlineRequestCount ?? Infinity) <= 3) ||
+  (mode === "simulated-stream-error" &&
+    hostStopAbort &&
+    (offlineRequestCount ?? 0) > 0 &&
+    (offlineRequestCount ?? Infinity) <= 3) ||
+  (mode === "simulated-auth-error" &&
+    hostStopAbort &&
     offlineRequestCount === 1);
 const passed =
   workspaceClean &&
