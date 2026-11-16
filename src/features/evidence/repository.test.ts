@@ -17,6 +17,7 @@ import {
   createMarketEvent,
   getMarketEvent,
   listAuditEvents,
+  listMarketEvents,
   registerSource,
   verifyAuditTrail,
 } from "./repository";
@@ -142,6 +143,15 @@ describe("evidence repository", () => {
       try {
         const persisted = getMarketEvent(restarted, event.id);
         expect(persisted?.revisions).toHaveLength(2);
+        expect(listMarketEvents(restarted)).toMatchObject([
+          {
+            id: event.id,
+            revisions: [
+              { evidence: [{ sourceRecordId: secondRecord.id }] },
+              { evidence: [{ sourceRecordId: secondRecord.id }] },
+            ],
+          },
+        ]);
         expect(persisted?.revisions[0]?.firstSeenAtMs).toBe(
           persisted?.revisions[1]?.firstSeenAtMs,
         );

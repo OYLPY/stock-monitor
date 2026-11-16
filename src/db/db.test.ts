@@ -8,10 +8,10 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
-import { openDatabase, withTransaction } from "./index";
+import { getLocalDatabasePath, openDatabase, withTransaction } from "./index";
 import { migrateDatabase } from "./migrate";
 import { initializeDefaultPaperAccount } from "./paper-account-repository";
 import {
@@ -25,6 +25,30 @@ import { createTestDatabase } from "./test-database";
 type SqliteClient = InstanceType<typeof Database>;
 
 describe("local SQLite database", () => {
+  it("uses an absolute application-data path and respects the local override", () => {
+    const previousDirectory = process.env.STOCK_MONITOR_DATA_DIR;
+    delete process.env.STOCK_MONITOR_DATA_DIR;
+    const defaultPath = getLocalDatabasePath();
+    const overrideDirectory = join(tmpdir(), "stock-monitor-override");
+    process.env.STOCK_MONITOR_DATA_DIR = overrideDirectory;
+
+    try {
+      expect(isAbsolute(defaultPath)).toBe(true);
+      expect(
+        defaultPath.endsWith(join("stock-monitor", "database.sqlite")),
+      ).toBe(true);
+      expect(getLocalDatabasePath()).toBe(
+        resolve(overrideDirectory, "database.sqlite"),
+      );
+    } finally {
+      if (previousDirectory === undefined) {
+        delete process.env.STOCK_MONITOR_DATA_DIR;
+      } else {
+        process.env.STOCK_MONITOR_DATA_DIR = previousDirectory;
+      }
+    }
+  });
+
   it("migrates a new file and safely starts again", async () => {
     const fixture = await createTestDatabase();
     try {

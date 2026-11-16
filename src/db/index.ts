@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
-import { dirname, isAbsolute } from "node:path";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import {
@@ -61,6 +62,21 @@ export async function openDatabase(filePath: string) {
 }
 
 export type AppDatabase = Awaited<ReturnType<typeof openDatabase>>;
+
+export function getLocalDatabasePath() {
+  if (process.env.STOCK_MONITOR_DATA_DIR) {
+    return resolve(process.env.STOCK_MONITOR_DATA_DIR, "database.sqlite");
+  }
+
+  const dataDirectory =
+    process.platform === "win32"
+      ? (process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"))
+      : process.platform === "darwin"
+        ? join(homedir(), "Library", "Application Support")
+        : (process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"));
+
+  return resolve(dataDirectory, "stock-monitor", "database.sqlite");
+}
 
 export function withTransaction<T>(database: AppDatabase, work: () => T): T {
   return database.client.transaction(work).immediate();

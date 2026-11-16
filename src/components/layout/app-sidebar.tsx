@@ -31,10 +31,10 @@ import {
 
 const availableModules = [
   { icon: Activity, label: "市场监测", href: "/markets" },
+  { icon: Bell, label: "异常与事件", href: "/events" },
 ] as const;
 
 const plannedModules = [
-  { icon: Bell, label: "异常与事件" },
   { icon: FileText, label: "晨报与策略研究" },
   { icon: FlaskConical, label: "回测与模拟账户" },
   { icon: Settings2, label: "设置与任务" },
@@ -60,7 +60,10 @@ export function AppSidebar() {
               </span>
             </span>
           </Link>
-          <SidebarTrigger aria-label="关闭主导航" className="md:hidden" />
+          <SidebarTrigger
+            aria-label="关闭主导航"
+            className="min-h-12 min-w-12 md:hidden"
+          />
         </div>
       </SidebarHeader>
 
@@ -75,6 +78,7 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     aria-current={pathname === "/" ? "page" : undefined}
+                    className="min-h-12"
                     isActive={pathname === "/"}
                     render={<Link href="/" />}
                   >
@@ -95,6 +99,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={label}>
                   <SidebarMenuButton
                     aria-current={pathname === href ? "page" : undefined}
+                    className="min-h-12"
                     isActive={pathname === href}
                     render={<Link href={href} />}
                   >
@@ -105,7 +110,7 @@ export function AppSidebar() {
               ))}
               {plannedModules.map(({ icon: Icon, label }) => (
                 <SidebarMenuItem key={label}>
-                  <SidebarMenuButton aria-disabled="true">
+                  <SidebarMenuButton className="min-h-12" disabled>
                     <Icon aria-hidden="true" />
                     <span>{label}</span>
                   </SidebarMenuButton>

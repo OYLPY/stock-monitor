@@ -29,7 +29,8 @@ describe("AppShell", () => {
     expect(html.match(/<main\b/g)).toHaveLength(1);
     expect(html).toContain('<nav aria-label="主导航">');
     expect(html).toContain('aria-current="page"');
-    expect(html).toContain('aria-disabled="true"');
+    expect(html).toMatch(/<button[^>]*disabled=""/);
+    expect(html).not.toContain('aria-disabled="true"');
     expect(html).toContain('href="/markets"');
     expect(html).not.toContain('href="#"');
   });

@@ -626,6 +626,18 @@ export function getMarketEvent(database: AppDatabase, eventId: string) {
   return { ...event, revisions };
 }
 
+export function listMarketEvents(database: AppDatabase) {
+  return database.orm
+    .select({ id: marketEvents.id })
+    .from(marketEvents)
+    .orderBy(desc(marketEvents.createdAtMs), asc(marketEvents.id))
+    .all()
+    .flatMap(({ id }) => {
+      const event = getMarketEvent(database, id);
+      return event ? [event] : [];
+    });
+}
+
 export function listAuditEvents(database: AppDatabase) {
   return database.orm
     .select()

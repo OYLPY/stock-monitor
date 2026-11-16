@@ -15,7 +15,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4 sm:px-6">
-          <SidebarTrigger aria-label="打开主导航" className="md:hidden" />
+          <SidebarTrigger
+            aria-label="打开主导航"
+            className="min-h-12 min-w-12 md:hidden"
+          />
           <Separator className="h-5 md:hidden" orientation="vertical" />
           <p className="truncate text-sm font-medium">研究工作台</p>
           <Badge className="ml-auto hidden sm:inline-flex" variant="outline">

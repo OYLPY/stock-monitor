@@ -123,7 +123,7 @@ src/server/                      服务端配置和依赖组合根
 
 ## 数据写入与信任边界
 
-- SQLite 文件和配置位于本机应用数据目录，脱离 Git 仓库和工作区；具体目录、备份和密钥存储由 P02-04/P03-01 决定。
+- SQLite 文件位于本机应用数据目录，脱离 Git 仓库和工作区：Windows 默认 `%LOCALAPPDATA%\stock-monitor\database.sqlite`，macOS 默认 `~/Library/Application Support/stock-monitor/database.sqlite`，Linux 默认 `$XDG_DATA_HOME/stock-monitor/database.sqlite`（未设置时为 `~/.local/share/stock-monitor/database.sqlite`）。`STOCK_MONITOR_DATA_DIR` 可指定 `database.sqlite` 所在目录；备份和密钥存储仍由各自运维/安全设计负责。
 - 浏览器不能打开 SQLite 文件、读取服务凭据或直接写账本；所有账本事件只能由服务端纸面交易 Application 用例在确定性风控、版本绑定的本地批准和业务约束通过后追加。
 - Codex 只能产生结构化研究结果/候选，不接收 SQLite/账本端口。模型文本、网页、新闻、公告、Fixture 均视为不可信输入，不能改变系统指令、扩展工具权限或生成资金副作用。
 - SQLite Repository 只能由服务端 Infrastructure 调用。研究 Worker 更新任务/研究数据与纸面账本写入走不同的 Application 用例；数据库事务、事件唯一性和跨进程并发约束由 P03-01/P03-05 给出可测细则。
