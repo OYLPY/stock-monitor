@@ -158,7 +158,7 @@
 
 ### [P08 Codex 六角色研究执行](https://github.com/OYLPY/stock-monitor/issues/9)
 
-- [ ] [P08-01 — Codex SDK 服务封装与任务隔离](https://github.com/OYLPY/stock-monitor/issues/53) · 依赖：P04-01, P05-03
+- [x] [P08-01 — Codex SDK 服务封装与任务隔离](https://github.com/OYLPY/stock-monitor/issues/53) · 交付：`src/features/ai/codex-adapter`、[六字段交接](../harness/handoffs/P08-01.md) · 实现提交：[6f98e815](https://github.com/OYLPY/stock-monitor/commit/6f98e81585dca6aa37997739d18541d36e947a68) · Quality CI：[43873045326](https://github.com/OYLPY/stock-monitor/actions/runs/43873045326) success · 依赖：P04-01, P05-03
 - [ ] [P08-02 — 六角色结构化研究工作流](https://github.com/OYLPY/stock-monitor/issues/54) · 依赖：P08-01, P07-05
 - [ ] [P08-03 — 研究证据引用与反幻觉校验](https://github.com/OYLPY/stock-monitor/issues/55) · 依赖：P08-02, P07-05
 - [ ] [P08-04 — 晨报/异常报告/每日与每周审计生成](https://github.com/OYLPY/stock-monitor/issues/56) · 依赖：P08-02, P08-03
