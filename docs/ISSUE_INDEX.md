@@ -141,7 +141,7 @@
 
 ### [P06 React UI 与体验实现](https://github.com/OYLPY/stock-monitor/issues/7)
 
-- [ ] [P06-01 — 设计系统和应用壳层](https://github.com/OYLPY/stock-monitor/issues/42) · 依赖：P05-03
+- [ ] [P06-01 — 设计系统和应用壳层](https://github.com/OYLPY/stock-monitor/issues/42) · 交付：[DOC-0017](design/UI_DESIGN.md)、`components.json`、`src/components/ui`、`src/components/layout`、[六字段交接](../harness/handoffs/P06-01.md) · 覆盖：RQ-027、NFR-011/012、AC-NFR-016–020 · 依赖：P05-03
 - [ ] [P06-02 — 美日市场 Dashboard 与行情图表](https://github.com/OYLPY/stock-monitor/issues/43) · 依赖：P06-01, P05-04
 - [ ] [P06-03 — 异常监测与事件证据中心](https://github.com/OYLPY/stock-monitor/issues/44) · 依赖：P06-01, P05-04
 - [ ] [P06-04 — 晨报及六角色策略研究工作台](https://github.com/OYLPY/stock-monitor/issues/45) · 依赖：P06-01, P05-04

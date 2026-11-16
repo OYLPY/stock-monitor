@@ -1,6 +1,19 @@
 # UI 设计与现代 Web 实施约定
 
+> Doc ID: DOC-0017 · metadata 以[文档目录](../pmo/DOCUMENT_INDEX.md)为准。
+
 参考：[Chrome for Developers — Modern Web Guidance v1](https://developer.chrome.com/blog/modern-web-guidance-v1?hl=zh-cn)。
+
+## 设计 token 与应用壳层
+
+- `src/app/globals.css` 是 shadcn 语义色、字体和圆角 token 的唯一代码来源。组件使用 `bg-background`、`text-foreground`、`text-muted-foreground`、`border-border`、`bg-primary` 等语义 utility，不散落原始颜色值。
+- 基础主题使用 neutral。`--chart-*` 仅供有来源和时效标注的真实或 Fixture 图表使用；状态必须有文字，不以红绿颜色单独表达行情方向或验证状态。
+- `font-sans` 和 `font-heading` 使用系统字体栈，优先可用的简体中文字体并保留系统回退；本地运行和构建不得依赖远程字体请求。
+- 字级沿用 Tailwind 语义尺度：页面标题 `text-2xl`/`text-3xl`、区块标题 `text-base`、正文 `text-sm`、辅助说明 `text-xs`。数值列在对应数据页面使用等宽数字样式。
+- 间距沿用 Tailwind v4 的 0.25rem 基准阶梯，布局使用 `gap-*`、`p-*` 与逻辑方向属性；圆角只通过 `--radius` 派生的 radius tokens 调整。
+- 应用壳层使用 shadcn `Sidebar` 和单一 `<main>`。仅已实现的页面使用可导航链接；待开放模块显式标注状态，不渲染空链接。窄屏导航应可通过可见按钮打开和关闭。
+- 每页仅一个 `<h1>`，跳过链接定位到带 `tabIndex={-1}` 的页面标题；导航用 `aria-current="page"` 标示当前位置。焦点状态须在常规和 forced-colors 模式下清晰可见。
+- 空数据统一使用 shadcn `Empty` 和文字状态。无已验证行情或研究结果时显示 `NOT_VERIFIED`，不生成示例价格、胜率或模拟收益。
 
 ## 产品界面原则
 
