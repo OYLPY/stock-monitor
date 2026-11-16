@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0032 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 >
-> 状态：P03-05 设计基线；P07-01 本地交易日历解析器、P11-01 持久任务队列与独立 Worker 已实现。市场时段扫描、研究任务处理器和本机通知仍待后续任务；本文细化 [FR-Research-001–006](../requirements/FR_RESEARCH.md)，不声明实时行情或新闻已接入。
+> 状态：P03-05 设计基线；P07-01 本地交易日历解析器、P11-01 持久任务队列与 P11-02 市场时段门禁已实现。市场行情连接器、研究信号、通知仍未接入；本文细化 [FR-Research-001–006](../requirements/FR_RESEARCH.md)，不声明实时行情或新闻已接入。
 >
 > 相关设计：[DB Schema](DB_SCHEMA.md)、[API/DTO 契约](API_CONTRACTS.md)、[数据溯源](DATA_PROVENANCE.md)、[失败与恢复](FAILURE_MODES.md)、[工作流状态](WORKFLOW_STATE.md)。
 
@@ -18,7 +18,13 @@
 - 队列保存 `scheduled_local_at`、IANA `time_zone` 和解析后的 UTC `scheduled_at_ms`。DST 不存在或重复的当地时间拒绝入队，不按运行机器时区猜测；本 Issue 提供一次性计划时刻，周期计划及领域任务由后续任务接入。
 - SQLite `worker_state` 使用带期限的本机单实例锁；`task_runs` 以短事务认领，到期租约恢复时使用 fencing generation。任务尝试和事件日志持久化到 `task_run_attempts` / `task_run_events`。
 - 待运行任务取消时立即成为 `SKIPPED/CANCELLED`；运行中取消会中止 Worker Thread，再记录同一状态。超时会终止 Thread 并记录 `FAILED/TASK_TIMEOUT`。允许最多 3 次认领尝试；工作进程异常退出时仅在租约到期后重试。
-- 当前没有已注册的研究任务处理器；遇到未知 `runType` 会以 `FAILED/HANDLER_NOT_REGISTERED` 结束，绝不把空工作报告为成功。市场数据和研究流程尚未接入，休眠、关机期间也不承诺继续运行。
+- `MARKET_WATCH` 是当前唯一领域处理器，只执行交易时段与日历门禁；市场行情、研究分析和通知处理器尚未接入。未知 `runType` 以 `FAILED/HANDLER_NOT_REGISTERED` 结束，绝不把空工作报告为成功。休眠、关机期间不承诺继续运行。
+
+### P11-02 市场时段门禁
+
+- Worker 在实际开始执行时读取当前 UTC instant，并分别检查 NYSE、Nasdaq、TSE；不使用计划入队时间推断当前是否开市。任一目标交易所的日历不可用时，任务以 `BLOCKED_EXTERNAL/CALENDAR_UNAVAILABLE` 失败关闭；所有目标市场关闭时返回 `SKIPPED/SKIPPED_CLOSED`，不请求行情；任一市场开放时只允许进入开放交易所范围。
+- 当前未注册真实市场行情 Provider，开放时段任务返回 `BLOCKED_EXTERNAL/SOURCE_UNAVAILABLE`。明细在 `task_run_events` 完成事件中保存各交易所日期、时区、开闭状态、日历版本、核查时间与有效会话边界；行情新鲜度为 `UNKNOWN`，信号评估为 `NOT_RUN`。不会将未知、陈旧或 Fixture 行情变成信号，也不会报告 `NO_NEW_EVENTS`。
+- P07-02/P07-03 提供者和对应数据类别的 SLA 通过核验前，实时信号保持禁用。接入后须使用来源/数据类别的已验证 SLA 判断时效；`STALE`、`UNKNOWN` 或不能满足实时门槛的 `DELAYED` 不得触发信号。
 
 ## 市场时间与触发窗口
 

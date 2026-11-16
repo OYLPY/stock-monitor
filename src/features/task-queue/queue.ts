@@ -532,7 +532,11 @@ export function finishTaskRun(
       workerId: task.leaseOwner,
       eventType,
       occurredAtMs: nowMs,
-      details: { resultCode, errorCode },
+      details: {
+        resultCode,
+        errorCode,
+        ...(outcome.details === undefined ? {} : { handler: outcome.details }),
+      },
     });
     return readTaskRun(database, task.id)!;
   });

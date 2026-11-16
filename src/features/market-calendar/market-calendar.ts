@@ -1,5 +1,5 @@
-import { MARKET_TIME_ZONES, marketDateAt } from "@/domain/primitives";
-import type { MarketCode, MarketDate } from "@/domain/primitives";
+import { MARKET_TIME_ZONES, marketDateAt } from "../../domain/primitives.ts";
+import type { MarketCode, MarketDate } from "../../domain/primitives.ts";
 
 export type MarketCalendarExchange = "NYSE" | "NASDAQ" | "TSE";
 

@@ -1,5 +1,9 @@
 import { parentPort, workerData } from "node:worker_threads";
-import type { TaskHandlerRegistry, TaskRunOutcome } from "./types.ts";
+import type {
+  JsonValue,
+  TaskHandlerRegistry,
+  TaskRunOutcome,
+} from "./types.ts";
 
 type RunnerData = {
   task: {
@@ -36,6 +40,25 @@ function errorOutcome(error: unknown): TaskRunOutcome {
   return { executionStatus, resultCode: errorCode, errorCode };
 }
 
+function isJsonValue(value: unknown): value is JsonValue {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return true;
+  }
+  if (typeof value === "number") return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isJsonValue);
+  if (typeof value !== "object") return false;
+
+  const prototype = Object.getPrototypeOf(value);
+  return (
+    (prototype === Object.prototype || prototype === null) &&
+    Object.values(value).every(isJsonValue)
+  );
+}
+
 try {
   const handlersModule = (await import(data.handlersModuleUrl)) as {
     taskHandlers: TaskHandlerRegistry;
@@ -63,6 +86,7 @@ try {
       !/^[A-Z][A-Z0-9_]{0,63}$/.test(result.resultCode) ||
       (result.errorCode !== undefined &&
         !/^[A-Z][A-Z0-9_]{0,63}$/.test(result.errorCode)) ||
+      (result.details !== undefined && !isJsonValue(result.details)) ||
       ![undefined, "DONE", "BLOCKED_EXTERNAL", "SKIPPED"].includes(
         result.executionStatus,
       )
@@ -75,6 +99,7 @@ try {
       executionStatus: result.executionStatus ?? "DONE",
       resultCode: result.resultCode,
       errorCode: result.errorCode,
+      details: result.details,
     } satisfies TaskRunOutcome);
   }
 } catch (error) {

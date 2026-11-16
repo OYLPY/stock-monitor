@@ -8,6 +8,7 @@ export type TaskRunOutcome = {
   executionStatus: Exclude<TaskRunStatus, "PENDING" | "RUNNING">;
   resultCode: string;
   errorCode?: string;
+  details?: JsonValue;
 };
 
 export type TaskRun = {
@@ -50,6 +51,7 @@ export type TaskHandlerResult = {
   executionStatus?: "DONE" | "BLOCKED_EXTERNAL" | "SKIPPED";
   resultCode: string;
   errorCode?: string;
+  details?: JsonValue;
 };
 
 export type TaskHandler = (

@@ -18,4 +18,8 @@ export const taskHandlers: TaskHandlerRegistry = {
     errorCode: "SOURCE_UNAVAILABLE",
   }),
   INVALID_RESULT: async () => ({ resultCode: "invalid result" }),
+  INVALID_DETAILS: async () => ({
+    resultCode: "INVALID_DETAILS",
+    details: { value: Number.NaN },
+  }),
 };

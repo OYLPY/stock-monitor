@@ -241,6 +241,30 @@ describe("task queue", () => {
     }
   });
 
+  it("rejects non-JSON handler evidence before persisting the outcome", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      const task = enqueue(fixture.database, "INVALID_DETAILS").task;
+      await runWorker(fixture.database, {
+        maxTasks: 1,
+        heartbeatIntervalMs: 10,
+        lockDurationMs: 1_000,
+        handlersModuleUrl: new URL(
+          "./test-handlers.fixture.ts",
+          import.meta.url,
+        ).href,
+      });
+
+      expect(readTaskRun(fixture.database, task.id)).toMatchObject({
+        executionStatus: "FAILED",
+        resultCode: "TASK_RESULT_CODE_INVALID",
+        errorCode: "TASK_RESULT_CODE_INVALID",
+      });
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
   it("times out and terminates an unresponsive task thread", async () => {
     const fixture = await createTestDatabase();
     try {
