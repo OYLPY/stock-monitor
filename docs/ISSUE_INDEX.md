@@ -150,7 +150,7 @@
 
 ### [P07 行情与公开信息采集实现](https://github.com/OYLPY/stock-monitor/issues/8)
 
-- [ ] [P07-01 — NYSE/Nasdaq/JPX 交易日历与时段判定](https://github.com/OYLPY/stock-monitor/issues/48) · 依赖：P05-02, P04-03
+- [x] [P07-01 — NYSE/Nasdaq/JPX 交易日历与时段判定](https://github.com/OYLPY/stock-monitor/issues/48) · 交付：[版本化日历实现](../src/features/market-calendar/market-calendar.ts)、[DOC-0032 调度契约](design/SCHEDULER.md)、[六字段交接](../harness/handoffs/P07-01.md) · 覆盖：RQ-003/005、FR-Research-001/002 · 依赖：P05-02, P04-03
 - [ ] [P07-02 — 美股行情/历史数据适配器](https://github.com/OYLPY/stock-monitor/issues/49) · 依赖：P07-01, P05-04
 - [ ] [P07-03 — 日股行情/历史数据适配器](https://github.com/OYLPY/stock-monitor/issues/50) · 依赖：P07-01, P05-04
 - [ ] [P07-04 — 公司公告、财报与官方宏观采集](https://github.com/OYLPY/stock-monitor/issues/51) · 依赖：P07-01, P05-04
