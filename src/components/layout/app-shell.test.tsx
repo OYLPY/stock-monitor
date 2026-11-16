@@ -33,6 +33,7 @@ describe("AppShell", () => {
     expect(html).not.toContain('aria-disabled="true"');
     expect(html).toContain('href="/markets"');
     expect(html).toContain('href="/reports"');
+    expect(html).toContain('href="/backtests"');
     expect(html).not.toContain('href="#"');
   });
 
@@ -67,5 +68,23 @@ describe("AppShell", () => {
     );
 
     expect(html).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/reports"/);
+  });
+
+  it("marks the backtests workspace as the active page", () => {
+    mockPathname.mockReturnValue("/backtests");
+
+    const html = renderToStaticMarkup(
+      createElement(
+        AppShell,
+        null,
+        createElement(
+          "h1",
+          { id: "main-content", tabIndex: -1 },
+          "回测与纸面账户",
+        ),
+      ),
+    );
+
+    expect(html).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/backtests"/);
   });
 });

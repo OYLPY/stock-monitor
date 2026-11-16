@@ -33,12 +33,10 @@ const availableModules = [
   { icon: Activity, label: "市场监测", href: "/markets" },
   { icon: Bell, label: "异常与事件", href: "/events" },
   { icon: FileText, label: "晨报与策略研究", href: "/reports" },
+  { icon: FlaskConical, label: "回测与模拟账户", href: "/backtests" },
 ] as const;
 
-const plannedModules = [
-  { icon: FlaskConical, label: "回测与模拟账户" },
-  { icon: Settings2, label: "设置与任务" },
-];
+const plannedModules = [{ icon: Settings2, label: "设置与任务" }];
 
 export function AppSidebar() {
   const pathname = usePathname();

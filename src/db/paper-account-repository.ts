@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { AppDatabase } from "./index";
 import { withTransaction } from "./index";
 import {
@@ -8,6 +8,48 @@ import {
   ledgerEvents,
   paperAccounts,
 } from "./schema";
+
+export function listPaperAccountLedger(database: AppDatabase) {
+  const account = database.orm
+    .select({
+      id: paperAccounts.id,
+      baseCurrency: paperAccounts.baseCurrency,
+      initializedAtMs: paperAccounts.initializedAtMs,
+    })
+    .from(paperAccounts)
+    .where(eq(paperAccounts.accountKey, "local-default"))
+    .get();
+
+  if (!account) return null;
+
+  const entries = database.orm
+    .select({
+      eventId: ledgerEvents.id,
+      sequenceNo: ledgerEvents.sequenceNo,
+      eventType: ledgerEvents.eventType,
+      effectiveAtMs: ledgerEvents.effectiveAtMs,
+      recordedAtMs: ledgerEvents.recordedAtMs,
+      cashEntryId: cashLedgerEntries.id,
+      bucket: cashLedgerEntries.bucket,
+      currencyCode: cashLedgerEntries.currencyCode,
+      currencyScale: cashLedgerEntries.currencyScale,
+      amountMinor: cashLedgerEntries.amountMinor,
+    })
+    .from(ledgerEvents)
+    .leftJoin(
+      cashLedgerEntries,
+      eq(cashLedgerEntries.ledgerEventId, ledgerEvents.id),
+    )
+    .where(eq(ledgerEvents.accountId, account.id))
+    .orderBy(
+      asc(ledgerEvents.sequenceNo),
+      asc(ledgerEvents.effectiveAtMs),
+      asc(cashLedgerEntries.id),
+    )
+    .all();
+
+  return { account, entries };
+}
 
 export function initializeDefaultPaperAccount(database: AppDatabase) {
   return withTransaction(database, () => {
