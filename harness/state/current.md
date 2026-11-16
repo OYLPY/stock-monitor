@@ -55,4 +55,7 @@
 - **P05-05 本地验收**：Online Backup API、manifest/hash/Schema 校验、临时前向迁移、原子新路径恢复已实现；`pnpm format:check`、定向文档 Prettier、lint、typecheck、完整测试（9 files / 48 tests）、build、目标 DB 集成测试（2 files / 10 tests）、CLI smoke、39 个文档目录 tag/path 自检和 `git diff --cached --check` 均 exit 0。100,000 事件 / 60 秒性能基准留待 P12。
 - **P05-05 远端验收**：实现提交 `151769c6aa3a219cfd1e4e55f5d8593b26c6f0eb` 已推送；匹配 [Quality CI run 43804916395](https://github.com/OYLPY/stock-monitor/actions/runs/43804916395) success。
 - **P05-05 最终状态**：#41 与阶段 #6 已关闭；完成证据见 [六字段交接](../handoffs/P05-05.md)。
-- **下一步具体操作**：读取 `docs/DEVELOPMENT_PLAN.md` 的 P06-03、`docs/design/UI_DESIGN.md`、`DATA_PROVENANCE.md`、`DB_SCHEMA.md`、`SCHEDULER.md` 及 `src/features/evidence` / `src/db` 的事件来源实现；针对列表筛选、事件状态和可访问性检索/retrieve modern-web-guidance，再按 #44 验收开始实现。
+- **P06-03 开始记录**：#44 于 2026-11-16 开始；开始基线 `6d730f3d0b1b558f57c70502d1f6ee3639c75bf8`，main 与 origin/main 同步、工作树干净、无开放 PR，#42/#40 已关闭；开始评论已写入 Issue。
+- **P06-03 本地验收**：format、lint、typecheck、test（15 files / 59 tests）、build、文档格式/389 个本地链接、`git diff --check` 均 exit 0；生产构建和桌面/390px/320px 窄屏键盘验收通过。详见 [六字段交接](../handoffs/P06-03.md)。
+- **P06-03 实现提交**：`610f23668e591db3f7ad1a4d5f60dc3980f7f4bb` 已在本地 main；代码尚待 push 与匹配 Quality CI。远端 CI 成功后才能关闭 #44。
+- **下一步具体操作**：push 当前 main，等待该 SHA 的 Quality CI 成功；随后向 #44 留验收评论并关闭，再同步 Issue 索引和状态，开始 P06-04 / #45。
