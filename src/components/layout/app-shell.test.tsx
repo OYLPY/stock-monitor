@@ -32,6 +32,7 @@ describe("AppShell", () => {
     expect(html).toMatch(/<button[^>]*disabled=""/);
     expect(html).not.toContain('aria-disabled="true"');
     expect(html).toContain('href="/markets"');
+    expect(html).toContain('href="/reports"');
     expect(html).not.toContain('href="#"');
   });
 
@@ -48,5 +49,23 @@ describe("AppShell", () => {
 
     expect(html).toContain('aria-current="page"');
     expect(html).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/markets"/);
+  });
+
+  it("marks the reports workspace as the active page", () => {
+    mockPathname.mockReturnValue("/reports");
+
+    const html = renderToStaticMarkup(
+      createElement(
+        AppShell,
+        null,
+        createElement(
+          "h1",
+          { id: "main-content", tabIndex: -1 },
+          "晨报与策略研究",
+        ),
+      ),
+    );
+
+    expect(html).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/reports"/);
   });
 });
