@@ -1,9 +1,9 @@
 # 当前执行状态
 
-- **状态**：P01–P04、PMO-01 与 P05-01–04 已完成并关闭。P05-05 / #41 实现已提交并通过匹配 CI；当前补交六字段交接与索引证据，随后关闭 #41 和 P05 阶段 #6，再开始 P06-01 / #42（依赖 #39 已满足）。P04-03 未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01–P05、PMO-01 与其子工作项均已完成并关闭；P05-05 / #41 的实现、交接、状态和索引均已提交并通过匹配 CI。当前开始 P06-01 / #42，依赖 P05-03 / #39 已满足。P04-03 未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
 - **依赖**：P04-01 / #33 的 P03-02 / #29、P04-02 / #34 的 P03-01 / #28、P04-03 / #35 的 P02-02 / #25、P04-04 / #36 的 P03-05 / #32 均已关闭；P05-01–05 的子 Issue 依赖均满足。
-- **同步状态**：P05-05 实现 `151769c6aa3a219cfd1e4e55f5d8593b26c6f0eb` 已 push 到 `main`；匹配 [Quality CI 43804916395](https://github.com/OYLPY/stock-monitor/actions/runs/43804916395) success。交接/索引提交待发。
+- **同步状态**：P05-05 实现 `151769c6aa3a219cfd1e4e55f5d8593b26c6f0eb` 与交接/索引 `12a7fbda1a4d55cd10f174529ac999ecc9136122` 均已 push 到 `main`；匹配 [Quality CI 43804916395](https://github.com/OYLPY/stock-monitor/actions/runs/43804916395) 与 [43805369607](https://github.com/OYLPY/stock-monitor/actions/runs/43805369607) 均 success。#41 与 #6 已关闭。
 - **产品边界**：本地即开即用，无应用登录、注册或用户管理；本地批准绑定不可变计划版本。UI 采用 shadcn/ui 设计基线，组件接入安排在 P06。产品可复用本机 CLI 登录，但这不构成应用登录或账号管理。
 - **P01-03 结果**：FR-Trade/追踪文档已直接推送 main；本地 format、lint、typecheck、unit（3 文件/19 测试）、build、ID/链接检查通过；Issue #22 已在 Quality #19 成功后关闭。详见 `harness/handoffs/P01-03.md`。
 - **P01-04 本地验收**：NFR-001–013 / AC-NFR-001–022，RQ 全量矩阵和研究/交易功能 AC 映射已完成；补齐外部不可信文本权限边界与六字段上下文恢复验收。format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、编号/矩阵/本地链接自检均通过；integration 不适用（`package.json` 无独立命令）。详细记录见 `harness/handoffs/P01-04.md`。
@@ -54,4 +54,5 @@
 - **P05-04 远端验收**：`ef9acea101cb5662130e79d87ab3975addfc43a5` 已推送到 `main`；匹配 [Quality CI run 43801379357](https://github.com/OYLPY/stock-monitor/actions/runs/43801379357) success（install、format、lint、typecheck、test、build 全绿）。
 - **P05-05 本地验收**：Online Backup API、manifest/hash/Schema 校验、临时前向迁移、原子新路径恢复已实现；`pnpm format:check`、定向文档 Prettier、lint、typecheck、完整测试（9 files / 48 tests）、build、目标 DB 集成测试（2 files / 10 tests）、CLI smoke、39 个文档目录 tag/path 自检和 `git diff --cached --check` 均 exit 0。100,000 事件 / 60 秒性能基准留待 P12。
 - **P05-05 远端验收**：实现提交 `151769c6aa3a219cfd1e4e55f5d8593b26c6f0eb` 已推送；匹配 [Quality CI run 43804916395](https://github.com/OYLPY/stock-monitor/actions/runs/43804916395) success。
-- **下一步具体操作**：提交并 push P05-05 六字段交接、当前状态和 Issue 索引，确认匹配 CI 后关闭 #41 与阶段 #6；再检查 #42 验收并开始 P06-01。
+- **P05-05 最终状态**：#41 与阶段 #6 已关闭；完成证据见 [六字段交接](../handoffs/P05-05.md)。
+- **下一步具体操作**：读取 P06-01 对应 UI 设计与应用入口，先运行 modern-web-guidance 的 search/retrieve，再按 #42 验收实现 shadcn/ui 应用壳层。
