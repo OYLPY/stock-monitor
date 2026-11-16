@@ -1,9 +1,9 @@
 # 当前执行状态
 
-- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–05 / #28–32 与 PMO-01 / #88 均已完成并关闭。P04-01 / #33、P04-02 / #34、P04-03 / #35 已完成并关闭；P04-03 证实披露数据源不等于行情源，且本次核验未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-04 / #36 是下一项。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–05 / #28–32 与 PMO-01 / #88 均已完成并关闭。P04-01 / #33、P04-02 / #34、P04-03 / #35 已完成并关闭；P04-03 证实披露数据源不等于行情源，且本次核验未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-04 / #36 的 PoC、追踪和证据已推送且匹配 CI 成功；正完成最终文档同步，之后关闭 #36 与阶段 #5。下一项为 P05-01 / #37（依赖 #34 已满足）。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
-- **依赖**：P04-01 / #33 的 P03-02 / #29、P04-02 / #34 的 P03-01 / #28、P04-03 / #35 的 P02-02 / #25、P04-04 / #36 的 P03-05 / #32 均已关闭；P04-04 / #36 可开始。
-- **同步状态**：进入 P04-01 前确认无开放 PR，执行 `git fetch --prune origin` / `git pull --ff-only origin main`，基线为 `750fcee1c2cd4a057a377f587371e236ac01495d`。PoC 已以 `aa07f9ec2c19c745752eb6c79f111f9e0d2cb9ee` 推送；[Quality CI run 43732653552](https://github.com/OYLPY/stock-monitor/actions/runs/43732653552) success。再次推送前仍须检查开放 PR 并同步远端 `main`。
+- **依赖**：P04-01 / #33 的 P03-02 / #29、P04-02 / #34 的 P03-01 / #28、P04-03 / #35 的 P02-02 / #25、P04-04 / #36 的 P03-05 / #32 均已关闭；P05-01 / #37 依赖 P04-02 / #34，已满足。
+- **同步状态**：P04-04 代码与研究提交 `353fab73528603ae08d45377aa31a06c5c42ffe7` 已 push 到 `main`，匹配 [Quality CI run 43785725224](https://github.com/OYLPY/stock-monitor/actions/runs/43785725224) success。文档同步提交前再次确认无开放 PR；每次 push 前均需重新 fetch 并比较 `origin/main`。
 - **产品边界**：本地即开即用，无应用登录、注册或用户管理；本地批准绑定不可变计划版本。UI 采用 shadcn/ui 设计基线，组件接入安排在 P06。产品可复用本机 CLI 登录，但这不构成应用登录或账号管理。
 - **P01-03 结果**：FR-Trade/追踪文档已直接推送 main；本地 format、lint、typecheck、unit（3 文件/19 测试）、build、ID/链接检查通过；Issue #22 已在 Quality #19 成功后关闭。详见 `harness/handoffs/P01-03.md`。
 - **P01-04 本地验收**：NFR-001–013 / AC-NFR-001–022，RQ 全量矩阵和研究/交易功能 AC 映射已完成；补齐外部不可信文本权限边界与六字段上下文恢复验收。format、lint、typecheck、unit（3 文件/19 测试）、build、定向 Prettier、编号/矩阵/本地链接自检均通过；integration 不适用（`package.json` 无独立命令）。详细记录见 `harness/handoffs/P01-04.md`。
@@ -40,4 +40,6 @@
 - **P04-02 远端验收**：实现提交 `9b9c22b6ad8f86c4cee206f2d6c7b8eb242bd503` / [Quality CI run 43737070633](https://github.com/OYLPY/stock-monitor/actions/runs/43737070633) 与索引/交接同步提交 `51b4be7ec296cb1cc7a02c9a09471ab4d38bbd0f` / [Quality CI run 43737481131](https://github.com/OYLPY/stock-monitor/actions/runs/43737481131) 均成功；#34 已关闭。
 - **P04-03 本地验收**：DOC-0036 调研报告和 synthetic `FIXTURE` / `DEMO_ONLY` 离线 PoC 已完成；Free API 的 `BLOCKED_EXTERNAL` 状态只作为样例，provider probe 标为 `NOT_RUN`，未读凭据或发出外部请求。format、lint、typecheck、unit（3 files / 19 tests）、build、PoC、目标 Prettier、36 Doc ID/tag/path 与 332 个本地链接审计均通过；Integration N/A（无独立命令）。详见 `harness/handoffs/P04-03.md` 和 `poc/market-data/actual-run-2026-11-16.jsonl`。
 - **P04-03 远端验收**：`2018c81bb77a18c23a4f9997379c3942a93f593d` 已 push；匹配的 [Quality CI run 43740121430](https://github.com/OYLPY/stock-monitor/actions/runs/43740121430) success；Issue #35 已附证据并关闭。
-- **下一步具体操作**：开始 P04-04 / #36；先复核 #32 已关闭、无开放 PR，并同步远端 `main`。
+- **P04-04 本地验收**：真实 Next 页面受理任务后关闭浏览器标签页并停止 Next 服务，独立 Worker 心跳继续、任务变为 `DONE`、effect 计数为 1；四个进程中断边界、lease fencing、API 幂等/校验与模拟错窗通过。Node v22.14.0 / SQLite 3.54.1；无外部请求、凭据或行情数据；真实睡眠/关机和 macOS `NOT_TESTED`。`pnpm install --frozen-lockfile`、format、lint、typecheck、unit（3 files / 19 tests）、build、smoke/browser PoC、文档索引/链接审计及 `git diff --check` 均通过。详见 [DOC-0037](../../docs/research/p04-04-worker-runtime-findings.md)、[PoC 运行日志](../../poc/worker/actual-run-2026-11-16.jsonl)、[六字段交接](../handoffs/P04-04.md)。
+- **P04-04 远端验收**：`353fab73528603ae08d45377aa31a06c5c42ffe7` 已 push；匹配的 [Quality CI run 43785725224](https://github.com/OYLPY/stock-monitor/actions/runs/43785725224) success。文档同步 CI 完成后关闭 #36 与阶段 #5。
+- **下一步具体操作**：完成本次文档同步提交及匹配 CI；关闭 #36 和 P04 阶段 #5 后，开始 P05-01 / #37，先复核 Issue、#34 依赖、无开放 PR并同步 `main`。

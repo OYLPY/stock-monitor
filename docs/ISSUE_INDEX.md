@@ -129,7 +129,7 @@
 - [x] [P04-01 — Codex SDK 本地授权与流式调用 PoC](https://github.com/OYLPY/stock-monitor/issues/33) · 交付：[p04-01-codex-sdk-findings.md](research/p04-01-codex-sdk-findings.md)、[PoC](../poc/codex/README.md) · 依赖：P03-02
 - [x] [P04-02 — SQLite/Drizzle 精度与迁移 PoC](https://github.com/OYLPY/stock-monitor/issues/34) · 交付：[DOC-0035](research/p04-02-sqlite-drizzle-findings.md)、[PoC](../poc/sqlite/README.md) · 依赖：P03-01
 - [x] [P04-03 — 美日历史/公告数据适配器 PoC](https://github.com/OYLPY/stock-monitor/issues/35) · 交付：[DOC-0036](research/data-sources.md)、[离线 PoC](../poc/market-data/README.md) · 依赖：P02-02
-- [ ] [P04-04 — 后台 Worker、关闭浏览器及重启恢复 PoC](https://github.com/OYLPY/stock-monitor/issues/36) · 依赖：P03-05
+- [x] [P04-04 — 后台 Worker、关闭浏览器及重启恢复 PoC](https://github.com/OYLPY/stock-monitor/issues/36) · 交付：[DOC-0037](research/p04-04-worker-runtime-findings.md)、[PoC 与运行手册](../poc/worker/README.md)、[六字段交接](../harness/handoffs/P04-04.md) · 依赖：P03-05
 
 ### [P05 数据与工程基础实现](https://github.com/OYLPY/stock-monitor/issues/6)
 
