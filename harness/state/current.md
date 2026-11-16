@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **状态**：P01–P05、PMO-01 与其子工作项均已完成并关闭。P06-01 / #42 的实现提交 `d2d048762301eb8f457a0355bd095d7a4be0be5d` 已推送，匹配 Quality CI `43810920888` success；最终移动端构建已复核导航开闭与空态。当前补齐六字段交接/索引并等待 closeout commit 的匹配 CI，尚未关闭 #42。P04-03 未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01–P05、PMO-01 与其子工作项均已完成并关闭。P06-01 / #42 已完成并关闭：实现提交 `d2d048762301eb8f457a0355bd095d7a4be0be5d` 与 closeout 提交 `f1220e5e36d257892d8576834a1337dc48c02754` 匹配 Quality CI `43810920888`、`43811690836` 均 success。当前开始 P06-02 / #43，依赖 P06-01 / #42、P05-04 / #40 均已关闭；开始基线 `f1220e5e36d257892d8576834a1337dc48c02754`，工作树干净且无开放 PR，Issue 已同步为 direct-main/no-PR。尚未修改 P06-02 功能代码。P04-03 未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
 - **依赖**：P04-01 / #33 的 P03-02 / #29、P04-02 / #34 的 P03-01 / #28、P04-03 / #35 的 P02-02 / #25、P04-04 / #36 的 P03-05 / #32 均已关闭；P05-01–05 的子 Issue 依赖均满足。
 - **同步状态**：P05-05 实现 `151769c6aa3a219cfd1e4e55f5d8593b26c6f0eb` 与交接/索引 `12a7fbda1a4d55cd10f174529ac999ecc9136122` 均已 push 到 `main`；匹配 [Quality CI 43804916395](https://github.com/OYLPY/stock-monitor/actions/runs/43804916395) 与 [43805369607](https://github.com/OYLPY/stock-monitor/actions/runs/43805369607) 均 success。#41 与 #6 已关闭。
@@ -55,4 +55,4 @@
 - **P05-05 本地验收**：Online Backup API、manifest/hash/Schema 校验、临时前向迁移、原子新路径恢复已实现；`pnpm format:check`、定向文档 Prettier、lint、typecheck、完整测试（9 files / 48 tests）、build、目标 DB 集成测试（2 files / 10 tests）、CLI smoke、39 个文档目录 tag/path 自检和 `git diff --cached --check` 均 exit 0。100,000 事件 / 60 秒性能基准留待 P12。
 - **P05-05 远端验收**：实现提交 `151769c6aa3a219cfd1e4e55f5d8593b26c6f0eb` 已推送；匹配 [Quality CI run 43804916395](https://github.com/OYLPY/stock-monitor/actions/runs/43804916395) success。
 - **P05-05 最终状态**：#41 与阶段 #6 已关闭；完成证据见 [六字段交接](../handoffs/P05-05.md)。
-- **下一步具体操作**：确认新增 `harness/handoffs/P06-01.md` 六字段记录、DOC-0017 索引与本条状态准确；运行文档格式/链接自检及 `git diff --check`，提交并 push closeout 证据，再确认匹配 Quality CI 后关闭 #42。
+- **下一步具体操作**：读取 `docs/design/UI_DESIGN.md`、`docs/design/DATA_PROVENANCE.md`、P06-02 相关源码与 `.agents/skills/modern-web-guidance/SKILL.md`；按项目规约检索并 retrieve 适用的图表、数据时效和可访问状态指导，再根据 #43 验收实现 Dashboard。
