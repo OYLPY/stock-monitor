@@ -45,4 +45,6 @@
 - **P05-01 本地验收**：新增 SQLite/Drizzle 核心账户与账本表、版本化初始资金、不可变开账 repository、校验和迁移、WAL 连接、在线升级快照和临时 DB 工厂。`pnpm install --frozen-lockfile`、format、lint、typecheck、unit（4 files / 24 tests）、build、Drizzle generate、SQLite PoC、549 个 Markdown 链接 / 37 Doc ID 审计及 `git diff --check` 均 exit 0。无独立 integration 命令；实际文件数据库集成由 Vitest 覆盖。详见 [P05-01 六字段交接](../handoffs/P05-01.md)。
 - **P05-01 远端验收**：实现提交 db480ee1ca2eafe170fb38c419eb6074beea4cf3 / [Quality CI 43789971494](https://github.com/OYLPY/stock-monitor/actions/runs/43789971494) 与文档/交接提交 bbec1e123d86cb26c3c510375893b48ac7ab7561 / [Quality CI 43790868201](https://github.com/OYLPY/stock-monitor/actions/runs/43790868201) 均成功；#37 已更新验收证据并关闭。
 - **P05-02 开始记录**：#38 于 2026-11-16 开始；开始前 main 与 origin/main 同步至 bbec1e123d86cb26c3c510375893b48ac7ab7561、工作树干净且无开放 PR；依赖 #29 已关闭。Issue #38 已按用户授权修订为 direct-main/no-PR，并记录基线。
-- **下一步具体操作**：实现 src/domain/primitives.ts 和边界测试；按 PMO 编号新增 DOC-0038，更新相关 API/DB/风险契约和需求追踪；运行任务验收并保留真实日志。
+- **P05-02 本地验收**：时间/金额/FX/证券标识原语、边界测试与 DOC-0038 追踪已完成；Node v22.14.0 / pnpm 11.25.0。format、lint、typecheck、unit（5 files / 31 tests）、build、目标文档 Prettier、38 个 Doc ID / 6 个 tags 自检和 `git diff --check` 均 exit 0。详见 [P05-02 六字段交接](../handoffs/P05-02.md)。
+- **P05-02 实现远端验收**：`5e2733fbf645e9602216eaf9a7a5f5892eaef41e` 已 push；匹配 [Quality CI run 43794287233](https://github.com/OYLPY/stock-monitor/actions/runs/43794287233) 成功（install、format、lint、typecheck、test、build 全绿）。
+- **下一步具体操作**：提交并 push P05-02 交接、状态与 Issue 索引同步；核验匹配 Quality CI，更新并关闭 #38，然后开始 P05-03 / #39。
