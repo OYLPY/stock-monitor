@@ -123,7 +123,7 @@
 | [`P05-02`](https://github.com/OYLPY/stock-monitor/issues/38) | **统一时间、金额、货币与市场标识**：定义 Asia/Tokyo / America/New_York 时间工具、精确小数/整数金额、汇率单位、证券符号+交易所复合标识。 | src/domain/primitives、单测 | DST转换、JPY/USD舍入、时区日期与交易日跨日映射均可复算；依赖：P03-02 |
 | [`P05-03`](https://github.com/OYLPY/stock-monitor/issues/39) | **输入 Schema、API 基础设施与安全设置**：实现 Zod 输入验证、统一错误处理、本地访问保护、密钥环境变量与日志脱敏、数据导入边界。 | src/lib/api、src/lib/security、.env.example | 恶意/过大输入拒绝，API 不回显密钥；没有任何真实下单路由；依赖：P05-01, P05-02 |
 | [`P05-04`](https://github.com/OYLPY/stock-monitor/issues/40) | **事件与来源仓储及审计历史**：实现消息来源、行情引用、内容 hash、采集时间、版本与只追加审计日志；不可验证状态的显式表示。 | src/features/evidence、仓储/单测 | 事件和引用可追溯、重启后仍在；缺来源不能被标记 VERIFIED；依赖：P05-01, P05-03 |
-| [`P05-05`](https://github.com/OYLPY/stock-monitor/issues/41) | **备份、恢复和数据库完整性验证**：实现本地数据导出备份、导入预检、schema版本校验、事务性恢复及损坏报告；避免删除旧数据。 | scripts/backup、scripts/restore、docs/operations/BACKUP.md | 全新本地环境可恢复已知测试账本；错误备份不覆盖当前数据库；依赖：P05-01, P05-04 |
+| [`P05-05`](https://github.com/OYLPY/stock-monitor/issues/41) | **备份、恢复和数据库完整性验证**：实现本地数据导出备份、导入预检、schema版本校验、事务性恢复及损坏报告；避免删除旧数据。 | scripts/backup、scripts/restore、docs/operations/backup.md | 全新本地环境可恢复已知测试账本；错误备份不覆盖当前数据库；依赖：P05-01, P05-04 |
 
 ### P06 — React UI 与体验实现
 

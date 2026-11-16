@@ -322,7 +322,7 @@
           "id": "P05-05",
           "title": "备份、恢复和数据库完整性验证",
           "scope": "实现本地数据导出备份、导入预检、schema版本校验、事务性恢复及损坏报告；避免删除旧数据。",
-          "deliverables": "scripts/backup、scripts/restore、docs/operations/BACKUP.md",
+          "deliverables": "scripts/backup、scripts/restore、docs/operations/backup.md",
           "acceptance": "全新本地环境可恢复已知测试账本；错误备份不覆盖当前数据库",
           "depends": [
             "P05-01",

@@ -13,8 +13,8 @@ import {
   paperAccounts,
   sourceRecords,
   sources,
-} from "./schema";
-import { migrateDatabase } from "./migrate";
+} from "./schema.ts";
+import { migrateDatabase } from "./migrate.ts";
 
 const schema = {
   auditEvents,

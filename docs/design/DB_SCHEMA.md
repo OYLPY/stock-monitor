@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0013 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P03-01 设计基线已由 P05-01 接入本地 SQLite 核心账户/账本表，并由 P05-04 / #40 接入来源、事件、证据与只追加审计表；数据供应商适配、备份/恢复和完整产品流程仍待 P07/P05-05/P10/P12 完成。驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
+> 状态：P03-01 设计基线已由 P05-01 接入本地 SQLite 核心账户/账本表，并由 P05-04 / #40 接入来源、事件、证据与只追加审计表；P05-05 / #41 已实现 CLI 在线快照、校验及新路径恢复；数据供应商适配和完整产品流程仍待 P07/P10/P12 完成。驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
 >
 > 上位契约：[架构](ARCHITECTURE.md)、[数据溯源](DATA_PROVENANCE.md)、[AI 工作流](AI_WORKFLOW.md)、[纸面交易与风控](../requirements/FR_TRADE.md)、[研究工作流](../requirements/FR_RESEARCH.md)、[非功能需求](../requirements/NFR.md)。
 
@@ -296,9 +296,9 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 2. 应用迁移前生成 SQLite 一致性快照。迁移由单一写者在 `BEGIN IMMEDIATE` 事务中逐版本执行；同一事务记录 hash 和 `user_version`。失败回滚并保留原库。迁移只向前，不提供会丢账的 down migration；降级使用先校验的备份恢复。
 3. 每条连接都执行 `foreign_keys=ON`（必须在事务开始前）并设置有限 busy timeout。每次迁移后检查 `PRAGMA integrity_check` 与 `PRAGMA foreign_key_check`；检查失败不得将数据库标为 ready。
 4. 备份使用 SQLite Online Backup API 或驱动已验证的等价一致性快照；不直接复制运行中的主数据库文件，特别是 WAL 模式下不能只复制 `.db`。备份包有 sidecar manifest：应用版本、Schema 版本、创建时刻、文件长度、SHA-256。密钥只存 OS 本机安全配置，不进入 DB/manifest/备份。
-5. 恢复先将备份和 manifest 放到临时目录，校验 SHA-256、应用/Schema 兼容性、migration hashes、`integrity_check` 和外键；再对临时副本做需要的前向迁移。所有检查完成后才在服务停止写入的条件下原子切换；失败保留当前数据库及原备份不变。恢复日志记录结果和版本，不记录秘密值。
+5. 恢复先将备份和 manifest 放到临时目录，校验 SHA-256、应用/Schema 兼容性、migration hashes、`integrity_check` 和外键；再对临时副本做需要的前向迁移。当前 CLI 只恢复到全新路径：所有检查完成且 SQLite 连接关闭后，才以同文件系统原子硬链接发布目标文件；目标已存在或任何检查失败时保留现有数据库及原备份不变。CLI JSON 报告只记录结果、版本和诊断码，不记录秘密值。
 
-此设计满足 NFR-007 的版本/校验摘要、临时校验和不覆盖规则。P04-02 PoC 验证了 runner 的 SHA-256、幂等、事务回滚和 `user_version` 同步；P05-01 已将这些边界接入产品核心 Schema，采用 WAL、`synchronous=FULL`、外键、有限 busy timeout、迁移前在线快照和迁移后完整性检查。完整备份/恢复、崩溃恢复与 100,000 事件恢复 60 秒目标仍由 P05-05/P12-02 验证。
+此设计满足 NFR-007 的版本/校验摘要、临时校验和不覆盖规则。P04-02 PoC 验证了 runner 的 SHA-256、幂等、事务回滚和 `user_version` 同步；P05-01 已将这些边界接入产品核心 Schema，采用 WAL、`synchronous=FULL`、外键、有限 busy timeout、迁移前在线快照和迁移后完整性检查。P05-05 / #41 已由文件型 SQLite 测试验证在线快照、已知纸面账本恢复、manifest/hash/Schema 校验和安全发布；100,000 事件恢复 60 秒目标仍由 P12-02 性能验收。
 
 ## 决策取舍与待后续验证
 
@@ -316,7 +316,7 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 | P03-02/P03-03/P03-04 | 细化 DTO、状态机/错误码、资金/风险舍入、OHLCV 调整、回测输入清单与费用模型。                                     |
 | P03-05/P11           | 细化任务唯一键、窗口、租约、恢复、重试、事件指纹、通知去重。                                                     |
 | P05-01               | 已实施核心账户/账本迁移、开账 repository、配置版本、精确金额、SQLite WAL、迁移哈希/版本校验和测试数据库工厂；完整业务表仍待各自任务。 |
-| P05-05               | 实施备份/恢复并验证崩溃安全和真实数据目录权限。                                                        |
+| P05-05 / #41         | 已实施 CLI 备份、预检和新路径安全恢复；当前数据库运行时路径切换、真实用户数据目录权限及崩溃/大库性能演练仍待 P12/P13。 |
 | P10/P12              | 验证批准绑定版本、重复 fill、账本重放一致性、Fixture 禁止入账、冲正审计和 NFR 性能/恢复用例。                    |
 
 ## 来源与追踪

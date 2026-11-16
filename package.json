@@ -9,6 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "backup": "node --experimental-strip-types scripts/backup.ts",
+    "restore": "node --experimental-strip-types scripts/restore.ts",
     "autopilot": "node --experimental-strip-types scripts/autopilot.ts",
     "format:check": "prettier --check --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"harness/**/*.json\" drizzle.config.ts package.json README.md docs/design/UI_DESIGN.md docs/CONTEXT_ENGINEERING.md .github/workflows/quality.yml"
   },
