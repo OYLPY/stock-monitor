@@ -58,6 +58,12 @@
 
 [^jquants-terms]: [J-Quants API 服务条款](https://jpx-jquants.com/en/termsofservice)（英文参考译文，页面注明日文为有约束力版本；最后更新 2026-01-19）第 8 条限定 own use，第 7 条规定订阅终止后的数据删除；另参见[数据 FAQ](https://jpx-jquants.com/en/help/data) 对交易所覆盖、点时数据及价格回溯调整的解释。
 
+#### P07-03 复核（2026-11-16）
+
+最新 [J-Quants API 数据覆盖](https://jpx-jquants.com/en/spec/data-spec)仍将 Free 股票日线范围列为最近 2 年、延迟 12 周；付费计划分别列为 5、10、20 年，Premium 的数据起点列为 2008-05-07，且页面提醒个别数据可能短于计划覆盖期。[服务条款](https://jpx-jquants.com/en/termsofservice)要求使用者先注册并同意条款；Free 不等于匿名免授权调用。Free 限流为 5 次/分钟。[限流说明](https://jpx-jquants.com/en/spec/rate-limits)
+
+**P07-03 / #50 当前结论：`BLOCKED_EXTERNAL`。** 免费数据既滞后 12 周又只有 2 年，无法满足策略经数十年市场行情验证的要求；更长的历史范围需要付费，项目没有授权购买。Premium 当前列出的数据起点也不到数十年。本次未注册、未申请 key、未请求 API；没有把 Fixture 当作真实行情。
+
 ### 美国：交易所行情、延迟展示和历史产品
 
 | 产品                                  | 范围和时效                                                                                                                                                                                                                                                                                                                                                                                                                                           | 访问、价格和使用条件                                                                                                                                                                                                                                                                                                                                                                                                   | 可访问性证据                                                                           |
@@ -86,6 +92,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - SEC 与 EDINET 有公开/免费 API，可供披露与结构化财务事实使用；两者不是股票报价数据源。SEC investor API 无 key，EDINET v2 需要 key。[^sec][^edinet]
 - 日本存在面向个人的免费官方日线 API，但 Free 数据只有 2 年窗口且滞后 12 周；公开说明不提供日内实时行情。该授权只针对注册人的 own use，免费不意味着可向其他用户分发数据。[J-Quants 计划与条款](https://jpx-jquants.com/en)
 - J-Quants 官方计划页列出 Light、Standard、Premium 的日线历史跨度分别为 5 年、10 年、20 年；因此公开计划资料也不支持“免费或默认可得几十年日线”的说法。这里记录的是计划说明，未订阅或验证实际账户可用范围。[J-Quants 计划页](https://jpx-jquants.com/en)
+- 2026-11-16 复核的 J-Quants 数据规格将 Free 日线列为 2 年且延迟 12 周，Free API 限流为 5 次/分钟；Premium 列 20 年并标注数据期起点 2008-05-07，仍不足以证明满足数十年行情验证。#50 因此保持 `BLOCKED_EXTERNAL`。
 - JPX 官方免费月度表覆盖最长 10 年，但月度频率无法替代逐交易日回测；同一目录卡注明外部再分发不可。[JPX 月间相场表目录卡](https://clientportal.jpx.co.jp/ClientPortal/s/datacatalog/a085j00000Ip94b/a037?language=ja)
 - JPX 日线历史可追溯到 1974 年，NYSE Daily TAQ 可追溯到 1993 年；这些支持多年代跨度的官方历史产品都有明确费用或订阅/许可门槛。[JPX Data Cloud 价表](https://db-ec.jpx.co.jp/client_info/JPX_DLSITE/html/price_en.pdf)、[NYSE 历史价表](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)
 - Nasdaq/NYSE 的延迟展示政策仍涉及产品级许可、展示提示或访问条件；“交易所网站可打开”不足以证明应用可建立免费、稳定、可保存的行情通道。
@@ -112,6 +119,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 3. JPX/TDnet、JPX 延迟行情、NYSE TAQ、Nasdaq Data Link 属于收费或需要进一步许可的候选。本任务没有授权采购，也未尝试访问。
 4. P04-03 仅交付研究文档；没有选定生产供应商、写入配置、创建适配器或把示例/测试数据接入应用。实现前应对当前条款、账户类型、存储与展示范围、具体字段、时间戳、价格调整和实际连接能力重新核验。
 5. P07-02 / #49 在完整历史数据需要付费、项目未授权付费且没有 API key 时保持 `BLOCKED_EXTERNAL`；不以 Fixture 替代真实行情适配器的完成验收，继续处理其他已满足依赖的任务。
+6. P07-03 / #50 的 Free 日线仅 2 年并延迟 12 周；付费数据不在当前授权范围。保持 `BLOCKED_EXTERNAL`，不以短历史或 Fixture 宣称满足数十年回测。
 
 ## 主要来源（访问日期均为 2026-11-16）
 
