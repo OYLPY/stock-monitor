@@ -50,4 +50,6 @@
 - **P05-03 开始记录**：#39 于 2026-11-16 开始；开始前 `main` 与 `origin/main` 同步至 `417fcbc6045b297aec3f974bef7509aa85c78c68`、工作树干净且无开放 PR；前置 #37/#38 均已关闭。已按授权在 `main` 直接实施，不创建 PR。
 - **P05-03 本地验收**：请求解析/错误响应/loopback 来源校验与不泄密日志已实现；format、lint、typecheck、unit（7 files / 40 tests）、build、DOC-0009 相关链接及运行时无 API 路由/凭据/外部请求自检、`git diff --check` 均通过。没有独立 integration 命令。详见 [P05-03 六字段交接](../handoffs/P05-03.md)。
 - **P05-03 实现远端验收**：`131a316808ad597b675de3bd1ef9a6677eaea06f` 已推送；匹配 [Quality CI run 43797158508](https://github.com/OYLPY/stock-monitor/actions/runs/43797158508) 成功（install、format、lint、typecheck、test、build 全绿）。
-- **下一步具体操作**：提交并 push P05-03 六字段交接、当前状态与 Issue 索引更新；确认匹配 CI 后向 #39 记录完整证据并关闭，然后开始 P05-04 / #40。
+- **P05-04 本地验收**：来源/来源记录/事件修订/证据引用/审计 hash-chain 已实现；`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（8 files / 43 tests）、`pnpm build`、Drizzle schema 对照、38 个文档目录的 tag/path/alias 自检及 `git diff --check` 均 exit 0。无独立 integration 命令；实际临时 SQLite 文件、重启、版本冲突和只追加边界由 Vitest 覆盖。详见 [P05-04 六字段交接](../handoffs/P05-04.md)。
+- **P05-04 远端验收**：`ef9acea101cb5662130e79d87ab3975addfc43a5` 已推送到 `main`；匹配 [Quality CI run 43801379357](https://github.com/OYLPY/stock-monitor/actions/runs/43801379357) success（install、format、lint、typecheck、test、build 全绿）。
+- **下一步具体操作**：提交并 push P05-04 六字段交接、当前状态与 Issue 索引更新；确认匹配 CI 后更新并关闭 #40，再开始 P05-05 / #41。
