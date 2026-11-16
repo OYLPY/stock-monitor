@@ -1,0 +1,122 @@
+import { describe, expect, it } from "vitest";
+import { sourceRecords, sources } from "../../db/schema";
+import { createTestDatabase } from "../../db/test-database";
+import {
+  disclosureSourcePolicies,
+  getDisclosureSourceState,
+  normalizeDisclosureCitation,
+  recordDisclosureCitation,
+} from "./index";
+
+describe("disclosure citations", () => {
+  it("normalizes official references without inventing publication or availability times", () => {
+    const citation = normalizeDisclosureCitation({
+      provider: "sec.edgar",
+      externalId: "0000320193-26-000123",
+      referenceUrl:
+        "https://www.sec.gov/Archives/edgar/data/320193/000032019326000123/index.htm?source=feed#filing",
+      title: "8-K filing",
+      rawTimeText: "2026-11-16T16:05:00-05:00",
+    });
+
+    expect(citation.source.sourceKey).toBe("sec.edgar");
+    expect(citation.record).toMatchObject({
+      recordKey: "disclosure:0000320193-26-000123",
+      recordType: "DISCLOSURE",
+      publishedAtMs: null,
+      occurredAtMs: null,
+      availableAtMs: null,
+      rawTimeText: "2026-11-16T16:05:00-05:00",
+      sourceTimeZone: "America/New_York",
+      canonicalUrl:
+        "https://www.sec.gov/Archives/edgar/data/320193/000032019326000123/index.htm",
+      dataClass: "NOT_VERIFIED",
+    });
+  });
+
+  it("stores one record when the same provider ID arrives through multiple URLs", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      const first = recordDisclosureCitation(fixture.database, {
+        provider: "sec.edgar",
+        externalId: "0000320193-26-000123",
+        referenceUrl:
+          "https://www.sec.gov/Archives/edgar/data/320193/000032019326000123/index.htm",
+        title: "8-K filing",
+        rawTimeText: "2026-11-16T16:05:00-05:00",
+      });
+      const duplicate = recordDisclosureCitation(fixture.database, {
+        provider: "sec.edgar",
+        externalId: "0000320193-26-000123",
+        referenceUrl:
+          "https://www.sec.gov/Archives/edgar/data/320193/000032019326000123/filing.htm",
+        title: "8-K filing",
+        rawTimeText: "2026-11-16T16:05:00-05:00",
+      });
+
+      expect(first.duplicate).toBe(false);
+      expect(duplicate.duplicate).toBe(true);
+      expect(duplicate.record.id).toBe(first.record.id);
+      expect(fixture.database.orm.select().from(sources).all()).toHaveLength(1);
+      expect(
+        fixture.database.orm.select().from(sourceRecords).all(),
+      ).toHaveLength(1);
+      expect(() =>
+        recordDisclosureCitation(fixture.database, {
+          provider: "sec.edgar",
+          externalId: "0000320193-26-000123",
+          referenceUrl:
+            "https://www.sec.gov/Archives/edgar/data/320193/000032019326000123/index.htm",
+          title: "Changed title for same filing",
+          rawTimeText: "2026-11-16T16:05:00-05:00",
+        }),
+      ).toThrow("disclosure_identity_content_conflict");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("rejects non-official hosts and marks credentialed or paid sources", () => {
+    expect(() =>
+      normalizeDisclosureCitation({
+        provider: "sec.edgar",
+        externalId: "filing-1",
+        referenceUrl: "https://sec.gov.evil.example/filing/1",
+        title: "Untrusted filing",
+      }),
+    ).toThrow("untrusted_disclosure_reference_host");
+
+    expect(disclosureSourcePolicies["edinet.v2"].accessMode).toBe(
+      "API_KEY_REQUIRED",
+    );
+    expect(disclosureSourcePolicies["bea.api"].accessMode).toBe(
+      "API_KEY_REQUIRED",
+    );
+    expect(disclosureSourcePolicies["tdnet.api"].accessMode).toBe(
+      "PAID_API_DISABLED",
+    );
+    expect(disclosureSourcePolicies["issuer.ir"].accessMode).toBe(
+      "MANUAL_REFERENCE",
+    );
+    expect(getDisclosureSourceState("bea.api")).toEqual({
+      status: "BLOCKED_EXTERNAL",
+      reason: "API credentials are required and are not configured.",
+    });
+    expect(getDisclosureSourceState("bea.api", true).status).toBe(
+      "NOT_VERIFIED",
+    );
+    expect(getDisclosureSourceState("sec.edgar").status).toBe("NOT_VERIFIED");
+  });
+
+  it("preserves an explicitly unknown source timezone", () => {
+    const citation = normalizeDisclosureCitation({
+      provider: "boj.timeseries",
+      externalId: "FXERD02",
+      referenceUrl: "https://www.stat-search.boj.or.jp/index_en.html",
+      title: "Exchange rate series",
+      sourceTimeZone: null,
+    });
+
+    expect(citation.record.sourceTimeZone).toBeNull();
+  });
+});

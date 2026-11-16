@@ -68,7 +68,8 @@
 - **P06-06 远端验收**：实现提交 `e332d10647ffc56e4d7d0cf1c4b9c3adea8637a2` / [Quality CI 43841963483](https://github.com/OYLPY/stock-monitor/actions/runs/43841963483) 与交接/索引提交 `2eb947da6d95d71ee9b8686ec83e7e4d66a3a86a` / [Quality CI 43843143481](https://github.com/OYLPY/stock-monitor/actions/runs/43843143481) 均 success；#47 已附证据并关闭。
 - **P07-01 本地验收**：Node `v22.14.0` / pnpm `11.25.0`；`pnpm install --frozen-lockfile`、`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（20 files / 89 tests）、`pnpm build` 均 exit 0。`docs/design/SCHEDULER.md` 独立 Prettier、`git diff --check` 与 PMO 自检（39 个 Doc ID 唯一、tags 已注册且每项 2–6 个、7 份变更 Markdown 的 480 个本地链接）exit 0。`TRACEABILITY.md` 的单文件 Prettier 检查 exit 1；变更前基线 `2eb947da6d95d71ee9b8686ec83e7e4d66a3a86a` 同样 exit 1，未重排整份追踪矩阵。无独立 integration 命令；日历实现是无网络/数据库 I/O 的纯函数，样本由 Vitest 覆盖。详见[六字段交接](../handoffs/P07-01.md)。
 - **P07-01 远端验收**：实现/设计提交 `2f9e6a5e0c7332bcc2af049e03cbd6ad5b90b257` 已 push；[Quality CI 43848036117](https://github.com/OYLPY/stock-monitor/actions/runs/43848036117) success，包含 install、format、lint、typecheck、unit、build、Chromium 与 Playwright E2E。官方覆盖期为 NYSE 2026–2028、Nasdaq 2026、TSE 2026–2027；未覆盖日期不推导为开市。
-- **下一步具体操作**：push P07-03 / #50 六字段交接和当前状态记录，确认 Quality CI 成功；保持 #50 open，随后核对 P07-04 / #51 的依赖和官方来源可用性，在满足条件时继续。
+- **P07-04 / #51 当前状态**：规范化披露引用与幂等写入内核已通过本地完整代码检查；原生 HTTP/RSS/API 响应采集尚未实现。SEC、BOJ、Fed RSS、BLS 仍 `NOT_VERIFIED`；EDINET/BEA 缺 key、TDnet API 需付费、issuer IR 需逐站确认。#51 保持 open，详见[六字段交接](../handoffs/P07-04.md)。
+- **P07-04 下一步具体操作**：`git fetch --prune origin`，确认 `main` 与 `origin/main` 同步且无新开放 PR，再提交/push P07-04 代码与文档；确认匹配 Quality CI 后更新 #51 状态，并选择依赖已满足的下一项。
 
 - **P06-06 开始记录**：2026-11-16；#47 的旧 PR 要求已按用户授权修正为 main 直推/no-PR；开始评论记录依赖、基线和运行时边界。
 - **P07-01 开始记录**：2026-11-16；开始前 main 与 origin/main 同步至 `2eb947da6d95d71ee9b8686ec83e7e4d66a3a86a`，工作树干净，无开放 PR；依赖 #38/#35 和前序 #47 均已关闭。#48 的旧分支/PR 文字已按授权修正为直接 main/no-PR，并记录官方日历核验计划。

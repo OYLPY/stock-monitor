@@ -1,6 +1,6 @@
 # 市场数据与证据溯源设计
 
-> 状态：P02-02 设计基线；P05-04 / #40 已将来源注册、带 SHA-256/时间/版本的来源记录、事件修订/证据和 hash-chain 审计落入 SQLite 仓储，并实现缺少可信证据时拒绝 `VERIFIED`、Fixture 保持 `DEMO_ONLY`。当前只保存来源元数据与内容 hash，不保存原文；未接入行情、新闻或披露 API，也未核准或使用外部许可/凭据。供应商能力和数据时效仍须按 P04/P07 的许可、费用、覆盖、频率与样本验证。
+> 状态：P02-02 设计基线；P05-04 / #40 已将来源注册、带 SHA-256/时间/版本的来源记录、事件修订/证据和 hash-chain 审计落入 SQLite 仓储，并实现缺少可信证据时拒绝 `VERIFIED`、Fixture 保持 `DEMO_ONLY`。P07-04 / #51 增加了披露引用归一化和按来源上游 ID 幂等写入；目前只保存来源元数据与内容 hash，不保存原文，尚无原生 HTTP 采集器，也未核准或使用外部凭据。供应商能力和数据时效仍须按 P04/P07 的许可、费用、覆盖、频率与样本验证。
 >
 > 产品为本地即开即用工具，不增加应用登录或用户管理。来源凭据如适用，只由本机服务端/Worker 持有。参见 [系统架构](ARCHITECTURE.md)、[FR-Research](../requirements/FR_RESEARCH.md)、[NFR](../requirements/NFR.md) 和 [需求追踪矩阵](../requirements/TRACEABILITY.md)。
 
@@ -30,6 +30,13 @@
 | 日本经济事件日历        | BOJ 与总务省统计局等按各自统计类别公布日程；BOJ 标注日程会更新且发布时间可能变更，某些时刻为 approximate。                                                                                                                                                                                        | 记录 `scheduledAt`、时区、时间精度、日程抓取/更新版本与实际 `releasedAt`（取得时）；“around”类时刻不得伪造成精确分钟。                                                                                                                         |
 
 以上是来源类别和已核实的约束，不代表这些来源已在应用中接通。官方来源事实和访问日期汇总见[来源核验记录](../research/P02-02-DATA-SOURCE-FINDINGS.md)。
+
+### P07-04 官方宏观来源
+
+- 美国宏观：Fed RSS 保存 feed 项目的来源发布时间；BLS v1 按官方每日/每批限制请求；BEA 缺 `UserID` 时将来源标为 `BLOCKED_EXTERNAL`。API 结果中的报告期与新闻发布时间是不同时间语义。
+- 日本宏观：BOJ Time-Series Data Search API 可按代码查询 JSON/CSV，单次不超过 60,000 个观测；系列报告期不作为公告发布时间。接口未经过本机真实请求验证。
+- SEC、Fed、BLS、BOJ 当前缺真实调用结果时一律 `NOT_VERIFIED`。EDINET/BEA 缺 key、TDnet 付费接口未授权、issuer IR 未逐站核验时不得发起自动采集。
+- `src/providers/disclosures` 只归一已取得的引用元数据，不负责 HTTP、RSS/XML 或各来源 API 响应解析。源 ID 在同一 source 下用于幂等去重；多个不同 source 的同一公告归并留给 P07-05。
 
 ## 统一证据与观察契约
 

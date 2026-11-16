@@ -6,7 +6,7 @@
 
 **核验时点：2026-11-16。**调查美国与日本上市股票的数据可行性，重点区分监管披露、交易所行情、免费延迟/历史数据和需要许可的行情产品，并记录数据范围、时效、时间字段、认证、频率限制、价格、使用/再分发条件及本次访问证据。
 
-本任务跟踪 GitHub Issue [#35](https://github.com/OYLPY/stock-monitor/issues/35)。Issue 已更新为直接在 `main` 工作、不创建 PR；此项交付仅是来源研究，不是应用接入、数据授权或产品验收证据。
+本调查始于 GitHub Issue [#35](https://github.com/OYLPY/stock-monitor/issues/35)，并由 P07-02 / [#49](https://github.com/OYLPY/stock-monitor/issues/49)、P07-03 / [#50](https://github.com/OYLPY/stock-monitor/issues/50) 与 P07-04 / [#51](https://github.com/OYLPY/stock-monitor/issues/51) 延续。来源研究和引用归一化不等于生产 API 接入、数据授权或产品验收。
 
 ## 方法与筛选标准
 
@@ -85,6 +85,35 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 
 **P07-02 / #49 当前结论：`BLOCKED_EXTERNAL`。** 当前路线要求跨数十年历史验证，但免费日线只返回最新 100 条；完整历史、复权日线和实时/延迟行情都需要付费，项目不允许购买数据服务。没有 API key，也没有注册、发起 API 请求或读取行情载荷。条款允许私人个人研究这一点已核实；阻断原因是完整历史数据和凭据不可用，不是将研究用途误判为商业用途。Nasdaq Data Link 与 NYSE 历史产品仍按各自订阅和许可条件处理。
 
+## P07-04：官方披露与宏观来源复核（2026-11-16）
+
+本节只使用来源机构的一手资料。页面/接口说明可读不等于已测试 API、已取得真实载荷、获得本地长期留存权或允许自动化抓取。
+
+| 来源                            | 官方能力与访问边界                                                                                                                                                    | 本地实施状态                                                                                    |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| SEC EDGAR                       | submissions/XBRL API 无需 API key；程序化访问上限为每秒 10 次，并要求明确 `User-Agent`。`acceptanceDateTime` 不等于首次公开可见时刻，SEC 不提供有保证的首次可见时间。 | 引用内核可接收 accession number 与官方 URL；未调用 API，首次公开时间保持未知。                  |
+| EDINET API v2                   | 需要 EDINET API key；列表包含 `docID`、`submitDateTime` 和文件公开/下载状态。官方建议克制请求，核验资料没有给出固定分钟配额；撤回或不可下载文件须按状态降级。         | 当前没有 API key；自动采集为 `BLOCKED_EXTERNAL`。不注册账户或发起 API 请求。                    |
+| JPX TDnet API                   | 订阅服务；官方价表列基本费每月 ¥70,000（未税），依获取量另收费。官方测试 API 返回固定 dummy data，不能用于真实披露验收。                                              | 付费未获授权，API 为 `BLOCKED_EXTERNAL`；不连接测试服务器，也不以公开网页可见推断自动抓取许可。 |
+| 公司 IR                         | 发行人域名、页面结构、发布时间和自动访问/留存许可各异；没有可假定适用于所有发行人的统一 API。                                                                         | 只接收明确给出的 issuer URL，归一为手工引用；不抓取未知 IR 站点或转载内容。                     |
+| BOJ Time-Series Data Search API | 官方 API 面向任何用户，支持 JSON/CSV，无需在说明中注册 key；单次最多 60,000 个观测，过频请求可能被限制。系列数据是报告期观察，不自动代表公告发布时间。                | 记录 API 入口和观察期时间语义；未请求真实系列数据，当前状态 `NOT_VERIFIED`。                    |
+| Federal Reserve RSS             | Fed 官方发布公告、演讲和统计更新的 RSS feed；页面没有核实到统一数值限额。RSS 发布时间按发布记录保存，不能代替本地取得时间。                                           | 仅登记 feed 来源与需求驱动的请求约束；未下载 feed 或将其当作已验证新闻。                        |
+| BLS Public Data API v1          | 无注册 API key 的公开接口；单次最多 25 个 series，按官方 FAQ 每日最多 25 次、历史查询最长 10 年。v2 的注册凭据和 20 年范围不能套用到 v1。                             | API 使用政策已登记；未请求 series 数据，当前状态 `NOT_VERIFIED`。                               |
+| BEA API                         | 注册后取得 36 字符 `UserID`；数据请求还必须带 `Method` 和 `DatasetName`，并遵守官方 throttling/terms。                                                                | 当前没有 API key；自动采集为 `BLOCKED_EXTERNAL`。不注册或请求数据。                             |
+
+`src/providers/disclosures` 当前提供规范化引用和 SQLite 幂等写入内核：以“来源 + 上游稳定 ID + 记录版本”识别重复项，校验官方来源域名，分别保留来源发布时间、事件时间、来源可用时间和原始时间文本；未知时间保持 `null`，不从 `collectedAt` 推导。相同来源 ID 的多个干净 permalink 只形成一条 source record；跨来源的语义事件归并留给 P07-05。仓储只保存来源 URL、时间元数据和内容哈希，不保存原始披露正文。
+
+该模块目前**没有**发起 HTTP 请求或解析上述来源的原生响应格式。SEC、BOJ、Fed RSS 和 BLS 的公开接口因此仍是 `NOT_VERIFIED`，不是“当前可用”；EDINET/BEA 缺 key、TDnet 需付费、公司 IR 需逐站确认的自动采集均为 `BLOCKED_EXTERNAL` 或手工引用。未以测试 Fixture 代替任何真实数据。本 Issue 的原生采集适配器和运行时降级路径仍未验收。
+
+### 官方来源
+
+- [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)、[SEC fair access](https://www.sec.gov/about/developer-resources) 和 [SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions)。
+- [EDINET API v2 规格](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf)、[EDINET FAQ](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0090_001.html) 与[使用规约](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0030.html)。
+- [JPX TDnet API](https://www.jpx.co.jp/english/markets/paid-info-listing/tdnet/02.html)、[TDnet API 接口规格](https://www.jpx.co.jp/english/markets/paid-info-listing/tdnet/p1j4l40000000q03-att/tdnetapi_specificationsE.pdf) 和[服务费率](https://www.jpx.co.jp/markets/paid-info-listing/tdnet/)。
+- [BOJ Time-Series API 手册](https://www.stat-search.boj.or.jp/info/api_manual_en.pdf)、[使用注意事项](https://www.stat-search.boj.or.jp/info/notice_en.html) 与[快速指南](https://www.stat-search.boj.or.jp/ssi/docs/info/nme_aphelp_en.html)。
+- [Federal Reserve RSS](https://www.federalreserve.gov/feeds/feeds.htm)。
+- [BLS API FAQ](https://www.bls.gov/developers/api_faqs.htm)、[v1 规格](https://www.bls.gov/developers/api_signature.htm) 与[v2 规格](https://www.bls.gov/developers/api_signature_v2.htm)。
+- [BEA API 指南](https://apps.bea.gov/API/docs/)、[Swagger](https://apps.bea.gov/API/swagger/index.htm) 与[服务条款](https://apps.bea.gov/api/_pdf/bea_api_tos.pdf)。
+
 ## 发现、相反证据与结论
 
 ### 已由官方材料支持的事实
@@ -120,6 +149,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 4. P04-03 仅交付研究文档；没有选定生产供应商、写入配置、创建适配器或把示例/测试数据接入应用。实现前应对当前条款、账户类型、存储与展示范围、具体字段、时间戳、价格调整和实际连接能力重新核验。
 5. P07-02 / #49 在完整历史数据需要付费、项目未授权付费且没有 API key 时保持 `BLOCKED_EXTERNAL`；不以 Fixture 替代真实行情适配器的完成验收，继续处理其他已满足依赖的任务。
 6. P07-03 / #50 的 Free 日线仅 2 年并延迟 12 周；付费数据不在当前授权范围。保持 `BLOCKED_EXTERNAL`，不以短历史或 Fixture 宣称满足数十年回测。
+7. P07-04 / #51 已增加来源策略和幂等引用写入内核，但未实现原生 HTTP/RSS 响应采集，因此不能宣称 SEC、BOJ、Fed 或 BLS 已连通；EDINET/BEA 的 API key、TDnet 的付费许可和逐发行人的 IR 自动访问授权仍缺失。Issue 保持 open，待原生适配器和来源降级路径验证后再验收。
 
 ## 主要来源（访问日期均为 2026-11-16）
 
