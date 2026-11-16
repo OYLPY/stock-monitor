@@ -183,7 +183,7 @@
 
 ### [P11 自动任务、监测与通知](https://github.com/OYLPY/stock-monitor/issues/12)
 
-- [ ] [P11-01 — Worker 任务队列与调度器](https://github.com/OYLPY/stock-monitor/issues/69) · 依赖：P04-04, P05-01
+- [x] [P11-01 — Worker 任务队列与调度器](https://github.com/OYLPY/stock-monitor/issues/69) · 依赖：P04-04, P05-01
 - [ ] [P11-02 — 美日市场时段扫描与假日异常](https://github.com/OYLPY/stock-monitor/issues/70) · 依赖：P11-01, P07-01
 - [ ] [P11-03 — 重大新事件规则、去重与告警](https://github.com/OYLPY/stock-monitor/issues/71) · 依赖：P07-05, P08-03, P11-02
 - [ ] [P11-04 — 晨报、日审计和周审计任务编排](https://github.com/OYLPY/stock-monitor/issues/72) · 依赖：P08-04, P11-01, P11-03
