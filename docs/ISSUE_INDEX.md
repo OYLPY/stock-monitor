@@ -135,7 +135,7 @@
 
 - [x] [P05-01 — 建立数据库、迁移及仓储层](https://github.com/OYLPY/stock-monitor/issues/37) · 依赖：P04-02
 - [x] [P05-02 — 统一时间、金额、货币与市场标识](https://github.com/OYLPY/stock-monitor/issues/38) · 依赖：P03-02
-- [ ] [P05-03 — 输入 Schema、API 基础设施与安全设置](https://github.com/OYLPY/stock-monitor/issues/39) · 依赖：P05-01, P05-02
+- [x] [P05-03 — 输入 Schema、API 基础设施与安全设置](https://github.com/OYLPY/stock-monitor/issues/39) · 交付：[API_CONTRACTS.md](design/API_CONTRACTS.md)、`src/lib/api`、`src/lib/security`、`.env.example` · 覆盖：RQ-001、RQ-025 · 依赖：P05-01, P05-02
 - [ ] [P05-04 — 事件与来源仓储及审计历史](https://github.com/OYLPY/stock-monitor/issues/40) · 依赖：P05-01, P05-03
 - [ ] [P05-05 — 备份、恢复和数据库完整性验证](https://github.com/OYLPY/stock-monitor/issues/41) · 依赖：P05-01, P05-04
 

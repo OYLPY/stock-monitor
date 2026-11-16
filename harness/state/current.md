@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–05 / #28–32、P04-01–04 / #33–36、PMO-01 / #88 与 P04 阶段 #5 均已完成并关闭。P04-03 证实披露数据源不等于行情源，且本次核验未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P05-01 / #37 已完成并关闭；当前执行 P05-02 / #38，依赖 P03-02 / #29 已满足。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–05 / #28–32、P04-01–04 / #33–36、PMO-01 / #88 与 P04 阶段 #5 均已完成并关闭。P04-03 证实披露数据源不等于行情源，且本次核验未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P05-01 / #37、P05-02 / #38 已完成并关闭；当前执行 P05-03 / #39，依赖 #37 和 #38 均已满足。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
 - **依赖**：P04-01 / #33 的 P03-02 / #29、P04-02 / #34 的 P03-01 / #28、P04-03 / #35 的 P02-02 / #25、P04-04 / #36 的 P03-05 / #32 均已关闭；P05-01 / #37 依赖 P04-02 / #34，已满足。
 - **同步状态**：P04-04 实现提交 `353fab73528603ae08d45377aa31a06c5c42ffe7` / [Quality CI 43785725224](https://github.com/OYLPY/stock-monitor/actions/runs/43785725224) 与文档同步提交 `24f20a4e47995668c159d12ecf582adee69eaecf` / [Quality CI 43786151528](https://github.com/OYLPY/stock-monitor/actions/runs/43786151528) 均已 push 并成功。开始 P05-01 前再次同步 `main` 并确认无开放 PR。
@@ -47,4 +47,7 @@
 - **P05-02 开始记录**：#38 于 2026-11-16 开始；开始前 main 与 origin/main 同步至 bbec1e123d86cb26c3c510375893b48ac7ab7561、工作树干净且无开放 PR；依赖 #29 已关闭。Issue #38 已按用户授权修订为 direct-main/no-PR，并记录基线。
 - **P05-02 本地验收**：时间/金额/FX/证券标识原语、边界测试与 DOC-0038 追踪已完成；Node v22.14.0 / pnpm 11.25.0。format、lint、typecheck、unit（5 files / 31 tests）、build、目标文档 Prettier、38 个 Doc ID / 6 个 tags 自检和 `git diff --check` 均 exit 0。详见 [P05-02 六字段交接](../handoffs/P05-02.md)。
 - **P05-02 实现远端验收**：`5e2733fbf645e9602216eaf9a7a5f5892eaef41e` 已 push；匹配 [Quality CI run 43794287233](https://github.com/OYLPY/stock-monitor/actions/runs/43794287233) 成功（install、format、lint、typecheck、test、build 全绿）。
-- **下一步具体操作**：提交并 push P05-02 交接、状态与 Issue 索引同步；核验匹配 Quality CI，更新并关闭 #38，然后开始 P05-03 / #39。
+- **P05-03 开始记录**：#39 于 2026-11-16 开始；开始前 `main` 与 `origin/main` 同步至 `417fcbc6045b297aec3f974bef7509aa85c78c68`、工作树干净且无开放 PR；前置 #37/#38 均已关闭。已按授权在 `main` 直接实施，不创建 PR。
+- **P05-03 本地验收**：请求解析/错误响应/loopback 来源校验与不泄密日志已实现；format、lint、typecheck、unit（7 files / 40 tests）、build、DOC-0009 相关链接及运行时无 API 路由/凭据/外部请求自检、`git diff --check` 均通过。没有独立 integration 命令。详见 [P05-03 六字段交接](../handoffs/P05-03.md)。
+- **P05-03 实现远端验收**：`131a316808ad597b675de3bd1ef9a6677eaea06f` 已推送；匹配 [Quality CI run 43797158508](https://github.com/OYLPY/stock-monitor/actions/runs/43797158508) 成功（install、format、lint、typecheck、test、build 全绿）。
+- **下一步具体操作**：提交并 push P05-03 六字段交接、当前状态与 Issue 索引更新；确认匹配 CI 后向 #39 记录完整证据并关闭，然后开始 P05-04 / #40。
