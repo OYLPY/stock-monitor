@@ -13,6 +13,7 @@
 - 查 RQ/FR/AC 的需求关系：用 [需求索引](requirements/REQUIREMENTS_INDEX.md) 与 [追踪矩阵](requirements/TRACEABILITY.md)；它们不替代文档目录。
 - 查阶段目标与依赖路线：用 [开发计划](DEVELOPMENT_PLAN.md)。
 - 查 UI token、shadcn 组件和可访问性约定：用 [UI 设计规范](design/UI_DESIGN.md)。
+- 查市场日历、交易时段和调度通知契约：读 [调度与事件通知契约](design/SCHEDULER.md)。
 - 查本地 SQLite 快照、预检与安全恢复步骤：用 [备份与恢复手册](operations/backup.md)。
 
 ## 检索顺序

@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0032 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 >
-> 状态：P03-05 设计基线；Worker、市场日历适配器、来源和本机通知运行时代码尚未实现。本文细化 [FR-Research-001–006](../requirements/FR_RESEARCH.md) 与现有任务状态，不声明实时行情或新闻已接入。
+> 状态：P03-05 设计基线；P07-01 本地交易日历解析器已实现并通过本地校验。Worker、行情/新闻来源适配器、调度和本机通知运行时代码尚未实现。本文细化 [FR-Research-001–006](../requirements/FR_RESEARCH.md)，不声明实时行情或新闻已接入。
 >
 > 相关设计：[DB Schema](DB_SCHEMA.md)、[API/DTO 契约](API_CONTRACTS.md)、[数据溯源](DATA_PROVENANCE.md)、[失败与恢复](FAILURE_MODES.md)、[工作流状态](WORKFLOW_STATE.md)。
 
@@ -14,7 +14,23 @@
 
 ## 市场时间与触发窗口
 
-交易时段使用版本化官方市场日历；交易所、本地业务日、IANA 时区、会话开始/结束 UTC 时刻、午休、提前收盘、临时休市、来源和有效版本一并保存。美股 NYSE 与 Nasdaq 分别判定；TSE 使用东京市场日历。具体规则承接 [FR-Research 的日历来源与窗口](../requirements/FR_RESEARCH.md#fr-research-001--002--交易日历与监测窗口)，不得硬编码 EST/固定 UTC 偏移或用开发机时区替代。
+交易时段使用版本化官方市场日历；判定结果携带交易所、本地业务日、IANA 时区、会话 UTC 边界、午休/提前收盘/临时休市状态和来源版本。Worker 写入任务记录时必须保存被引用的日历版本与市场时段。美股 NYSE 与 Nasdaq 分别判定；TSE 使用东京市场日历。具体规则承接 [FR-Research 的日历来源与窗口](../requirements/FR_RESEARCH.md#fr-research-001--002--交易日历与监测窗口)，不得硬编码 EST/固定 UTC 偏移或用开发机时区替代。
+
+### P07-01 版本化交易日历快照
+
+实现位于 [`src/features/market-calendar`](../../src/features/market-calendar/market-calendar.ts)，由 `marketCalendarStateAt` 对传入的 UTC instant 做纯本地判定；本实现不联网、不自动刷新，也不持久化状态。官方页面未提供可用的发布版本号时，以官方页面所列年份和本地核查时刻组成快照版本：
+
+| 交易所       | IANA 时区          | 有效年份  | 快照版本                                       | 最近核查时刻（UTC） | 官方来源                                                                                                                                                                       |
+| ------------ | ------------------ | --------- | ---------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| NYSE         | `America/New_York` | 2026–2028 | `nyse-cash-2026-2028-as-of-2026-11-16`         | 2026-11-16 10:07:15 | [NYSE 交易时间与假日](https://www.nyse.com/trade/hours-calendars)                                                                                                              |
+| Nasdaq       | `America/New_York` | 2026      | `nasdaq-us-cash-2026-as-of-2026-11-16`         | 2026-11-16 10:07:15 | [Nasdaq 假日与交易时间](https://www.nasdaq.com/market-activity/stock-market-holiday-schedule)                                                                                  |
+| TSE 现金股票 | `Asia/Tokyo`       | 2026–2027 | `jpx-cash-equities-2026-2027-as-of-2026-11-16` | 2026-11-16 10:07:15 | [JPX 市场假日](https://www.jpx.co.jp/english/corporate/about-jpx/calendar/index.html)、[TSE 国内股票交易规则](https://www.jpx.co.jp/english/equities/trading/domestic/01.html) |
+
+- NYSE/Nasdaq 核心时段为 09:30–16:00 ET；TSE 为 09:00–11:30、12:30–15:30 JST。窗口是左闭右开，盘前、盘后、期权及衍生品时段不纳入本 V1 股票日历。
+- NYSE 提前收市日为 2026-11-27、2026-12-24、2027-11-26、2028-07-03、2028-11-24，收市时刻 13:00 ET；Nasdaq 2026-11-27、2026-12-24 收市于 13:00 ET。TSE 假日采用其现金股票市场日历，包含法定假日及 1 月 1–3 日、12 月 31 日休市。
+- Nasdaq 官方页面目前只列出 2026 年；超出已核验年份（例如 Nasdaq 2027）返回 `CALENDAR_UNAVAILABLE / UNSUPPORTED_YEAR`。其他交易所超出各自覆盖年份时同样失败关闭，不从周末、美国联邦假日或相邻年份推导交易所假日。
+- 临时休市覆盖必须携带理由、交易所官方 HTTPS 来源、来源版本和带时区的核查时刻；仅接受对应交易所的官方域名。单个有效覆盖优先于常规日历并在结果中回传来源信息；无效、重复或冲突覆盖返回 `CALENDAR_UNAVAILABLE`。
+- 日历快照是静态数据。来源规则变化时应通过 Issue 更新快照、版本和验证样本；Worker 集成时还须将被引用的日历版本、市场日期及 UTC 会话边界写入任务记录。该解析器没有提供数十年历史交易日历，历史回测不能把当前快照当作完整历史日历。
 
 - 会话窗口按左闭右开 `[open, close)`；边界由当地日历转换成 UTC instant。DST 切换不改变当地开收市定义；每次运行记录被引用的日历版本。
 - 证券异常扫描只覆盖其上市市场当前开放的常规交易时段。TSE 午休/休市不扫描 TSE 证券；若美股同时开市，可单独扫描美股证券。盘前、盘后和未经批准的延长时段不属于 V1。
