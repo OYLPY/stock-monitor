@@ -179,6 +179,12 @@ const citationInputSchema = z.strictObject({
   publisher: z.string().trim().min(1).max(160).optional(),
   referenceUrl: z.string().url(),
   title: z.string().trim().min(1).max(500),
+  recordType: z.enum(["DISCLOSURE", "OTHER"]).default("DISCLOSURE"),
+  contentFingerprint: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .nullable()
+    .optional(),
   publishedAtMs: timestampSchema,
   occurredAtMs: timestampSchema,
   availableAtMs: timestampSchema,
@@ -242,13 +248,20 @@ function sourceRecordContent(input: {
   provider: DisclosureProvider;
   externalId: string;
   title: string;
+  recordType?: "DISCLOSURE" | "OTHER";
+  contentFingerprint?: string | null;
   publishedAtMs: number | null;
   occurredAtMs: number | null;
   availableAtMs: number | null;
   rawTimeText: string | null;
   sourceTimeZone: string | null;
 }): string {
-  return JSON.stringify(input);
+  const { recordType, contentFingerprint, ...previousShape } = input;
+  return JSON.stringify({
+    ...previousShape,
+    ...(recordType && recordType !== "DISCLOSURE" ? { recordType } : {}),
+    ...(contentFingerprint ? { contentFingerprint } : {}),
+  });
 }
 
 function sha256(value: string): string {
@@ -302,6 +315,8 @@ export function normalizeDisclosureCitation(input: DisclosureCitationInput) {
     provider: parsed.data.provider,
     externalId: parsed.data.externalId,
     title: parsed.data.title,
+    recordType: parsed.data.recordType,
+    contentFingerprint: parsed.data.contentFingerprint ?? null,
     publishedAtMs: parsed.data.publishedAtMs,
     occurredAtMs: parsed.data.occurredAtMs,
     availableAtMs: parsed.data.availableAtMs,
@@ -313,7 +328,7 @@ export function normalizeDisclosureCitation(input: DisclosureCitationInput) {
     source,
     record: {
       recordKey: `disclosure:${parsed.data.externalId}`,
-      recordType: "DISCLOSURE" as const,
+      recordType: parsed.data.recordType,
       recordVersion: parsed.data.recordVersion,
       supersedesRecordId: parsed.data.supersedesRecordId,
       publishedAtMs: parsed.data.publishedAtMs,
@@ -365,3 +380,14 @@ export function recordDisclosureCitation(
   });
   return { duplicate: false, record, source };
 }
+
+export {
+  collectBlsSeries,
+  collectBojSeries,
+  collectFederalReserveRss,
+  collectSecFilings,
+} from "./collectors";
+export type {
+  DisclosureCollectionResult,
+  DisclosureCollectionStatus,
+} from "./collectors";

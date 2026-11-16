@@ -153,7 +153,7 @@
 - [x] [P07-01 — NYSE/Nasdaq/JPX 交易日历与时段判定](https://github.com/OYLPY/stock-monitor/issues/48) · 交付：[版本化日历实现](../src/features/market-calendar/market-calendar.ts)、[DOC-0032 调度契约](design/SCHEDULER.md)、[六字段交接](../harness/handoffs/P07-01.md) · 覆盖：RQ-003/005、FR-Research-001/002 · 依赖：P05-02, P04-03
 - [ ] [P07-02 — 美股行情/历史数据适配器](https://github.com/OYLPY/stock-monitor/issues/49) · 状态：`BLOCKED_EXTERNAL`（免费日线仅最近 100 条；完整历史/复权需付费，且无 API key；见 [DOC-0036](research/data-sources.md)） · 交接：[六字段记录](../harness/handoffs/P07-02.md) · 依赖：P07-01, P05-04
 - [ ] [P07-03 — 日股行情/历史数据适配器](https://github.com/OYLPY/stock-monitor/issues/50) · 状态：`BLOCKED_EXTERNAL`（Free 仅 2 年且延迟 12 周；需注册，付费计划仍未覆盖数十年；见 [DOC-0036](research/data-sources.md)） · 交接：[六字段记录](../harness/handoffs/P07-03.md) · 依赖：P07-01, P05-04
-- [ ] [P07-04 — 公司公告、财报与官方宏观采集](https://github.com/OYLPY/stock-monitor/issues/51) · 状态：部分引用内核已实现，原生采集未验证；EDINET/BEA 缺 key、TDnet 付费未授权、issuer IR 需逐站确认 · 交接：[六字段记录](../harness/handoffs/P07-04.md) · 依赖：P07-01, P05-04
+- [ ] [P07-04 — 公司公告、财报与官方宏观采集](https://github.com/OYLPY/stock-monitor/issues/51) · 状态：实现与本地门禁通过，线上来源可用性仍 `NOT_VERIFIED`；EDINET/BEA 缺 key、TDnet 付费未授权、issuer IR 为手工引用 · 交接：[六字段记录](../harness/handoffs/P07-04.md) · 依赖：P07-01, P05-04
 - [ ] [P07-05 — 事件归一化、新旧判断与数据质量门禁](https://github.com/OYLPY/stock-monitor/issues/52) · 依赖：P07-02, P07-03, P07-04
 
 ### [P08 Codex 六角色研究执行](https://github.com/OYLPY/stock-monitor/issues/9)

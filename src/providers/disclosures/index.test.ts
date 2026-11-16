@@ -7,6 +7,7 @@ import {
   normalizeDisclosureCitation,
   recordDisclosureCitation,
 } from "./index";
+import type { DisclosureProvider } from "./index";
 
 describe("disclosure citations", () => {
   it("normalizes official references without inventing publication or availability times", () => {
@@ -32,6 +33,18 @@ describe("disclosure citations", () => {
         "https://www.sec.gov/Archives/edgar/data/320193/000032019326000123/index.htm",
       dataClass: "NOT_VERIFIED",
     });
+    expect(citation.record.content).toBe(
+      JSON.stringify({
+        provider: "sec.edgar",
+        externalId: "0000320193-26-000123",
+        title: "8-K filing",
+        publishedAtMs: null,
+        occurredAtMs: null,
+        availableAtMs: null,
+        rawTimeText: "2026-11-16T16:05:00-05:00",
+        sourceTimeZone: "America/New_York",
+      }),
+    );
   });
 
   it("stores one record when the same provider ID arrives through multiple URLs", async () => {
@@ -105,7 +118,46 @@ describe("disclosure citations", () => {
     expect(getDisclosureSourceState("bea.api", true).status).toBe(
       "NOT_VERIFIED",
     );
+    expect(getDisclosureSourceState("edinet.v2").status).toBe(
+      "BLOCKED_EXTERNAL",
+    );
+    expect(getDisclosureSourceState("tdnet.api").status).toBe(
+      "BLOCKED_EXTERNAL",
+    );
+    expect(getDisclosureSourceState("issuer.ir").status).toBe(
+      "BLOCKED_EXTERNAL",
+    );
     expect(getDisclosureSourceState("sec.edgar").status).toBe("NOT_VERIFIED");
+  });
+
+  it("accepts all official source families through the shared citation adapter", () => {
+    const references: Array<[DisclosureProvider, string, string?]> = [
+      ["sec.edgar", "https://www.sec.gov/filing"],
+      ["edinet.v2", "https://disclosure2dl.edinet-fsa.go.jp/document"],
+      ["tdnet.api", "https://www.jpx.co.jp/disclosure"],
+      ["boj.timeseries", "https://www.stat-search.boj.or.jp/series"],
+      [
+        "federalreserve.rss",
+        "https://www.federalreserve.gov/feeds/example.xml",
+      ],
+      ["bls.api", "https://www.bls.gov/data"],
+      ["bea.api", "https://apps.bea.gov/data"],
+      ["issuer.ir", "https://investor.example.com/ir", "Example Issuer"],
+    ];
+
+    for (const [provider, referenceUrl, publisher] of references) {
+      const citation = normalizeDisclosureCitation({
+        provider,
+        externalId: "record-1",
+        referenceUrl,
+        title: "Official source record",
+        ...(publisher ? { publisher } : {}),
+      });
+
+      expect(citation.source.sourceKey).toBe(
+        provider === "issuer.ir" ? "issuer.ir.investor.example.com" : provider,
+      );
+    }
   });
 
   it("preserves an explicitly unknown source timezone", () => {
