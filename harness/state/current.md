@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **状态**：P01–P05、PMO-01、P06-01–03 均已完成并关闭；P06-04 / #45 已在 `main` 完成本地实现与验证，功能提交 `bf2cac992b7ee764f75d40660db0ca7e060d5786` 尚未 push，交接与 CI 待收尾。依赖 #42/#40/#44 已关闭。P04-03 未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01–P05、PMO-01、P06-01–04 均已完成并关闭；P06-04 功能提交 `bf2cac992b7ee764f75d40660db0ca7e060d5786` 与交接提交 `fd5666ade9934f497d0183183e0288cd3f2a3c75` 已推送，匹配 [Quality CI 43828961138](https://github.com/OYLPY/stock-monitor/actions/runs/43828961138) success，#45 已附验收证据并关闭。当前进入 P06-05 / #46，基线 `fd5666ade9934f497d0183183e0288cd3f2a3c75`，依赖 #42/#37 已关闭；Issue 已改为 direct-main/no-PR 并留下开始记录。P04-03 未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
 - **依赖**：P04-01 / #33 的 P03-02 / #29、P04-02 / #34 的 P03-01 / #28、P04-03 / #35 的 P02-02 / #25、P04-04 / #36 的 P03-05 / #32 均已关闭；P05-01–05 的子 Issue 依赖均满足。
 - **同步状态**：P05-05 实现 `151769c6aa3a219cfd1e4e55f5d8593b26c6f0eb` 与交接/索引 `12a7fbda1a4d55cd10f174529ac999ecc9136122` 均已 push 到 `main`；匹配 [Quality CI 43804916395](https://github.com/OYLPY/stock-monitor/actions/runs/43804916395) 与 [43805369607](https://github.com/OYLPY/stock-monitor/actions/runs/43805369607) 均 success。#41 与 #6 已关闭。
@@ -60,5 +60,6 @@
 - **P06-03 远端验收**：实现提交 `610f23668e591db3f7ad1a4d5f60dc3980f7f4bb`、交接提交 `076dfe69ac5a6be3b770e67e367c9135b38d4a44` 已 push；匹配 [Quality CI run 43823427290](https://github.com/OYLPY/stock-monitor/actions/runs/43823427290) 成功（install、format、lint、typecheck、test、build 全绿）。#44 已附证据并关闭。
 - **P06-03 最终状态**：`docs/ISSUE_INDEX.md` 已标记完成；完整验收见 [六字段交接](../handoffs/P06-03.md)。
 - **P06-04 本地验收**：`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（16 files / 66 tests）、`pnpm build`、定向文档 Prettier、365 个 Markdown 本地链接、39 个 Doc ID/tag/追踪关系审计和 `git diff --check` 均 exit 0；桌面与 390px/320px 浏览器验收通过。Integration 无独立运行时/命令；当前无报告存储或生成器，生产界面如实显示空状态。详见 [六字段交接](../handoffs/P06-04.md)。
-- **P06-04 收尾状态**：功能提交 `bf2cac992b7ee764f75d40660db0ca7e060d5786` 已在本地 `main`，尚未 push；#45 仍开放，远端 CI 尚未运行。
-- **下一步具体操作**：提交 `harness/handoffs/P06-04.md` 与本文件，push `main`，等待匹配 Quality CI 成功后更新并关闭 #45。
+- **P06-04 远端验收**：功能提交 `bf2cac992b7ee764f75d40660db0ca7e060d5786` 与交接提交 `fd5666ade9934f497d0183183e0288cd3f2a3c75` 均已 push；最终 [Quality CI 43828961138](https://github.com/OYLPY/stock-monitor/actions/runs/43828961138) success（install、format、lint、typecheck、test、build 全绿）；#45 已附证据并关闭。
+- **P06-05 开始记录**：#46 于 2026-11-16 开始；基线 `fd5666ade9934f497d0183183e0288cd3f2a3c75`，main 与 origin/main 同步、工作树干净、无开放 PR；依赖 #42/#37 均已关闭，开始评论已写入 Issue。实际本地账本/回测 loader 与回测、风险及模拟成交运行时尚未实现。
+- **下一步具体操作**：沿用事件中心的本地只读 DB 访问模式检查当前账户与现金账本；实现 Backtests/Paper Ledger 页面，明确没有真实历史行情、回测结果或模拟订单时显示 NOT_VERIFIED/空态，且不提供任何账本写入或真实交易路径。
