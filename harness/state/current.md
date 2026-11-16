@@ -57,5 +57,6 @@
 - **P05-05 最终状态**：#41 与阶段 #6 已关闭；完成证据见 [六字段交接](../handoffs/P05-05.md)。
 - **P06-03 开始记录**：#44 于 2026-11-16 开始；开始基线 `6d730f3d0b1b558f57c70502d1f6ee3639c75bf8`，main 与 origin/main 同步、工作树干净、无开放 PR，#42/#40 已关闭；开始评论已写入 Issue。
 - **P06-03 本地验收**：format、lint、typecheck、test（15 files / 59 tests）、build、文档格式/389 个本地链接、`git diff --check` 均 exit 0；生产构建和桌面/390px/320px 窄屏键盘验收通过。详见 [六字段交接](../handoffs/P06-03.md)。
-- **P06-03 实现提交**：`610f23668e591db3f7ad1a4d5f60dc3980f7f4bb` 已在本地 main；代码尚待 push 与匹配 Quality CI。远端 CI 成功后才能关闭 #44。
-- **下一步具体操作**：push 当前 main，等待该 SHA 的 Quality CI 成功；随后向 #44 留验收评论并关闭，再同步 Issue 索引和状态，开始 P06-04 / #45。
+- **P06-03 远端验收**：实现提交 `610f23668e591db3f7ad1a4d5f60dc3980f7f4bb`、交接提交 `076dfe69ac5a6be3b770e67e367c9135b38d4a44` 已 push；匹配 [Quality CI run 43823427290](https://github.com/OYLPY/stock-monitor/actions/runs/43823427290) 成功（install、format、lint、typecheck、test、build 全绿）。#44 已附证据并关闭。
+- **P06-03 最终状态**：`docs/ISSUE_INDEX.md` 已标记完成；完整验收见 [六字段交接](../handoffs/P06-03.md)。
+- **下一步具体操作**：同步远端 `main`，读取 #45、P06-04 阶段验收与相关设计，核实依赖仍满足后记录开始状态并执行 P06-04。
