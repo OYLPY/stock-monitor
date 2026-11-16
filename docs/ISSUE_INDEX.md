@@ -151,7 +151,7 @@
 ### [P07 行情与公开信息采集实现](https://github.com/OYLPY/stock-monitor/issues/8)
 
 - [x] [P07-01 — NYSE/Nasdaq/JPX 交易日历与时段判定](https://github.com/OYLPY/stock-monitor/issues/48) · 交付：[版本化日历实现](../src/features/market-calendar/market-calendar.ts)、[DOC-0032 调度契约](design/SCHEDULER.md)、[六字段交接](../harness/handoffs/P07-01.md) · 覆盖：RQ-003/005、FR-Research-001/002 · 依赖：P05-02, P04-03
-- [ ] [P07-02 — 美股行情/历史数据适配器](https://github.com/OYLPY/stock-monitor/issues/49) · 状态：`BLOCKED_EXTERNAL`（免费日线仅最近 100 条；完整历史/复权需付费，且无 API key；见 [DOC-0036](research/data-sources.md)） · 依赖：P07-01, P05-04
+- [ ] [P07-02 — 美股行情/历史数据适配器](https://github.com/OYLPY/stock-monitor/issues/49) · 状态：`BLOCKED_EXTERNAL`（免费日线仅最近 100 条；完整历史/复权需付费，且无 API key；见 [DOC-0036](research/data-sources.md)） · 交接：[六字段记录](../harness/handoffs/P07-02.md) · 依赖：P07-01, P05-04
 - [ ] [P07-03 — 日股行情/历史数据适配器](https://github.com/OYLPY/stock-monitor/issues/50) · 依赖：P07-01, P05-04
 - [ ] [P07-04 — 公司公告、财报与官方宏观采集](https://github.com/OYLPY/stock-monitor/issues/51) · 依赖：P07-01, P05-04
 - [ ] [P07-05 — 事件归一化、新旧判断与数据质量门禁](https://github.com/OYLPY/stock-monitor/issues/52) · 依赖：P07-02, P07-03, P07-04

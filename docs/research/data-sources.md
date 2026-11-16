@@ -75,7 +75,7 @@
 
 #### P07-02 条款复核（2026-11-16）
 
-Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_service/) 允许个人、非商业用途，并将投资分析、研究、测试、监控及其他私人个人活动列为非商业使用范围；不能把个人本地研究本身直接判定为商业用途。其 [免费 API key 说明](https://www.alphavantage.co/support/api-key/) 对多数数据集列出每天 25 次请求；无限请求只面向经确认的开源或教育项目，本项目资格未获确认。官方 [日线 API 文档](https://www.alphavantage.co/documentation/) 说明免费 key 的 `TIME_SERIES_DAILY` 只返回最近 100 个数据点，完整 25 年以上日线需要 Premium；复权日线、实时及 15 分钟延迟行情也需 Premium。TOS 没有在本次核验中明确本地长期保存/缓存期限或离线回测保留权。
+Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_service/) 提供个人、非商业用途许可，并把私人个人的投资分析、研究、测试和监控与“超出该范围”的商业用途相区分；因此不能仅凭本地个人研究本身就判定为商业用途。条款另含组织代用、向他人提供信息及特定行业任职等判定条件，本项目未核验具体使用者是否触发这些条件。其 [免费 API key 说明](https://www.alphavantage.co/support/api-key/) 对多数数据集列出每天 25 次请求；无限请求只面向经确认的开源或教育项目，本项目资格未获确认。官方 [日线 API 文档](https://www.alphavantage.co/documentation/) 说明免费 key 的 `TIME_SERIES_DAILY` 只返回最近 100 个数据点，完整 25 年以上日线需要 Premium；复权日线、实时及 15 分钟延迟行情也需 Premium。TOS 没有在本次核验中明确本地长期保存/缓存期限或离线回测保留权。
 
 **P07-02 / #49 当前结论：`BLOCKED_EXTERNAL`。** 当前路线要求跨数十年历史验证，但免费日线只返回最新 100 条；完整历史、复权日线和实时/延迟行情都需要付费，项目不允许购买数据服务。没有 API key，也没有注册、发起 API 请求或读取行情载荷。条款允许私人个人研究这一点已核实；阻断原因是完整历史数据和凭据不可用，不是将研究用途误判为商业用途。Nasdaq Data Link 与 NYSE 历史产品仍按各自订阅和许可条件处理。
 
@@ -89,7 +89,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - JPX 官方免费月度表覆盖最长 10 年，但月度频率无法替代逐交易日回测；同一目录卡注明外部再分发不可。[JPX 月间相场表目录卡](https://clientportal.jpx.co.jp/ClientPortal/s/datacatalog/a085j00000Ip94b/a037?language=ja)
 - JPX 日线历史可追溯到 1974 年，NYSE Daily TAQ 可追溯到 1993 年；这些支持多年代跨度的官方历史产品都有明确费用或订阅/许可门槛。[JPX Data Cloud 价表](https://db-ec.jpx.co.jp/client_info/JPX_DLSITE/html/price_en.pdf)、[NYSE 历史价表](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)
 - Nasdaq/NYSE 的延迟展示政策仍涉及产品级许可、展示提示或访问条件；“交易所网站可打开”不足以证明应用可建立免费、稳定、可保存的行情通道。
-- Alpha Vantage 服务条款允许个人非商业的投资研究/监控；但其免费美股日线 API 仅返回最近 100 条，完整 25 年以上历史及复权日线需要 Premium。P07-02 因数据跨度与付费边界标记 `BLOCKED_EXTERNAL`，不是因为个人研究被定义为商业用途。
+- Alpha Vantage 服务条款不把私人个人投资研究/监控本身定义为商业用途，但其他条件仍需按实际使用者核验；其免费美股日线 API 仅返回最近 100 条，完整 25 年以上历史及复权日线需要 Premium。P07-02 因数据跨度与付费边界标记 `BLOCKED_EXTERNAL`，不是因为个人研究被定义为商业用途。
 
 ### 基于上述材料的推论
 
@@ -102,7 +102,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - 未测试任何生产/测试 API、注册流程、账号授权、当前网络地区可用性、请求限额之外的实际行为或具体返回字段。除 J-Quants/JPX 文档写明的更新表外，不把文档阅读等同于实际运行可达。
 - Nasdaq Data Link 的实时/延迟产品价格、个人用户实际费用、具体延迟级别、API 限额及本地单人使用许可需要按产品和账户确认；没有在本任务中申请或购买。
 - NYSE/JPX 行情合同下，内部单人本地工具的缓存期限、离线回测留存期限和导出权须按具体产品条款确认。网页公开延迟报价不自动授予这些权利。
-- Alpha Vantage 条款允许个人非商业投资研究/测试/监控；免费额度的本项目资格、长期本地保存/缓存期限和回测保留权未确认。本项目没有 API key；完整历史和复权日线需 Premium。
+- Alpha Vantage 条款将私人个人投资研究/测试/监控与商业用途区分，但用户是否触发组织使用、对外提供数据或行业任职等条件未确认；免费额度的本项目资格、长期本地保存/缓存期限和回测保留权也未确认。本项目没有 API key；完整历史和复权日线需 Premium。
 - 发行人层级的公司公告、新闻源、经济日历和 ETF 专项数据不在这项行情/披露产品范围内；本文件没有选择其供应商。
 
 ## 决策影响与下一步
