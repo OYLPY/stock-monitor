@@ -146,7 +146,7 @@
 - [x] [P06-03 — 异常监测与事件证据中心](https://github.com/OYLPY/stock-monitor/issues/44) · 交付：`src/app/events/page.tsx`、`src/components/events`、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/P06-03.md) · 覆盖：FR-Research-003/004/005/006/010/011 · 依赖：P06-01, P05-04
 - [x] [P06-04 — 晨报及六角色策略研究工作台](https://github.com/OYLPY/stock-monitor/issues/45) · 交付：`src/app/reports`、`src/components/reports`、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/P06-04.md) · 覆盖：RQ-004/007/008/009、FR-Research-007/008/009 · 依赖：P06-01, P05-04
 - [x] [P06-05 — 回测与纸面模拟账户界面](https://github.com/OYLPY/stock-monitor/issues/46) · 交付：`src/app/backtests`、`src/components/backtests`、`src/db/paper-account-repository`、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/P06-05.md) · 覆盖：RQ-013–022、FR-Trade-004/008–013、NFR-011/012 · 依赖：P06-01, P05-01
-- [ ] [P06-06 — 设置、任务日志、通知及 E2E 页面验收](https://github.com/OYLPY/stock-monitor/issues/47) · 依赖：P06-02, P06-03, P06-04, P06-05
+- [x] [P06-06 — 设置、任务日志、通知及 E2E 页面验收](https://github.com/OYLPY/stock-monitor/issues/47) · 交付：[DOC-0009](design/API_CONTRACTS.md)、[DOC-0017](design/UI_DESIGN.md)、[DOC-0039](operations/backup.md)、`src/app/settings`、`src/app/tasks`、`src/app/api/v1/backup`、[六字段交接](../harness/handoffs/P06-06.md) · 覆盖：RQ-026、NFR-007/008/012 · 依赖：P06-02, P06-03, P06-04, P06-05
 
 ### [P07 行情与公开信息采集实现](https://github.com/OYLPY/stock-monitor/issues/8)
 
