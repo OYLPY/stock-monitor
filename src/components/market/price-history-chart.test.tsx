@@ -27,6 +27,7 @@ describe("PriceHistoryChart", () => {
   });
 
   it("renders an accessible chart with a semantic time-and-price table", () => {
+    const firstMarketTimestamp = Date.parse("2025-01-02T21:00:00.000Z");
     const html = renderToStaticMarkup(
       createElement(PriceHistoryChart, {
         collectedAtMs: Date.parse("2025-01-06T00:00:00.000Z"),
@@ -35,7 +36,7 @@ describe("PriceHistoryChart", () => {
         market: "US",
         marketLabel: "美国市场",
         points: [
-          { marketAtMs: Date.parse("2025-01-02T21:00:00.000Z"), close: 100 },
+          { marketAtMs: firstMarketTimestamp, close: 100 },
           { marketAtMs: Date.parse("2025-01-03T21:00:00.000Z"), close: 102.5 },
         ],
         sourceName: "核验后的历史来源",
@@ -50,6 +51,13 @@ describe("PriceHistoryChart", () => {
     expect(html).toContain("历史来源");
     expect(html).toContain("America/New_York");
     expect(html).toContain("HISTORICAL");
+    expect(html).toContain(
+      new Intl.DateTimeFormat("zh-CN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "America/New_York",
+      }).format(new Date(firstMarketTimestamp)),
+    );
   });
 
   it("handles a constant single-point fixture and marks it demo-only", () => {
