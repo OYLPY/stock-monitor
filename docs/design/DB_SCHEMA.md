@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0013 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P03-01 设计基线已由 P05-01 接入本地 SQLite 核心账户/账本表、Drizzle 迁移、迁移校验和与显式开账；其余业务表、备份/恢复与完整产品流程仍待 P05/P10/P12 完成。P04-02 的驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
+> 状态：P03-01 设计基线已由 P05-01 接入本地 SQLite 核心账户/账本表，并由 P05-04 / #40 接入来源、事件、证据与只追加审计表；数据供应商适配、备份/恢复和完整产品流程仍待 P07/P05-05/P10/P12 完成。驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
 >
 > 上位契约：[架构](ARCHITECTURE.md)、[数据溯源](DATA_PROVENANCE.md)、[AI 工作流](AI_WORKFLOW.md)、[纸面交易与风控](../requirements/FR_TRADE.md)、[研究工作流](../requirements/FR_RESEARCH.md)、[非功能需求](../requirements/NFR.md)。
 
@@ -46,6 +46,8 @@ erDiagram
     SOURCE_RECORDS ||--o{ MARKET_EVENT_EVIDENCE : documents
     MARKET_EVENTS ||--o{ MARKET_EVENT_REVISIONS : versions
     MARKET_EVENT_REVISIONS ||--o{ MARKET_EVENT_EVIDENCE : supported_by
+    SOURCE_RECORDS ||--o{ MARKET_EVENT_REVISIONS : primary_source
+    SOURCE_RECORDS o|--o{ LEDGER_EVENTS : references
     MARKET_CALENDAR_VERSIONS ||--o{ MARKET_SESSIONS : defines
     RESEARCH_RUNS ||--o| RESEARCH_REPORTS : produces
     TASK_RUNS o|--o| RESEARCH_RUNS : executes
@@ -95,8 +97,8 @@ erDiagram
 
 | 表                                                     | 关键字段与约束                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sources`                                              | `id`、唯一 `source_key`、发布方、类型、引用/许可 URL、是否需要凭据、最近核验时刻。只保存凭据需求/状态，不保存密钥或 token。                                                                                                                                                                                                                                                                                                             |
-| `source_records`                                       | `id`、`source_id`、外部 ID/清理后的规范 URL、`published_at_ms`、`occurred_at_ms`、`available_at_ms`（该信息最早可被策略获知的时刻）、`collected_at_ms`、原始时间和时区、内容 SHA-256、可选许可范围内的本机原文路径、`supersedes_record_id`。URL 不含密钥、认证参数或签名 token；原文不默认复制到数据库，来源保留期/许可允许时才保存。相同外部 ID 的修订另建行；来源不能证明可获知时间时留空，严格历史回测不得把该记录当作当时已知信息。 |
+| `sources`                                              | `id`、唯一 `source_key`、发布方、类型、权威角色、引用/许可 URL、许可状态、凭据要求和注册时间。只保存凭据需求/状态，不保存密钥或 token；本地仓储不表示来源已接通或许可已获批准。                                                                                                                                                                                                                      |
+| `source_records`                                       | `id`、来源、稳定 `record_key`、类型/版本/`supersedes_record_id`、`published_at_ms`、`occurred_at_ms`、`available_at_ms`（该信息最早可被策略获知的时刻）、`collected_at_ms`、原始时间/时区、清理后的规范 URL、内容 SHA-256 和数据类别。当前迁移只持久化元数据与 hash，不保存来源原文。URL 不含密钥、认证参数或签名 token；来源不能证明可获知时间时留空，严格历史回测不得把该记录当作当时已知信息。 |
 | `instruments`                                          | 稳定证券 ID、市场、资产类别（普通股/非杠杆 ETF）、报价币种、交易单位、交易所时区、分类状态和分类证据。未知分类可以记录，但不能通过纸面风控。                                                                                                                                                                                                                                                                                            |
 | `instrument_identifiers`                               | `instrument_id`、代码方案、市场、外部代码、有效起止时刻和来源记录。代码变化保留历史；对有效当前代码加部分唯一索引，不以 ticker 作为实体 ID。                                                                                                                                                                                                                                                                                            |
 | `instrument_listing_periods`                           | 证券在市场上市/退市/暂停等生命周期区间、有效起止时间与来源记录；允许退市后重新上市的多段历史。缺少退市证券记录时，覆盖不完整的回测宇宙标为 `NOT_VERIFIED`。                                                                                                                                                                                                                                                                             |
@@ -106,7 +108,8 @@ erDiagram
 | `fx_observations`                                      | base/quote 币种、整数汇率尾数与 scale、市场/采集时间、来源记录、类别/新鲜度。FX 方向显式保存，不通过货币字符串猜测倒数。                                                                                                                                                                                                                                                                                                                |
 | `fx_conversion_details`                                | 唯一 ledger event、实际兑换的两币金额、使用的 FX observation、精确汇率和费用规则版本；与同一 event 的两侧现金流水一致。FX 不可用时不产生外币购买力。                                                                                                                                                                                                                                                                                    |
 | `market_calendar_versions` / `market_sessions`         | 日历来源及版本、市场、有效区间与 IANA 时区；按版本记录当地日期、开收市 UTC 时刻、午休/例外/休市状态。结算和监测使用被引用版本，不硬编码偏移。                                                                                                                                                                                                                                                                                           |
-| `market_events` / `market_event_revisions` / `market_event_evidence` | 稳定事件簇、按版本保存的不可变事实修订及多来源证据；保存指纹算法版本、市场/证券、类别、发生/发布时间、首次发现时刻、重大性判断与规则版本。新增来源只追加证据；实质修订追加 revision，不改写已通知事实。 |
+| `market_events` / `market_event_revisions` / `market_event_evidence` | 稳定事件簇、按版本保存的不可变事实修订及多来源证据；保存来源记录引用、验证等级/原因/规则版本、主来源、指纹算法版本、市场/证券、类别、发生/发布时间、首次发现时刻和重大性判断。无证据时 `VERIFIED` 被仓储规则拒绝；Fixture 只能是 `DEMO_ONLY`。新增来源只追加证据；实质修订追加 revision，不改写已通知事实。 |
+| `audit_events`                                        | 连续序号、实体/动作、payload SHA-256、前序事件 hash、事件 hash 和记录时间；payload 原文不进入审计表。仓储事务内按事件顺序追加 hash 链，数据库触发器拒绝更新/删除；读取后可重算并核验链完整性。 |
 
 来源记录保留来源收到的内容摘要和时间。规范化报价、OHLCV、FX、日历与事件各自使用强类型列，不把大量业务事实塞进一个无约束 JSON 字段。
 
@@ -275,7 +278,7 @@ BEFORE DELETE ON paper_fills BEGIN
 END;
 ```
 
-V1 对 `source_records`、市场/FX/日历/事件证据、策略/计划版本、风险裁决、批准、成交、估值和账本流水建立 no-update/no-delete 触发器；订单当前状态作为可重建投影，历史变化留在只追加的 `paper_order_events`。上面 SQL 展示账本核心触发器。
+当前迁移对初始资金、纸面账户和账本流水建立 no-update/no-delete 触发器；P05-04 增加来源、来源记录、事件、事件修订、事件证据和审计记录的不可变/只追加触发器。其他尚未迁移的 V1 业务表按后续 Issue 接入；订单当前状态作为可重建投影，历史变化留在只追加的 `paper_order_events`。上面 SQL 展示账本核心触发器。
 
 V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加经核验的 currency-scale 规则及 migration，不得猜默认 scale。SQLite 存储边界只提供结构约束，不等同于 API authorization：账本写权限仍只通过确定性的服务端 paper-trading 用例授予，研究模型、报告解析器和 UI 均无直接 SQL 写入能力。
 

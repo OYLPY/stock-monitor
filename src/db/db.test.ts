@@ -1,7 +1,15 @@
 import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 import { openDatabase, withTransaction } from "./index";
 import { migrateDatabase } from "./migrate";
@@ -23,7 +31,7 @@ describe("local SQLite database", () => {
       const { client, orm } = fixture.database;
       expect(client.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(client.pragma("foreign_keys", { simple: true })).toBe(BigInt(1));
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(1));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(2));
       expect(
         (
           client
@@ -48,13 +56,13 @@ describe("local SQLite database", () => {
           .prepare("SELECT COUNT(*) AS count FROM schema_migrations")
           .pluck()
           .get(),
-      ).toBe(BigInt(1));
+      ).toBe(BigInt(2));
 
       client.close();
       const restarted = await openDatabase(fixture.filePath);
       try {
         expect(restarted.client.pragma("user_version", { simple: true })).toBe(
-          BigInt(1),
+          BigInt(2),
         );
         expect(
           restarted.orm.select().from(initialCapitalConfigs).all(),
@@ -64,7 +72,7 @@ describe("local SQLite database", () => {
             .prepare("SELECT COUNT(*) FROM schema_migrations")
             .pluck()
             .get(),
-        ).toBe(BigInt(1));
+        ).toBe(BigInt(2));
       } finally {
         restarted.client.close();
       }
@@ -130,10 +138,16 @@ describe("local SQLite database", () => {
   });
 
   it("snapshots a migrated database before applying the next migration", async () => {
-    const fixture = await createTestDatabase();
+    const directory = await mkdtemp(join(tmpdir(), "stock-monitor-migration-"));
+    const filePath = join(directory, "test.sqlite");
+    const client = new Database(filePath, { timeout: 200 });
     let snapshotClient: SqliteClient | undefined;
     try {
-      const migrationsDirectory = join(dirname(fixture.filePath), "migrations");
+      client.defaultSafeIntegers(true);
+      client.pragma("foreign_keys = ON");
+      client.pragma("journal_mode = WAL");
+      client.pragma("synchronous = FULL");
+      const migrationsDirectory = join(directory, "migrations");
       const metadataDirectory = join(migrationsDirectory, "meta");
       await mkdir(metadataDirectory, { recursive: true });
       const initialMigrationSql = await readFile(
@@ -165,12 +179,10 @@ describe("local SQLite database", () => {
         }),
       );
 
-      await migrateDatabase(fixture.database.client, migrationsDirectory);
+      await migrateDatabase(client, migrationsDirectory);
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(2));
       expect(
-        fixture.database.client.pragma("user_version", { simple: true }),
-      ).toBe(BigInt(2));
-      expect(
-        fixture.database.client
+        client
           .prepare(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'migration_probe'",
           )
@@ -178,13 +190,11 @@ describe("local SQLite database", () => {
           .get(),
       ).toBe(BigInt(1));
 
-      const snapshots = (await readdir(dirname(fixture.filePath))).filter(
+      const snapshots = (await readdir(dirname(filePath))).filter(
         (file) => file.includes(".pre-v2-") && file.endsWith(".sqlite"),
       );
       expect(snapshots).toHaveLength(1);
-      snapshotClient = new Database(
-        join(dirname(fixture.filePath), snapshots[0]),
-      );
+      snapshotClient = new Database(join(dirname(filePath), snapshots[0]));
       snapshotClient.defaultSafeIntegers(true);
       expect(snapshotClient.pragma("user_version", { simple: true })).toBe(
         BigInt(1),
@@ -203,7 +213,7 @@ describe("local SQLite database", () => {
         `${initialMigrationSql}\n-- altered after application\n`,
       );
       await expect(
-        migrateDatabase(fixture.database.client, migrationsDirectory),
+        migrateDatabase(client, migrationsDirectory),
       ).rejects.toThrow("migration_checksum_mismatch:1");
       await writeFile(
         join(migrationsDirectory, "0000_initial.sql"),
@@ -232,13 +242,11 @@ describe("local SQLite database", () => {
         }),
       );
       await expect(
-        migrateDatabase(fixture.database.client, migrationsDirectory),
+        migrateDatabase(client, migrationsDirectory),
       ).rejects.toThrow("no such table: missing_table");
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(2));
       expect(
-        fixture.database.client.pragma("user_version", { simple: true }),
-      ).toBe(BigInt(2));
-      expect(
-        fixture.database.client
+        client
           .prepare(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'migration_partial'",
           )
@@ -246,14 +254,12 @@ describe("local SQLite database", () => {
           .get(),
       ).toBe(BigInt(0));
       expect(
-        fixture.database.client
-          .prepare("SELECT COUNT(*) FROM schema_migrations")
-          .pluck()
-          .get(),
+        client.prepare("SELECT COUNT(*) FROM schema_migrations").pluck().get(),
       ).toBe(BigInt(2));
     } finally {
       snapshotClient?.close();
-      await fixture.cleanup();
+      client.close();
+      await rm(directory, { recursive: true, force: true });
     }
   });
 

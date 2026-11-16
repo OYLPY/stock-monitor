@@ -3,18 +3,30 @@ import { dirname, isAbsolute } from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import {
+  auditEvents,
   cashLedgerEntries,
   initialCapitalConfigs,
   ledgerEvents,
+  marketEventEvidence,
+  marketEventRevisions,
+  marketEvents,
   paperAccounts,
+  sourceRecords,
+  sources,
 } from "./schema";
 import { migrateDatabase } from "./migrate";
 
 const schema = {
+  auditEvents,
   cashLedgerEntries,
   initialCapitalConfigs,
   ledgerEvents,
+  marketEventEvidence,
+  marketEventRevisions,
+  marketEvents,
   paperAccounts,
+  sourceRecords,
+  sources,
 };
 
 function createSqliteClient(filePath: string) {

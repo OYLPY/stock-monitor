@@ -116,7 +116,8 @@ export async function migrateDatabase(
       return true;
     });
 
-    appliedNewMigration ||= applyOne.immediate();
+    const didApplyMigration = applyOne.immediate();
+    appliedNewMigration = didApplyMigration || appliedNewMigration;
   }
 
   const userVersion = client.pragma("user_version", {
