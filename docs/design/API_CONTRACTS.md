@@ -24,9 +24,9 @@
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 稳定 ID    | 服务端生成的 UUID 字符串；不接受客户端指定的主键。                                                                                                             |
 | 绝对时间   | RFC 3339 UTC 字符串，保留毫秒并以 `Z` 结尾；未带 offset 的时间字符串拒绝。                                                                                     |
-| 市场业务日 | `YYYY-MM-DD` 加 IANA timezone 字段；不得用本机时区替代市场时区。                                                                                               |
-| 货币       | ISO 货币码字段与金额分开。金额用十进制字符串表达最小单位，例如 `amountMinor: "1000000"`，另带 `scale`；不得用 JS `number` / JSON 浮点金额。                    |
-| 价格与 FX  | `{ mantissa: "12345", scale: 2, currency: "JPY" }`；汇率另带明确 `baseCurrency` / `quoteCurrency`。精确整数用字符串，`scale` 等受界限的小整数用 JSON integer。 |
+| 市场业务日 | `YYYY-MM-DD` 加 IANA timezone 字段；不得用本机时区替代市场时区。当地日期语义见 [DOC-0038](DOMAIN_PRIMITIVES.md)，不代表实际交易日。                                                                                               |
+| 货币       | ISO 货币码字段与金额分开。金额用十进制字符串表达最小单位，例如 `amountMinor: "1000000"`，另带 `scale`；不得用 JS `number` / JSON 浮点金额；V1 JPY=0/USD=2，最小单位见 [DOC-0038](DOMAIN_PRIMITIVES.md)。                    |
+| 价格与 FX  | `{ mantissa: "12345", scale: 2, currency: "JPY" }`；FX 单位按 quote per base 解释，见 [DOC-0038](DOMAIN_PRIMITIVES.md)；汇率另带明确 `baseCurrency` / `quoteCurrency`。精确整数用字符串，`scale` 等受界限的小整数用 JSON integer。 |
 | 股数       | `quantityShares` 用十进制整数字符串；展示交易单位与方向必须分字段。                                                                                            |
 | 证据时间   | `publishedAt`、`occurredAt`、`availableAt`、`collectedAt` 与行情 `marketAt` 分列；不确定值为 `null` 并附原因，不能相互填充。                                   |
 | 状态       | 保留 FR-Research/FR-Trade 中的稳定英文状态码；简体中文释义由客户端字典呈现，不能翻译后再发回 API。                                                             |

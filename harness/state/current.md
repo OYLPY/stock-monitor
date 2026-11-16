@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–05 / #28–32、P04-01–04 / #33–36、PMO-01 / #88 与 P04 阶段 #5 均已完成并关闭。P04-03 证实披露数据源不等于行情源，且本次核验未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。当前执行 P05-01 / #37；依赖 P04-02 / #34 已满足。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01-01–04 / #20–23、P02-01–04 / #24–27、P03-01–05 / #28–32、P04-01–04 / #33–36、PMO-01 / #88 与 P04 阶段 #5 均已完成并关闭。P04-03 证实披露数据源不等于行情源，且本次核验未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P05-01 / #37 已完成并关闭；当前执行 P05-02 / #38，依赖 P03-02 / #29 已满足。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
 - **依赖**：P04-01 / #33 的 P03-02 / #29、P04-02 / #34 的 P03-01 / #28、P04-03 / #35 的 P02-02 / #25、P04-04 / #36 的 P03-05 / #32 均已关闭；P05-01 / #37 依赖 P04-02 / #34，已满足。
 - **同步状态**：P04-04 实现提交 `353fab73528603ae08d45377aa31a06c5c42ffe7` / [Quality CI 43785725224](https://github.com/OYLPY/stock-monitor/actions/runs/43785725224) 与文档同步提交 `24f20a4e47995668c159d12ecf582adee69eaecf` / [Quality CI 43786151528](https://github.com/OYLPY/stock-monitor/actions/runs/43786151528) 均已 push 并成功。开始 P05-01 前再次同步 `main` 并确认无开放 PR。
@@ -43,5 +43,6 @@
 - **P04-04 本地验收**：真实 Next 页面受理任务后关闭浏览器标签页并停止 Next 服务，独立 Worker 心跳继续、任务变为 `DONE`、effect 计数为 1；四个进程中断边界、lease fencing、API 幂等/校验与模拟错窗通过。Node v22.14.0 / SQLite 3.54.1；无外部请求、凭据或行情数据；真实睡眠/关机和 macOS `NOT_TESTED`。`pnpm install --frozen-lockfile`、format、lint、typecheck、unit（3 files / 19 tests）、build、smoke/browser PoC、文档索引/链接审计及 `git diff --check` 均通过。详见 [DOC-0037](../../docs/research/p04-04-worker-runtime-findings.md)、[PoC 运行日志](../../poc/worker/actual-run-2026-11-16.jsonl)、[六字段交接](../handoffs/P04-04.md)。
 - **P04-04 远端验收**：实现与文档同步提交的匹配 Quality CI 均成功；Issue #36 与 P04 阶段 #5 已关闭。
 - **P05-01 本地验收**：新增 SQLite/Drizzle 核心账户与账本表、版本化初始资金、不可变开账 repository、校验和迁移、WAL 连接、在线升级快照和临时 DB 工厂。`pnpm install --frozen-lockfile`、format、lint、typecheck、unit（4 files / 24 tests）、build、Drizzle generate、SQLite PoC、549 个 Markdown 链接 / 37 Doc ID 审计及 `git diff --check` 均 exit 0。无独立 integration 命令；实际文件数据库集成由 Vitest 覆盖。详见 [P05-01 六字段交接](../handoffs/P05-01.md)。
-- **P05-01 远端状态**：实现提交 `db480ee1ca2eafe170fb38c419eb6074beea4cf3` 已推送；匹配 [Quality CI run 43789971494](https://github.com/OYLPY/stock-monitor/actions/runs/43789971494) 已成功（install、format、lint、typecheck、test、build 全绿）；#37 保持开放直到文档同步提交的 CI 成功并写入 issue 证据。
-- **下一步具体操作**：将实现 CI 成功结果、P05-01 六字段交接和 docs/ISSUE_INDEX.md 勾选状态一并提交推送；确认文档同步提交的 Quality CI 成功后，更新并关闭 #37，再按 Issue #38 开始 P05-02。
+- **P05-01 远端验收**：实现提交 db480ee1ca2eafe170fb38c419eb6074beea4cf3 / [Quality CI 43789971494](https://github.com/OYLPY/stock-monitor/actions/runs/43789971494) 与文档/交接提交 bbec1e123d86cb26c3c510375893b48ac7ab7561 / [Quality CI 43790868201](https://github.com/OYLPY/stock-monitor/actions/runs/43790868201) 均成功；#37 已更新验收证据并关闭。
+- **P05-02 开始记录**：#38 于 2026-11-16 开始；开始前 main 与 origin/main 同步至 bbec1e123d86cb26c3c510375893b48ac7ab7561、工作树干净且无开放 PR；依赖 #29 已关闭。Issue #38 已按用户授权修订为 direct-main/no-PR，并记录基线。
+- **下一步具体操作**：实现 src/domain/primitives.ts 和边界测试；按 PMO 编号新增 DOC-0038，更新相关 API/DB/风险契约和需求追踪；运行任务验收并保留真实日志。
