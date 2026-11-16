@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **状态**：P01–P05、PMO-01、P06-01–05 均已完成实现和本地/远端验证；P06-05 实现提交 `be6e6173a89099153c1af91d0310b3f631b7173b` 已推送，匹配 [Quality CI 43833835587](https://github.com/OYLPY/stock-monitor/actions/runs/43833835587) success。#46 待完成交接/索引提交的 CI 后关闭；下一个任务为 P06-06 / #47。P04-03 未发现同时免费、官方且可用于美日多年代日线回测的来源；未进行真实 API 接入。P04-01 的 NFR-004 重试预算、429 分类与取消边界仍由 P08-01 实现和验证。P00-05 / #19 仍 `BLOCKED_EXTERNAL`，不属于当前依赖链。
+- **状态**：P01–P05、PMO-01、P06-01–05 均已完成并关闭相关 Issue。当前执行 P06-06 / #47；基线 `bb592de665a36dfe1dfcd90670ea54919f0e44d5`，`main` 与 `origin/main` 同步，工作树干净，依赖 #43–#46 已关闭，无开放 PR。生产代码已有 SQLite 备份核心，但无设置/任务/通知运行时；UI 需据实显示未接入状态。P04-03 的免费公开历史数据限制、P00-05 / #19 `BLOCKED_EXTERNAL` 与当前依赖无关。
 - **执行授权**：用户授权无人值守；直接在 `main` 完成设计、编码和验证，不创建 PR；push 后确认 CI，按验收更新 Issue 并继续下一项。
 - **依赖**：P04-01 / #33 的 P03-02 / #29、P04-02 / #34 的 P03-01 / #28、P04-03 / #35 的 P02-02 / #25、P04-04 / #36 的 P03-05 / #32 均已关闭；P05-01–05 的子 Issue 依赖均满足。
 - **同步状态**：P05-05 实现 `151769c6aa3a219cfd1e4e55f5d8593b26c6f0eb` 与交接/索引 `12a7fbda1a4d55cd10f174529ac999ecc9136122` 均已 push 到 `main`；匹配 [Quality CI 43804916395](https://github.com/OYLPY/stock-monitor/actions/runs/43804916395) 与 [43805369607](https://github.com/OYLPY/stock-monitor/actions/runs/43805369607) 均 success。#41 与 #6 已关闭。
@@ -63,5 +63,7 @@
 - **P06-04 远端验收**：功能提交 `bf2cac992b7ee764f75d40660db0ca7e060d5786` 与交接提交 `fd5666ade9934f497d0183183e0288cd3f2a3c75` 均已 push；最终 [Quality CI 43828961138](https://github.com/OYLPY/stock-monitor/actions/runs/43828961138) success（install、format、lint、typecheck、test、build 全绿）；#45 已附证据并关闭。
 - **P06-05 开始记录**：#46 于 2026-11-16 开始；基线 `fd5666ade9934f497d0183183e0288cd3f2a3c75`，main 与 origin/main 同步、工作树干净、无开放 PR；依赖 #42/#37 均已关闭，开始评论已写入 Issue。实际本地账本/回测 loader 与回测、风险及模拟成交运行时尚未实现。
 - **P06-05 本地验收**：已实现参数 GET 草稿、数据库只读账本视图、NOT_VERIFIED/未开户状态和禁用的回测/模拟订单入口；无真实行情或撮合运行时。`pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（18 files / 73 tests）、`pnpm build`、定向文档 Prettier 与 `git diff --check` 均通过。生产页面桌面、390px 与 320px 窄屏/键盘检查通过；320px 下无横向溢出，参数 GET 可保留到 URL，控件为 48px，浏览器无错误。无独立 integration 脚本；SQLite 文件型 repository 测试包含在 Vitest 中。详见 [六字段交接](../handoffs/P06-05.md)。
-- **P06-05 远端验收**：实现提交 `be6e6173a89099153c1af91d0310b3f631b7173b` 已推送；匹配 [Quality CI 43833835587](https://github.com/OYLPY/stock-monitor/actions/runs/43833835587) success。待交接/索引提交通过匹配 CI 后附证据并关闭 #46。
-- **下一步具体操作**：提交 P06-05 六字段交接、当前状态和 Issue 索引；推送并确认匹配 Quality CI，再附验收证据并关闭 #46。随后重新核对 #47 依赖与开放 PR，启动 P06-06。
+- **P06-05 远端验收**：实现提交 `be6e6173a89099153c1af91d0310b3f631b7173b` / [Quality CI 43833835587](https://github.com/OYLPY/stock-monitor/actions/runs/43833835587) 与交接/索引提交 `bb592de665a36dfe1dfcd90670ea54919f0e44d5` / [Quality CI 43834666858](https://github.com/OYLPY/stock-monitor/actions/runs/43834666858) 均已推送且成功；#46 已附证据并关闭。
+- **下一步具体操作**：完成 P06-06 Settings/Tasks 页面、本机备份 API、Playwright 冒烟和文档追踪；运行 format、lint、typecheck、unit、build、E2E，记录退出码；提交并 push `main`，确认匹配 Quality CI 后附证据关闭 #47。
+
+- **P06-06 开始记录**：2026-11-16；#47 的旧 PR 要求已按用户授权修正为 main 直推/no-PR；开始评论记录依赖、基线和运行时边界。

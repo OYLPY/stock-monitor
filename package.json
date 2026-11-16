@@ -9,10 +9,11 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "backup": "node --experimental-strip-types scripts/backup.ts",
     "restore": "node --experimental-strip-types scripts/restore.ts",
     "autopilot": "node --experimental-strip-types scripts/autopilot.ts",
-    "format:check": "prettier --check --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"harness/**/*.json\" drizzle.config.ts package.json README.md docs/design/UI_DESIGN.md docs/CONTEXT_ENGINEERING.md .github/workflows/quality.yml"
+    "format:check": "prettier --check --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"tests/**/*.ts\" playwright.config.ts vitest.config.mts \"harness/**/*.json\" drizzle.config.ts package.json README.md docs/design/UI_DESIGN.md docs/CONTEXT_ENGINEERING.md .github/workflows/quality.yml"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@openai/codex-sdk": "0.169.0",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "^22.20.5",

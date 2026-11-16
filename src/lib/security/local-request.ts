@@ -12,13 +12,27 @@ export function assertLocalRequest(request: Request): void {
   }
 
   const host = request.headers.get("host")?.trim().toLowerCase();
+  let hostUrl: URL;
+  try {
+    if (!host) throw new Error();
+    hostUrl = new URL(`http://${host}`);
+  } catch {
+    throw new ApiError("LOCAL_ORIGIN_REQUIRED");
+  }
+
   if (
     url.protocol !== "http:" ||
     url.username ||
     url.password ||
     !LOOPBACK_HOSTNAMES.has(url.hostname) ||
-    !host ||
-    host !== url.host.toLowerCase()
+    !LOOPBACK_HOSTNAMES.has(hostUrl.hostname) ||
+    hostUrl.username ||
+    hostUrl.password ||
+    hostUrl.pathname !== "/" ||
+    hostUrl.search ||
+    hostUrl.hash ||
+    hostUrl.host !== host ||
+    hostUrl.port !== url.port
   ) {
     throw new ApiError("LOCAL_ORIGIN_REQUIRED");
   }
@@ -33,7 +47,7 @@ export function assertLocalRequest(request: Request): void {
   if (!source) throw new ApiError("LOCAL_ORIGIN_REQUIRED");
 
   try {
-    if (new URL(source).origin !== url.origin) {
+    if (new URL(source).origin !== hostUrl.origin) {
       throw new ApiError("LOCAL_ORIGIN_REQUIRED");
     }
   } catch {

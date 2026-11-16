@@ -12,6 +12,10 @@ const API_ERRORS = {
   REQUEST_TOO_LARGE: { status: 413, message: "请求体超过大小限制" },
   UNSUPPORTED_MEDIA_TYPE: { status: 415, message: "请求类型不受支持" },
   LOCAL_ORIGIN_REQUIRED: { status: 403, message: "请求来源无效" },
+  BACKUP_FAILED: {
+    status: 500,
+    message: "本机数据库备份失败，请检查磁盘空间和目录权限。",
+  },
   INTERNAL_ERROR: { status: 500, message: "系统暂时无法处理请求" },
 } as const;
 
@@ -48,7 +52,9 @@ export function errorResponse(cause: unknown): Response {
   const error =
     cause instanceof ApiError ? cause : new ApiError("INTERNAL_ERROR");
 
-  if (error.code === "INTERNAL_ERROR") logInternalApiError(requestId);
+  if (error.code === "INTERNAL_ERROR" || error.code === "BACKUP_FAILED") {
+    logInternalApiError(requestId, error.code);
+  }
 
   return jsonResponse(
     {

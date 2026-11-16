@@ -9,6 +9,7 @@ import {
   FileText,
   FlaskConical,
   House,
+  ListChecks,
   Settings2,
 } from "lucide-react";
 
@@ -22,7 +23,6 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
@@ -34,9 +34,9 @@ const availableModules = [
   { icon: Bell, label: "异常与事件", href: "/events" },
   { icon: FileText, label: "晨报与策略研究", href: "/reports" },
   { icon: FlaskConical, label: "回测与模拟账户", href: "/backtests" },
+  { icon: Settings2, label: "设置", href: "/settings" },
+  { icon: ListChecks, label: "任务与通知", href: "/tasks" },
 ] as const;
-
-const plannedModules = [{ icon: Settings2, label: "设置与任务" }];
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -104,15 +104,6 @@ export function AppSidebar() {
                     <Icon aria-hidden="true" />
                     <span>{label}</span>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {plannedModules.map(({ icon: Icon, label }) => (
-                <SidebarMenuItem key={label}>
-                  <SidebarMenuButton className="min-h-12" disabled>
-                    <Icon aria-hidden="true" />
-                    <span>{label}</span>
-                  </SidebarMenuButton>
-                  <SidebarMenuBadge>待开放</SidebarMenuBadge>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

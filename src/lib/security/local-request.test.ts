@@ -35,6 +35,21 @@ describe("local request security", () => {
     ).not.toThrow();
   });
 
+  it("allows Next-normalized localhost URLs for matching loopback host and origin", () => {
+    expect(() =>
+      assertLocalRequest(
+        localRequest(
+          "POST",
+          {
+            host: "127.0.0.1:3005",
+            origin: "http://127.0.0.1:3005",
+          },
+          "http://localhost:3005/api/v1/test",
+        ),
+      ),
+    ).not.toThrow();
+  });
+
   it("rejects non-loopback hosts, host mismatches, and cross-origin mutations", () => {
     expect(() =>
       assertLocalRequest(
@@ -47,6 +62,18 @@ describe("local request security", () => {
     expect(() =>
       assertLocalRequest(
         localRequest("POST", { origin: "http://attacker.example" }),
+      ),
+    ).toThrow(expect.objectContaining({ code: "LOCAL_ORIGIN_REQUIRED" }));
+    expect(() =>
+      assertLocalRequest(
+        localRequest(
+          "POST",
+          {
+            host: "127.0.0.1:3001",
+            origin: "http://127.0.0.1:3000",
+          },
+          "http://localhost:3000/api/v1/test",
+        ),
       ),
     ).toThrow(expect.objectContaining({ code: "LOCAL_ORIGIN_REQUIRED" }));
     expect(() => assertLocalRequest(localRequest("POST"))).toThrow(

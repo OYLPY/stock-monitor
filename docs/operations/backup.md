@@ -23,6 +23,10 @@ pnpm backup -- "D:\data\stock-monitor.sqlite" "D:\backups\stock-monitor-2026-11-
 
 数据库快照与 manifest 在临时目录生成，完成完整性/外键检查后发布。manifest 最后写入；如果进程中断且 manifest 缺失，预检会拒绝该不完整备份。备份失败时保留原数据库和已有输出目录。
 
+### 设置页备份
+
+应用的“设置”页可创建同样的 SQLite 一致性快照。它通过受本机来源检查保护的 POST 请求运行，默认保存到应用数据目录的 `backups` 子目录；每次使用唯一目录，不覆盖当前数据库或既有备份。成功消息显示完整本机目录，失败时显示统一错误提示。备份接口不会返回环境变量或服务凭据。
+
 ## 预检
 
 预检验证 manifest 格式、文件长度和 SHA-256、SQLite `integrity_check`、外键、`user_version` 与迁移记录。它会把数据库复制到系统临时目录，在临时副本上执行兼容的向前迁移，再验证迁移后的数据库；不会修改备份或已有数据库。
@@ -64,6 +68,7 @@ pnpm restore -- "D:\backups\stock-monitor-2026-11-16" "D:\data\stock-monitor-res
 ## 当前实现边界
 
 - CLI 显式接收数据库路径；它不猜测或修改应用运行时的数据路径。
+- 设置页备份使用 `getLocalDatabasePath()` 的应用路径，并将快照放入其旁边的 `backups` 子目录；命令行仍可为独立环境显式指定路径。
 - 恢复目标必须是新文件，不提供覆盖恢复或自动切换当前应用数据库的开关。
 - 备份会保存 SQLite 内现有数据和来源标记；数据是否为 REAL、DELAYED、HISTORICAL 或 DEMO_ONLY 由其原有记录决定。
 - 100,000 条账本记录在 60 秒内完成备份校验和恢复的基准由 P12 性能验收负责；本任务的文件型测试不代表该基准已通过。
@@ -72,6 +77,6 @@ pnpm restore -- "D:\backups\stock-monitor-2026-11-16" "D:\data\stock-monitor-res
 
 - 需求：[NFR-007](../requirements/NFR.md)、[RQ-026 / AC-NFR-011](../requirements/TRACEABILITY.md)
 - 设计：[SQLite Schema 与恢复规则](../design/DB_SCHEMA.md)
-- 实现：`src/db/backup.ts`、`scripts/backup.ts`、`scripts/restore.ts`
-- 验证：`src/db/backup.test.ts`（真实临时 SQLite 文件、WAL 快照、已知纸面账本、损坏与路径保护）
-- Issue：[P05-05 / #41](https://github.com/OYLPY/stock-monitor/issues/41)
+- 实现：`src/db/backup.ts`、`src/app/api/v1/backup/route.ts`、`scripts/backup.ts`、`scripts/restore.ts`
+- 验证：`src/db/backup.test.ts`（真实临时 SQLite 文件、WAL 快照、已知纸面账本、损坏与路径保护）、`src/app/api/v1/backup/route.test.ts` 与 P06-06 Playwright 冒烟
+- Issue：[P05-05 / #41](https://github.com/OYLPY/stock-monitor/issues/41)、[P06-06 / #47](https://github.com/OYLPY/stock-monitor/issues/47)

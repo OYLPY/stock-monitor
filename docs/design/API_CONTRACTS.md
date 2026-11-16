@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0009 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P03-02 设计基线；P05-03 / #39 已实现可复用的 JSON 请求解析、统一响应与本地来源校验工具，但尚无产品 API Route Handler 调用这些工具。应用只有 Next.js 最小主页；运行时授权、SQLite/Drizzle 与 Worker 仍待后续阶段实现。
+> 状态：P03-02 设计基线；P05-03 / #39 提供 JSON 请求解析、统一响应与本地来源校验；P06-06 / #47 已实现 loopback 保护的 SQLite 备份 Route Handler。其余 V1 路由与生产任务运行时仍待后续阶段实现。
 >
 > 上位契约：[系统架构](ARCHITECTURE.md)、[威胁模型](THREAT_MODEL.md)、[AI 工作流](AI_WORKFLOW.md)、[数据溯源](DATA_PROVENANCE.md)、[DB Schema](DB_SCHEMA.md)、[研究需求](../requirements/FR_RESEARCH.md)、[纸面交易需求](../requirements/FR_TRADE.md)、[非功能需求](../requirements/NFR.md)。
 
@@ -10,7 +10,7 @@
 
 - API 仅供绑定到 `127.0.0.1` 的本地 UI 使用，统一前缀 `/api/v1`，JSON 编码；不提供远端客户端契约、产品登录/用户管理、券商账户连接或真实下单 API。
 - 浏览器只提交命令和筛选条件。Route Handler 对每个请求执行严格边界验证，再调用服务端用例；风控、当前行情/FX 复核、批准和账本权限都由服务端确定性代码判定，不能信任客户端状态、AI 输出或隐藏按钮。
-- 禁用 CORS。每个请求都校验 `Host` 对应服务实际绑定的 loopback origin；状态变更请求还必须校验 `Origin`，缺失或 `null` 时按威胁模型校验 `Referer`，两者均不可验证则拒绝。拒绝 DNS rebinding/非预期 Host；不要把未经验证的 `Forwarded` / `X-Forwarded-Host` 当作可信来源。V1 不用 Cookie 或 bearer token 建立产品身份。
+- 禁用 CORS。每个请求校验 URL 与 `Host` 都是 loopback 且端口一致；框架把 URL hostname 规范化为 `localhost` 时，仍要求传入 `Host` 和变更请求的 `Origin` 匹配。Origin 缺失或为 `null` 时按威胁模型校验 `Referer`，两者均不可验证则拒绝。拒绝 DNS rebinding/非预期 Host；不要把未经验证的 `Forwarded` / `X-Forwarded-Host` 当作可信来源。V1 不用 Cookie 或 bearer token 建立产品身份。
 - GET 仅查询，不触发供应商刷新、任务创建或账本副作用。POST 命令不得由预取、渲染、超链接导航或请求重试隐式触发；任务/账户初始化/计划版本/批准/模拟订单等命令要求 UUIDv4 `Idempotency-Key`。键按操作范围唯一；相同键与相同规范化输入重放原结果，相同键与不同输入返回 `409 IDEMPOTENCY_KEY_REUSED`。
 - JSON 请求体上限为 64 KiB（当前命令 DTO 不接受行情序列或文章原文），在读取前校验大小并要求 `Content-Type: application/json`。外部/模型输出使用独立严格 Schema；未知键、类型错误、超长字符串/数组和非法枚举拒绝。验证错误只返回字段路径与错误码，不回显原始输入、模型原文、秘密或堆栈。
 - 各边界通过 Zod Schema 校验；请求 DTO 类型从 Schema 推导，禁止另写一个可能漂移的请求类型。服务端输出使用 DTO serializer/Schema 测试，领域实体和 DB 行不直接返回给浏览器。AI schema 不允许写 `verificationLevel`、`sourceStatus`、`riskVerdict`、账本余额或成交状态等确定性字段；应用层解析后检查 evidence ID 存在且属于本次输入，再赋值验证状态。
@@ -52,6 +52,7 @@
 | `POST /api/v1/paper-plans/{planId}/versions/{versionId}/approvals`                      | 对精确不可变版本产生本地批准记录，返回 `201 Created`。                                                                                                                                       | `Idempotency-Key`、`planHash`、`riskDecisionId` 和 `confirmed: true` 必填；服务器重读版本并验证 hash、同版本 `PASS`、未失效行情/FX、权益/回撤与现金条件。不接受 `userId`。 |
 | `POST /api/v1/paper-plans/{planId}/versions/{versionId}/paper-orders`                   | 创建本地模拟订单，返回 `201 Created` 与持久化订单 DTO。                                                                                                                                      | 仅纸面撮合用例；要求同版有效批准和服务器复核。无合格行情时不成交；绝不调用券商/交易所。                                                                                    |
 | `GET /api/v1/paper-orders/{orderId}`                                                    | 查询本地模拟订单及状态事件。                                                                                                                                                                 | 订单均明确 `PAPER`；不得出现可配置 broker URL、账户号或真实订单 ID。                                                                                                       |
+| `POST /api/v1/backup`                                                                  | 对当前本机 SQLite 创建一致性快照，返回 `200 OK` 和备份路径、Schema 版本、文件长度、SHA-256 与创建时刻。                                                                                      | 无请求体；仅 loopback 同源；服务端使用应用数据路径并分配唯一输出目录，不覆盖数据库或已有备份；不读取或返回凭据。失败为 `BACKUP_FAILED`。 |
 
 未列出的写接口不因便利而开放；尤其没有通用 SQL、provider URL、运行时设置、密钥、账户流水更新/删除、策略状态覆盖或真实交易端点。后续用例若需要新命令，须增加具名服务端用例并满足相同边界。
 
@@ -109,7 +110,7 @@
 | `415` | `UNSUPPORTED_MEDIA_TYPE`                                                                                                  | 变更接口不是 JSON。                                                                            |
 | `429` | `LOCAL_RATE_LIMITED`                                                                                                      | 本地工作队列或查询保护限流；有界等待后可重试，返回整数 `Retry-After`。不得透传供应商响应正文。 |
 | `503` | `LOCAL_STORAGE_BUSY`、`LOCAL_SERVICE_UNAVAILABLE`                                                                         | SQLite/Worker 本机服务暂时不可用；允许时返回 `retryable: true` 和有限重试提示。                |
-| `500` | `INTERNAL_ERROR`                                                                                                          | 未预期内部错误；只返回 requestId，不回显堆栈、SQL 或外部内容。                                 |
+| `500` | `INTERNAL_ERROR`、`BACKUP_FAILED`                                                                                          | 未预期错误或本机备份失败；只返回 requestId 与稳定错误文案，不回显堆栈、SQL、文件路径或外部内容。                         |
 
 无登录产品不返回 `401`/`UNAUTHORIZED`。已接受的异步任务即使之后遇到断网、凭据或供应商不可用，创建请求仍为 `202`；`TaskDto.executionStatus` 最终如实进入 `BLOCKED_EXTERNAL`/`FAILED`，并通过报告来源覆盖给出原因。读取一个已保存但过期/不完整的报价，是 `200` 加显式 `STALE`/`PARTIAL_COVERAGE` DTO；本地 API 或存储本身不可用才返回 `503`。`NO_NEW_EVENTS` 只能来自满足 FR-Research 完整覆盖与有效 SLA 的扫描，不能由 API 层猜定。
 
@@ -180,4 +181,4 @@ stateDiagram-v2
 | 版本化纸面批准和仅模拟订单       | FR-Trade-001/002/008/009/010、AC-TRD-004/013/014；P03-03 风控、P05 仓储、P10 模拟交易、P12-01/02。        |
 | 定点数、时间、来源与不可验证状态 | FR-Trade-011/013、NFR-009/010/011、AC-NFR-013–017；DB_SCHEMA、P03-04 回测契约、P07 数据适配器、P09 实现。 |
 
-本 Issue 只定义接口和状态边界，不增加 Zod/HTTP/数据库依赖，不接通 AI/行情，也不实现 Route Handler；实际响应体和状态迁移测试属于 P05/P08/P10/P12。数据供应商由 P04/P07 核验；不因公开 API 存在就把付费、授权不清或未点时数据当作 V1 可用来源。
+本契约定义接口和状态边界，不接通 AI/行情。P06-06 / #47 仅实现并测试 `POST /api/v1/backup`；其余路由与实际响应体/状态迁移测试依各阶段落地，汇总验收见 P12。数据供应商由 P04/P07 核验；不因公开 API 存在就把付费、授权不清或未点时数据当作 V1 可用来源。
