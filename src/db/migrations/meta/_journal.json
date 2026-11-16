@@ -15,6 +15,13 @@
       "when": 1794799947548,
       "tag": "0001_p05_04_evidence_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794840590293,
+      "tag": "0002_p11_01_task_queue",
+      "breakpoints": true
     }
   ]
 }

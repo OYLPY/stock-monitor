@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0013 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P03-01 设计基线已由 P05-01 接入本地 SQLite 核心账户/账本表，并由 P05-04 / #40 接入来源、事件、证据与只追加审计表；P05-05 / #41 已实现 CLI 在线快照、校验及新路径恢复；数据供应商适配和完整产品流程仍待 P07/P10/P12 完成。驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
+> 状态：P03-01 设计基线已由 P05 接入本地 SQLite 核心账户、账本、来源与证据表，并由 P11-01 / #69 接入持久任务队列、尝试日志、Worker 锁和迁移；P05-05 / #41 已实现 CLI 在线快照、校验及新路径恢复。任务步骤检查点、市场数据供应商适配和完整产品流程仍由后续任务完成。驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
 >
 > 上位契约：[架构](ARCHITECTURE.md)、[数据溯源](DATA_PROVENANCE.md)、[AI 工作流](AI_WORKFLOW.md)、[纸面交易与风控](../requirements/FR_TRADE.md)、[研究工作流](../requirements/FR_RESEARCH.md)、[非功能需求](../requirements/NFR.md)。
 
@@ -149,8 +149,11 @@ erDiagram
 
 | 表                        | 关键字段与约束 |
 | ------------------------- | --- |
-| `task_runs`               | 稳定任务 ID、唯一幂等键、规范化输入 hash、计划/日历/规则版本、市场窗口、执行状态、总尝试数、租约 owner/expiry/fencing generation、结果码和错误。相同计划槽位只创建一行；恢复只接管已过期 lease。 |
-| `task_run_steps`          | `task_run_id`、稳定 step key/顺序、attempt、状态、输入 hash、输出 schema version/hash、经验证结构化输出或领域产物引用、错误码和时间；`UNIQUE(task_run_id, step_key, attempt_no)`。成功检查点不可覆写；不存隐藏推理、秘密或完整模型对话。 |
+| `task_runs`               | P11-01 实现稳定任务 ID、唯一幂等键、规范化输入 JSON/hash、run type、IANA 时区/当地计划时刻/UTC 到期点、timeout、执行状态、总尝试数、租约 owner/expiry/fencing generation、取消请求、结果码和错误。相同幂等键与相同输入重放原任务；过期租约最多恢复到 3 次总认领。市场窗口与日历/规则版本在具体市场任务接入时追加。 |
+| `task_run_attempts`       | P11-01 按 `(task_run_id, attempt_no)` 保存 worker、每次认领起止时间、状态和错误码；进程崩溃后未结束的尝试记为 `ABANDONED`，不覆写过去的事件记录。 |
+| `task_run_events`         | P11-01 追加任务入队、认领、恢复、取消、超时、结束及 Worker 锁事件；详情仅保留小型结构化运行元数据，不保存凭据、提示词或模型隐藏推理。 |
+| `worker_state`            | 单行 SQLite 租约，保存本机 Worker owner、PID、心跳和过期时刻；租约有效时拒绝第二个 Worker，进程异常结束后允许到期恢复。 |
+| `task_run_steps`          | 后续工作流实现：`task_run_id`、稳定 step key/顺序、attempt、状态、输入 hash、输出 schema version/hash、经验证结构化输出或领域产物引用、错误码和时间；`UNIQUE(task_run_id, step_key, attempt_no)`。成功检查点不可覆写；不存隐藏推理、秘密或完整模型对话。 |
 | `source_scan_watermarks`  | 来源、市场、事件类别、scope/config hash、游标或最后成功可见时刻及 task 引用。仅记录完整成功来源；使用追加历史行并按自然键取最新值。事件证据和 step checkpoint 与水位在同一短事务提交。 |
 | `notification_decisions` | task、事件 revision、决策码、稳定排序位置、规则版本和原因；追加记录 `NOTIFIED`、`DEFERRED_LIMIT`、`EXPIRED_UNNOTIFIED` 或 `NOT_SIGNIFICANT`。仍新鲜的 deferred 和无决策候选可在后续扫描重新评估。 |
 | `notifications`           | 唯一事件 revision dedupe key、选中 decision、生成时刻和本机阅读状态。只保存已选中的本机 UI 通知，不提前建云推送用户/设备模型。 |

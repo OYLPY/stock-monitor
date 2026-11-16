@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0032 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 >
-> 状态：P03-05 设计基线；P07-01 本地交易日历解析器已实现并通过本地校验。Worker、行情/新闻来源适配器、调度和本机通知运行时代码尚未实现。本文细化 [FR-Research-001–006](../requirements/FR_RESEARCH.md)，不声明实时行情或新闻已接入。
+> 状态：P03-05 设计基线；P07-01 本地交易日历解析器、P11-01 持久任务队列与独立 Worker 已实现。市场时段扫描、研究任务处理器和本机通知仍待后续任务；本文细化 [FR-Research-001–006](../requirements/FR_RESEARCH.md)，不声明实时行情或新闻已接入。
 >
 > 相关设计：[DB Schema](DB_SCHEMA.md)、[API/DTO 契约](API_CONTRACTS.md)、[数据溯源](DATA_PROVENANCE.md)、[失败与恢复](FAILURE_MODES.md)、[工作流状态](WORKFLOW_STATE.md)。
 
@@ -11,6 +11,14 @@
 - 独立本地 Worker 负责定时触发；浏览器关闭时 Worker 仍可运行。UI 手动启动与计划任务走同一应用服务、交易日历门禁、来源质量检查和幂等执行路径。V1 不引入远程队列、云端通知或产品用户/设备模型。
 - Worker 在同一 SQLite 文件上工作；一次只有一个本地 Worker 取得执行权。外部网络调用不得持有 SQLite 写事务。数据、日历和权限条件不明时失败关闭。
 - 扫描频率按已验证来源的 SLA、请求限制和任务类别版本化。没有经验证的来源或有效频率时，不启动伪实时扫描，也不在文档中承诺固定轮询间隔。
+
+### P11-01 本机任务队列
+
+- `pnpm worker` 启动独立 Node Worker；每项任务在隔离的 Node Worker Thread 中运行，关闭浏览器或 Next.js 页面不影响该进程。`pnpm worker cancel <taskRunId>` 可取消待运行或正在运行的任务。
+- 队列保存 `scheduled_local_at`、IANA `time_zone` 和解析后的 UTC `scheduled_at_ms`。DST 不存在或重复的当地时间拒绝入队，不按运行机器时区猜测；本 Issue 提供一次性计划时刻，周期计划及领域任务由后续任务接入。
+- SQLite `worker_state` 使用带期限的本机单实例锁；`task_runs` 以短事务认领，到期租约恢复时使用 fencing generation。任务尝试和事件日志持久化到 `task_run_attempts` / `task_run_events`。
+- 待运行任务取消时立即成为 `SKIPPED/CANCELLED`；运行中取消会中止 Worker Thread，再记录同一状态。超时会终止 Thread 并记录 `FAILED/TASK_TIMEOUT`。允许最多 3 次认领尝试；工作进程异常退出时仅在租约到期后重试。
+- 当前没有已注册的研究任务处理器；遇到未知 `runType` 会以 `FAILED/HANDLER_NOT_REGISTERED` 结束，绝不把空工作报告为成功。市场数据和研究流程尚未接入，休眠、关机期间也不承诺继续运行。
 
 ## 市场时间与触发窗口
 
@@ -45,7 +53,7 @@
 
 手动命令使用 API 规定的 UUIDv4 `Idempotency-Key`：相同键、相同规范化输入重放原任务；相同键、不同输入返回 `409 IDEMPOTENCY_KEY_REUSED`。重试沿用原任务和原幂等键，不创建看似新的扫描。
 
-Worker 先取得本机单实例执行锁，再用短事务原子认领到期的 `PENDING` 任务并设置 owner/lease。认领必须受唯一幂等键和当前状态约束；锁冲突不得通过删除数据库、任务或锁文件绕过。租约超时后先按 [恢复协议](WORKFLOW_STATE.md) 核验检查点和副作用，再决定续跑。
+Worker 先取得本机单实例执行锁，再用短事务原子认领到期的 `PENDING` 任务并设置 owner/lease。认领必须受唯一幂等键和当前状态约束；锁冲突不得通过删除数据库、任务或锁文件绕过。P11-01 的租约恢复会把旧尝试记为 `ABANDONED`，并在预算内从处理器入口重跑相同不可变输入；fencing 仅保护任务状态提交，不检查领域检查点，也不保证外部副作用 exactly-once。接入有副作用的领域处理器时，须按[恢复协议](WORKFLOW_STATE.md)核验已提交检查点并实现幂等副作用。
 
 ## 成功水位与来源完整度
 

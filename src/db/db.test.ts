@@ -55,7 +55,7 @@ describe("local SQLite database", () => {
       const { client, orm } = fixture.database;
       expect(client.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(client.pragma("foreign_keys", { simple: true })).toBe(BigInt(1));
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(2));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(3));
       expect(
         (
           client
@@ -80,13 +80,13 @@ describe("local SQLite database", () => {
           .prepare("SELECT COUNT(*) AS count FROM schema_migrations")
           .pluck()
           .get(),
-      ).toBe(BigInt(2));
+      ).toBe(BigInt(3));
 
       client.close();
       const restarted = await openDatabase(fixture.filePath);
       try {
         expect(restarted.client.pragma("user_version", { simple: true })).toBe(
-          BigInt(2),
+          BigInt(3),
         );
         expect(
           restarted.orm.select().from(initialCapitalConfigs).all(),
@@ -96,7 +96,7 @@ describe("local SQLite database", () => {
             .prepare("SELECT COUNT(*) FROM schema_migrations")
             .pluck()
             .get(),
-        ).toBe(BigInt(2));
+        ).toBe(BigInt(3));
       } finally {
         restarted.client.close();
       }

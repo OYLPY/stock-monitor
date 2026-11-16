@@ -1,6 +1,6 @@
 # V1 系统架构
 
-> 状态：P02-01/P02-04 架构基线。本文定义本机运行容器、依赖方向和权限边界；不表示 Codex、外部数据或 SQLite 驱动已在产品中接入或验证。数据与证据契约见 P02-02，AI 工作流与角色权限见 P02-03，ADR/威胁模型/失效恢复见 P02-04；API/Schema 由 P03 细化，运行时可用性由 P04 验证。
+> 状态：P02-01/P02-04 架构基线；P05 已接入本机 SQLite/Drizzle，P11-01 已接入持久任务队列和独立 Node Worker。本文不表示 Codex、实时市场数据或研究任务处理器已在产品中接通；数据与证据契约见 P02-02，AI 工作流与角色权限见 P02-03，Worker 的运行行为由 P11-01 实现并持续由 P12 验证。
 >
 > 需求入口：[PRD](../requirements/PRD.md)、[非功能需求](../requirements/NFR.md)、[需求追踪矩阵](../requirements/TRACEABILITY.md)、[UI 设计](UI_DESIGN.md)。
 
@@ -8,7 +8,7 @@
 
 V1 是单机、单一业务使用者的美日股研究和纸面模拟工具。首次使用不要求应用登录、注册、用户管理或云身份；UI 设计基线采用 shadcn/ui，组件在 P06 UI 实现阶段接入，当前最小主页尚未使用组件库。系统不连接券商，不提供真实下单、云同步、遥测或付费结算。
 
-仓库当前只有 Next.js App Router 的最小主页。`package.json` 配置 Next.js Node 运行时并将 `dev`/`start` 绑定至 `127.0.0.1`；目前没有 SQLite 驱动或业务 feature 模块。`scripts/autopilot.ts` 与 `scripts/context.ts` 是开发任务执行器，不是产品 Worker，也不读取市场数据。下文架构是后续阶段的目标边界。
+仓库包含 Next.js App Router、本机 SQLite/Drizzle 基础设施和 Worker 任务队列。`pnpm worker` 独立运行队列协调器，`scripts/autopilot.ts` 与 `scripts/context.ts` 仍是开发执行器，不是产品任务处理器，也不读取市场数据。P11-01 尚未注册研究任务处理器；下文其他业务容器仍描述目标边界。
 
 ## 系统上下文与运行拓扑
 

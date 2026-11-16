@@ -210,6 +210,135 @@ export const marketEventEvidence = sqliteTable(
   ],
 );
 
+export const taskRuns = sqliteTable(
+  "task_runs",
+  {
+    id: text("id").primaryKey(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    inputHashSha256: text("input_hash_sha256").notNull(),
+    runType: text("run_type").notNull(),
+    inputJson: text("input_json").notNull(),
+    timeZone: text("time_zone").notNull(),
+    scheduledLocalAt: text("scheduled_local_at").notNull(),
+    scheduledAtMs: sqliteInt64("scheduled_at_ms").notNull(),
+    timeoutMs: sqliteSmallInteger("timeout_ms").notNull(),
+    executionStatus: text("execution_status").notNull(),
+    attemptCount: sqliteSmallInteger("attempt_count").notNull().default(0),
+    nextAttemptAtMs: sqliteInt64("next_attempt_at_ms").notNull(),
+    leaseOwner: text("lease_owner"),
+    leaseUntilMs: sqliteInt64("lease_until_ms"),
+    fencingGeneration: sqliteSmallInteger("fencing_generation")
+      .notNull()
+      .default(0),
+    cancellationRequestedAtMs: sqliteInt64("cancellation_requested_at_ms"),
+    resultCode: text("result_code"),
+    errorCode: text("error_code"),
+    createdAtMs: sqliteInt64("created_at_ms").notNull(),
+    startedAtMs: sqliteInt64("started_at_ms"),
+    finishedAtMs: sqliteInt64("finished_at_ms"),
+  },
+  (table) => [
+    uniqueIndex("task_runs_idempotency_key").on(table.idempotencyKey),
+    index("task_runs_due").on(
+      table.executionStatus,
+      table.nextAttemptAtMs,
+      table.createdAtMs,
+    ),
+    check(
+      "task_runs_input_hash",
+      sql`length(${table.inputHashSha256}) = 64 AND ${table.inputHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+    check("task_runs_input_json", sql`json_valid(${table.inputJson})`),
+    check("task_runs_timezone", sql`length(${table.timeZone}) > 0`),
+    check("task_runs_timeout", sql`${table.timeoutMs} BETWEEN 1 AND 86400000`),
+    check(
+      "task_runs_status",
+      sql`${table.executionStatus} IN ('PENDING', 'RUNNING', 'DONE', 'FAILED', 'BLOCKED_EXTERNAL', 'SKIPPED')`,
+    ),
+    check(
+      "task_runs_attempt_count",
+      sql`${table.attemptCount} BETWEEN 0 AND 3`,
+    ),
+    check("task_runs_fencing_generation", sql`${table.fencingGeneration} >= 0`),
+    check(
+      "task_runs_lease",
+      sql`(${table.executionStatus} = 'RUNNING' AND ${table.leaseOwner} IS NOT NULL AND ${table.leaseUntilMs} IS NOT NULL) OR (${table.executionStatus} <> 'RUNNING' AND ${table.leaseOwner} IS NULL AND ${table.leaseUntilMs} IS NULL)`,
+    ),
+    check(
+      "task_runs_finished",
+      sql`(${table.executionStatus} IN ('PENDING', 'RUNNING') AND ${table.finishedAtMs} IS NULL) OR (${table.executionStatus} IN ('DONE', 'FAILED', 'BLOCKED_EXTERNAL', 'SKIPPED') AND ${table.finishedAtMs} IS NOT NULL)`,
+    ),
+  ],
+);
+
+export const taskRunAttempts = sqliteTable(
+  "task_run_attempts",
+  {
+    taskRunId: text("task_run_id")
+      .notNull()
+      .references(() => taskRuns.id, { onDelete: "restrict" }),
+    attemptNo: sqliteSmallInteger("attempt_no").notNull(),
+    workerId: text("worker_id").notNull(),
+    executionStatus: text("execution_status").notNull(),
+    startedAtMs: sqliteInt64("started_at_ms").notNull(),
+    finishedAtMs: sqliteInt64("finished_at_ms"),
+    errorCode: text("error_code"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.taskRunId, table.attemptNo] }),
+    check("task_run_attempts_number", sql`${table.attemptNo} BETWEEN 1 AND 3`),
+    check(
+      "task_run_attempts_status",
+      sql`${table.executionStatus} IN ('RUNNING', 'DONE', 'FAILED', 'BLOCKED_EXTERNAL', 'SKIPPED', 'ABANDONED')`,
+    ),
+    check(
+      "task_run_attempts_finished",
+      sql`(${table.executionStatus} = 'RUNNING' AND ${table.finishedAtMs} IS NULL) OR (${table.executionStatus} <> 'RUNNING' AND ${table.finishedAtMs} IS NOT NULL)`,
+    ),
+  ],
+);
+
+export const taskRunEvents = sqliteTable(
+  "task_run_events",
+  {
+    id: text("id").primaryKey(),
+    taskRunId: text("task_run_id").references(() => taskRuns.id, {
+      onDelete: "restrict",
+    }),
+    workerId: text("worker_id"),
+    eventType: text("event_type").notNull(),
+    occurredAtMs: sqliteInt64("occurred_at_ms").notNull(),
+    detailsJson: text("details_json").notNull(),
+  },
+  (table) => [
+    index("task_run_events_task_time").on(table.taskRunId, table.occurredAtMs),
+    check("task_run_events_details", sql`json_valid(${table.detailsJson})`),
+    check(
+      "task_run_events_type",
+      sql`${table.eventType} IN ('TASK_QUEUED', 'TASK_CLAIMED', 'TASK_RECLAIMED', 'TASK_COMPLETED', 'TASK_FAILED', 'TASK_BLOCKED_EXTERNAL', 'TASK_CANCEL_REQUESTED', 'TASK_CANCELLED', 'TASK_SKIPPED', 'TASK_TIMED_OUT', 'TASK_ABANDONED', 'WORKER_LOCK_ACQUIRED', 'WORKER_LOCK_RELEASED', 'WORKER_LOCK_LOST')`,
+    ),
+  ],
+);
+
+export const workerState = sqliteTable(
+  "worker_state",
+  {
+    singletonId: sqliteSmallInteger("singleton_id").primaryKey(),
+    ownerId: text("owner_id"),
+    processId: sqliteSmallInteger("process_id"),
+    acquiredAtMs: sqliteInt64("acquired_at_ms"),
+    heartbeatAtMs: sqliteInt64("heartbeat_at_ms"),
+    leaseUntilMs: sqliteInt64("lease_until_ms"),
+  },
+  (table) => [
+    check("worker_state_singleton", sql`${table.singletonId} = 1`),
+    check(
+      "worker_state_lock",
+      sql`(${table.ownerId} IS NULL AND ${table.processId} IS NULL AND ${table.acquiredAtMs} IS NULL AND ${table.heartbeatAtMs} IS NULL AND ${table.leaseUntilMs} IS NULL) OR (${table.ownerId} IS NOT NULL AND ${table.processId} > 0 AND ${table.acquiredAtMs} IS NOT NULL AND ${table.heartbeatAtMs} IS NOT NULL AND ${table.leaseUntilMs} IS NOT NULL)`,
+    ),
+  ],
+);
+
 export const auditEvents = sqliteTable(
   "audit_events",
   {

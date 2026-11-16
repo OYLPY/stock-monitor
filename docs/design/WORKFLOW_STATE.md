@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0033 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 >
-> 状态：P03-05 设计契约。应用 Worker、持久化步骤和运行时恢复尚未实现；本文件不代表 Codex 或外部数据源已经接通。
+> 状态：P03-05 设计契约；P11-01 已实现任务队列、尝试/事件日志、Worker 租约、任务取消、超时和过期租约恢复。工作流步骤检查点及 Codex/外部数据任务处理器仍未接通。
 >
 > 关联：[调度与事件通知](SCHEDULER.md)、[AI 六角色工作流](AI_WORKFLOW.md)、[API/DTO](API_CONTRACTS.md)、[DB Schema](DB_SCHEMA.md)、[失败与恢复](FAILURE_MODES.md)、[上下文工程规约](../CONTEXT_ENGINEERING.md)。
 
@@ -44,6 +44,8 @@ stateDiagram-v2
 ```
 
 任务状态仅使用 `PENDING`、`RUNNING`、`DONE`、`FAILED`、`BLOCKED_EXTERNAL`、`SKIPPED`。不新增 `RETRYING` 或 `CANCELLED`；退避等待是带 `next_attempt_at` 的 `PENDING`，`SKIPPED_CLOSED`、`MISSED_WINDOW` 等是原因码。状态变化由 Worker/具名本机命令执行，客户端不得 PATCH 状态。
+
+P11-01 将用户取消实现为 `cancellation_requested_at_ms` 与原因码 `CANCELLED`，不新增任务状态：`PENDING` 任务直接进入 `SKIPPED`；`RUNNING` 任务由 Worker 中止隔离执行线程后进入 `SKIPPED`。超时任务进入 `FAILED/TASK_TIMEOUT`。这只保护任务框架及其提交栅栏；外部系统物理副作用不属于本地 exactly-once 保证。
 
 - 瞬时网络/服务错误在固定重试预算内回到 `PENDING`；最多 3 次总尝试（含首次）。超过预算或不可恢复错误进入 `FAILED`。
 - 凭据、授权、费用、权限和市场日历来源不可用进入 `BLOCKED_EXTERNAL`，不自动重试，也不推进受影响来源的水位。外部条件恢复后，只有显式本机 resume 命令可将原任务置回 `PENDING`；同一不可变输入和任务 ID 不变，且不重置总尝试预算。预算耗尽后不能再 resume，应以新任务重跑并关联原任务。

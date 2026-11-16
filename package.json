@@ -13,6 +13,7 @@
     "backup": "node --experimental-strip-types scripts/backup.ts",
     "restore": "node --experimental-strip-types scripts/restore.ts",
     "autopilot": "node --experimental-strip-types scripts/autopilot.ts",
+    "worker": "node --experimental-strip-types scripts/worker.ts",
     "format:check": "prettier --check --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"tests/**/*.ts\" playwright.config.ts vitest.config.mts \"harness/**/*.json\" drizzle.config.ts package.json README.md docs/design/UI_DESIGN.md docs/CONTEXT_ENGINEERING.md .github/workflows/quality.yml"
   },
   "dependencies": {

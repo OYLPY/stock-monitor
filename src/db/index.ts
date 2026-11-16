@@ -14,6 +14,10 @@ import {
   paperAccounts,
   sourceRecords,
   sources,
+  taskRunAttempts,
+  taskRunEvents,
+  taskRuns,
+  workerState,
 } from "./schema.ts";
 import { migrateDatabase } from "./migrate.ts";
 
@@ -28,6 +32,10 @@ const schema = {
   paperAccounts,
   sourceRecords,
   sources,
+  taskRunAttempts,
+  taskRunEvents,
+  taskRuns,
+  workerState,
 };
 
 function createSqliteClient(filePath: string) {
