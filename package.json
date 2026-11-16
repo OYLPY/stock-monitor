@@ -10,9 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "autopilot": "node --experimental-strip-types scripts/autopilot.ts",
-    "format:check": "prettier --check --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"harness/**/*.json\" package.json README.md docs/design/UI_DESIGN.md docs/CONTEXT_ENGINEERING.md .github/workflows/quality.yml"
+    "format:check": "prettier --check --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"harness/**/*.json\" drizzle.config.ts package.json README.md docs/design/UI_DESIGN.md docs/CONTEXT_ENGINEERING.md .github/workflows/quality.yml"
   },
   "dependencies": {
+    "better-sqlite3": "13.2.0",
+    "drizzle-orm": "0.45.4",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -24,9 +26,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "better-sqlite3": "13.2.0",
     "drizzle-kit": "0.31.11",
-    "drizzle-orm": "0.45.4",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.6",
     "prettier": "3.10.1",

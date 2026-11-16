@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0013 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P03-01 设计基线；逻辑 Schema 和初始迁移草案，尚未接入产品运行时。P04-02 已核验一组 SQLite/Drizzle/driver 版本及其精度和迁移边界，见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)；产品运行时集成与恢复验证仍由 P05/P12 完成。
+> 状态：P03-01 设计基线已由 P05-01 接入本地 SQLite 核心账户/账本表、Drizzle 迁移、迁移校验和与显式开账；其余业务表、备份/恢复与完整产品流程仍待 P05/P10/P12 完成。P04-02 的驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
 >
 > 上位契约：[架构](ARCHITECTURE.md)、[数据溯源](DATA_PROVENANCE.md)、[AI 工作流](AI_WORKFLOW.md)、[纸面交易与风控](../requirements/FR_TRADE.md)、[研究工作流](../requirements/FR_RESEARCH.md)、[非功能需求](../requirements/NFR.md)。
 
@@ -128,7 +128,8 @@ erDiagram
 
 | 表                                                | 关键字段与约束                                                                                                                                                                                                                                                                                                                                                                          |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `paper_accounts`                                  | 显式初始化后才创建；本机 V1 单一 `account_key` 唯一，base currency 固定 JPY，不含 owner/user 字段。初始 1,000,000 JPY 作为首个 `ACCOUNT_OPENED` 事件及现金流水写入，不能靠默认余额或重复初始化重置。                                                                                                                                                                                    |
+| `initial_capital_configs`                         | 只追加的初始资金配置版本；版本号唯一，记录 config key、币种、scale 与整数最小货币单位。V1 固定为 `initial-capital-v1` / 1,000,000 JPY；账户引用使用的版本，后续变化必须新增版本，不改旧值。 |
+| `paper_accounts`                                  | 显式初始化后才创建；本机 V1 单一 `account_key` 唯一，base currency 固定 JPY，不含 owner/user 字段，并引用初始资金配置版本。初始资金作为首个 `ACCOUNT_OPENED` 事件及现金流水写入，不能靠默认余额或重复初始化重置。 |
 | `paper_plans` / `paper_plan_versions`             | 稳定计划 ID 与不可变版本 ID；版本绑定证券、只做多方向、数量、精确价格/币种、生成时间、策略版本、输入证据清单哈希。编辑必然创建新版本。                                                                                                                                                                                                                                                  |
 | `plan_input_evidence`                             | 版本到报价、FX、费用/单位规则及来源记录的显式引用。版本 hash 覆盖这些输入快照，避免后续来源更新改变既有审批含义。                                                                                                                                                                                                                                                                       |
 | `risk_decisions`                                  | 计划版本、PASS/REJECT/UNRESOLVED、固定规则版本、计算输入 hash、原因和裁决时间。允许对同一版本追加重评，但不能改写历史。                                                                                                                                                                                                                                                                 |
@@ -155,7 +156,7 @@ erDiagram
 
 ## 不变量与最小 SQL 草案
 
-初始迁移是一次向前的迁移：Drizzle Kit 0.31.11 生成固定文件名 `0000_initial.sql`，数据库逻辑版本和 `schema_migrations.version` / `PRAGMA user_version` 从 1 开始；文件序号与逻辑版本不混用。迁移创建表/唯一约束/索引/只追加触发器并写入迁移哈希和版本。以下 SQL 展示金融账本核心列与 DB 能强制的门禁；完整字段表和引用关系以上表为准，驱动 API 语法由 P04-02 实测。
+初始迁移是一次向前的迁移：Drizzle Kit 0.31.11 生成固定文件名 `0000_initial.sql`，数据库逻辑版本和 `schema_migrations.version` / `PRAGMA user_version` 从 1 开始；文件序号与逻辑版本不混用。当前产品迁移由 Drizzle Kit journal 驱动，运行时按 `BEGIN IMMEDIATE` 逐文件校验 SHA-256 并原子记录版本；SQLite `STRICT` 和只追加触发器由迁移 SQL 明确补齐，因为 Drizzle Kit 不会生成它们。初始化配置 V1 随迁移写入，配置、账户和账本行不可覆写/删除。以下 SQL 展示金融账本核心列与 DB 能强制的门禁；完整字段表和引用关系以上表为准，驱动 API 语法由 P04-02 实测。
 
 ```sql
 PRAGMA foreign_keys = ON;
@@ -168,10 +169,19 @@ CREATE TABLE schema_migrations (
   applied_at_ms INTEGER NOT NULL
 ) STRICT;
 
+CREATE TABLE initial_capital_configs (
+  version INTEGER PRIMARY KEY CHECK (version > 0),
+  config_key TEXT NOT NULL UNIQUE,
+  currency_code TEXT NOT NULL CHECK (currency_code = 'JPY'),
+  currency_scale INTEGER NOT NULL CHECK (currency_scale = 0),
+  amount_minor INTEGER NOT NULL CHECK (amount_minor > 0)
+) STRICT;
+
 CREATE TABLE paper_accounts (
   id TEXT PRIMARY KEY,
   account_key TEXT NOT NULL UNIQUE CHECK (account_key = 'local-default'),
   base_currency TEXT NOT NULL CHECK (base_currency = 'JPY'),
+  initial_capital_version INTEGER NOT NULL REFERENCES initial_capital_configs(version) ON DELETE RESTRICT,
   initialized_at_ms INTEGER NOT NULL
 ) STRICT;
 
@@ -285,7 +295,7 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 4. 备份使用 SQLite Online Backup API 或驱动已验证的等价一致性快照；不直接复制运行中的主数据库文件，特别是 WAL 模式下不能只复制 `.db`。备份包有 sidecar manifest：应用版本、Schema 版本、创建时刻、文件长度、SHA-256。密钥只存 OS 本机安全配置，不进入 DB/manifest/备份。
 5. 恢复先将备份和 manifest 放到临时目录，校验 SHA-256、应用/Schema 兼容性、migration hashes、`integrity_check` 和外键；再对临时副本做需要的前向迁移。所有检查完成后才在服务停止写入的条件下原子切换；失败保留当前数据库及原备份不变。恢复日志记录结果和版本，不记录秘密值。
 
-这份草案满足 NFR-007 的版本/校验摘要、临时校验和不覆盖规则；P04-02 PoC 实际验证了最小迁移 runner 的 SHA-256、幂等、事务回滚和 `user_version` 同步，但不包含产品备份恢复。100,000 事件恢复 60 秒目标仍由 P05-05/P12-02 实测。PoC 使用 WAL、`synchronous=FULL` 和 better-sqlite3；产品连接选项及备份 API 仍由 P05 根据产品运行时验证。
+此设计满足 NFR-007 的版本/校验摘要、临时校验和不覆盖规则。P04-02 PoC 验证了 runner 的 SHA-256、幂等、事务回滚和 `user_version` 同步；P05-01 已将这些边界接入产品核心 Schema，采用 WAL、`synchronous=FULL`、外键、有限 busy timeout、迁移前在线快照和迁移后完整性检查。完整备份/恢复、崩溃恢复与 100,000 事件恢复 60 秒目标仍由 P05-05/P12-02 验证。
 
 ## 决策取舍与待后续验证
 
@@ -299,10 +309,11 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 
 | 后续任务             | 必须完成的运行验证                                                                                               |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| P04-02               | 已由 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md) 完成 driver 版本、STRICT、BigInt INTEGER、INSERT RETURNING、事务与跨进程竞争 PoC；P05 仍须接入产品 Schema 和完整外键约束。 |
+| P04-02               | 已由 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md) 完成 driver 版本、STRICT、BigInt INTEGER、INSERT RETURNING、事务与跨进程竞争 PoC；产品核心表已由 P05-01 接入，其他业务表仍按后续 Issue 实施。 |
 | P03-02/P03-03/P03-04 | 细化 DTO、状态机/错误码、资金/风险舍入、OHLCV 调整、回测输入清单与费用模型。                                     |
 | P03-05/P11           | 细化任务唯一键、窗口、租约、恢复、重试、事件指纹、通知去重。                                                     |
-| P05/P05-05           | 实施迁移/连接/备份/恢复并验证崩溃安全和真实数据目录权限。                                                        |
+| P05-01               | 已实施核心账户/账本迁移、开账 repository、配置版本、精确金额、SQLite WAL、迁移哈希/版本校验和测试数据库工厂；完整业务表仍待各自任务。 |
+| P05-05               | 实施备份/恢复并验证崩溃安全和真实数据目录权限。                                                        |
 | P10/P12              | 验证批准绑定版本、重复 fill、账本重放一致性、Fixture 禁止入账、冲正审计和 NFR 性能/恢复用例。                    |
 
 ## 来源与追踪

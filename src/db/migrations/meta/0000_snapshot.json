@@ -1,0 +1,346 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "5193aa14-8c3b-4659-b143-f0cfdc23f94d",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "cash_ledger_entries": {
+      "name": "cash_ledger_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ledger_event_id": {
+          "name": "ledger_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "bucket": {
+          "name": "bucket",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_minor": {
+          "name": "amount_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "cash_ledger_entries_ledger_event_id_ledger_events_id_fk": {
+          "name": "cash_ledger_entries_ledger_event_id_ledger_events_id_fk",
+          "tableFrom": "cash_ledger_entries",
+          "tableTo": "ledger_events",
+          "columnsFrom": [
+            "ledger_event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "cash_ledger_entries_bucket": {
+          "name": "cash_ledger_entries_bucket",
+          "value": "\"cash_ledger_entries\".\"bucket\" IN ('SETTLED', 'UNSETTLED_RECEIVABLE', 'UNSETTLED_PAYABLE')"
+        },
+        "cash_ledger_entries_currency": {
+          "name": "cash_ledger_entries_currency",
+          "value": "(\"cash_ledger_entries\".\"currency_code\" = 'JPY' AND \"cash_ledger_entries\".\"currency_scale\" = 0) OR (\"cash_ledger_entries\".\"currency_code\" = 'USD' AND \"cash_ledger_entries\".\"currency_scale\" = 2)"
+        },
+        "cash_ledger_entries_amount": {
+          "name": "cash_ledger_entries_amount",
+          "value": "\"cash_ledger_entries\".\"amount_minor\" <> 0"
+        }
+      }
+    },
+    "initial_capital_configs": {
+      "name": "initial_capital_configs",
+      "columns": {
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "config_key": {
+          "name": "config_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_minor": {
+          "name": "amount_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "initial_capital_configs_config_key_unique": {
+          "name": "initial_capital_configs_config_key_unique",
+          "columns": [
+            "config_key"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "initial_capital_configs_version": {
+          "name": "initial_capital_configs_version",
+          "value": "\"initial_capital_configs\".\"version\" > 0"
+        },
+        "initial_capital_configs_currency": {
+          "name": "initial_capital_configs_currency",
+          "value": "\"initial_capital_configs\".\"currency_code\" = 'JPY' AND \"initial_capital_configs\".\"currency_scale\" = 0"
+        },
+        "initial_capital_configs_amount": {
+          "name": "initial_capital_configs_amount",
+          "value": "\"initial_capital_configs\".\"amount_minor\" > 0"
+        }
+      }
+    },
+    "ledger_events": {
+      "name": "ledger_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sequence_no": {
+          "name": "sequence_no",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "effective_at_ms": {
+          "name": "effective_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recorded_at_ms": {
+          "name": "recorded_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ledger_events_account_sequence": {
+          "name": "ledger_events_account_sequence",
+          "columns": [
+            "account_id",
+            "sequence_no"
+          ],
+          "isUnique": true
+        },
+        "ledger_events_account_idempotency": {
+          "name": "ledger_events_account_idempotency",
+          "columns": [
+            "account_id",
+            "idempotency_key"
+          ],
+          "isUnique": true
+        },
+        "ledger_one_opening_event_per_account": {
+          "name": "ledger_one_opening_event_per_account",
+          "columns": [
+            "account_id"
+          ],
+          "isUnique": true,
+          "where": "\"ledger_events\".\"event_type\" = 'ACCOUNT_OPENED'"
+        }
+      },
+      "foreignKeys": {
+        "ledger_events_account_id_paper_accounts_id_fk": {
+          "name": "ledger_events_account_id_paper_accounts_id_fk",
+          "tableFrom": "ledger_events",
+          "tableTo": "paper_accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ledger_events_sequence": {
+          "name": "ledger_events_sequence",
+          "value": "\"ledger_events\".\"sequence_no\" > 0"
+        },
+        "ledger_events_type": {
+          "name": "ledger_events_type",
+          "value": "\"ledger_events\".\"event_type\" IN ('ACCOUNT_OPENED', 'RESERVATION', 'RELEASE', 'FILL', 'FEE', 'FX_CONVERSION', 'SETTLEMENT', 'CORPORATE_ACTION', 'REVERSAL')"
+        }
+      }
+    },
+    "paper_accounts": {
+      "name": "paper_accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_key": {
+          "name": "account_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "base_currency": {
+          "name": "base_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "initial_capital_version": {
+          "name": "initial_capital_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "initialized_at_ms": {
+          "name": "initialized_at_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "paper_accounts_account_key_unique": {
+          "name": "paper_accounts_account_key_unique",
+          "columns": [
+            "account_key"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "paper_accounts_initial_capital_version_initial_capital_configs_version_fk": {
+          "name": "paper_accounts_initial_capital_version_initial_capital_configs_version_fk",
+          "tableFrom": "paper_accounts",
+          "tableTo": "initial_capital_configs",
+          "columnsFrom": [
+            "initial_capital_version"
+          ],
+          "columnsTo": [
+            "version"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "paper_accounts_key": {
+          "name": "paper_accounts_key",
+          "value": "\"paper_accounts\".\"account_key\" = 'local-default'"
+        },
+        "paper_accounts_currency": {
+          "name": "paper_accounts_currency",
+          "value": "\"paper_accounts\".\"base_currency\" = 'JPY'"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
