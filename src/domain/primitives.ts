@@ -3,7 +3,7 @@ const CURRENCY_MINOR_DIGITS = {
   USD: 2,
 } as const;
 
-const MARKET_TIME_ZONES = {
+export const MARKET_TIME_ZONES = {
   JP: "Asia/Tokyo",
   US: "America/New_York",
 } as const;

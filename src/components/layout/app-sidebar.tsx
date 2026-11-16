@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Activity,
   Bell,
@@ -26,8 +29,11 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
+const availableModules = [
+  { icon: Activity, label: "市场监测", href: "/markets" },
+] as const;
+
 const plannedModules = [
-  { icon: Activity, label: "市场监测" },
   { icon: Bell, label: "异常与事件" },
   { icon: FileText, label: "晨报与策略研究" },
   { icon: FlaskConical, label: "回测与模拟账户" },
@@ -35,6 +41,8 @@ const plannedModules = [
 ];
 
 export function AppSidebar() {
+  const pathname = usePathname();
+
   return (
     <Sidebar>
       <SidebarHeader className="gap-3 p-4">
@@ -66,8 +74,8 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    aria-current="page"
-                    isActive
+                    aria-current={pathname === "/" ? "page" : undefined}
+                    isActive={pathname === "/"}
                     render={<Link href="/" />}
                   >
                     <House aria-hidden="true" />
@@ -83,6 +91,18 @@ export function AppSidebar() {
           <SidebarGroupLabel>后续模块</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {availableModules.map(({ href, icon: Icon, label }) => (
+                <SidebarMenuItem key={label}>
+                  <SidebarMenuButton
+                    aria-current={pathname === href ? "page" : undefined}
+                    isActive={pathname === href}
+                    render={<Link href={href} />}
+                  >
+                    <Icon aria-hidden="true" />
+                    <span>{label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
               {plannedModules.map(({ icon: Icon, label }) => (
                 <SidebarMenuItem key={label}>
                   <SidebarMenuButton aria-disabled="true">
