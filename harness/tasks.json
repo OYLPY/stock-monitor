@@ -50,16 +50,16 @@
       "source": "Issue #18 implementation commit c7d764712333b73f886beac1d0c53b7d396a1923 passed local checks and main Quality run 43689402274; isolated no-credentials run returned BLOCKED_EXTERNAL as expected (runner exit 3)."
     },
     "P00-05": {
-      "status": "FAILED",
-      "attempts": 3,
+      "status": "RUNNING",
+      "attempts": 4,
       "repairAttempts": 1,
-      "runId": "051b134e-10f5-41c8-b858-c0280e7c8721",
-      "startedAt": "2026-11-17T14:21:30.328Z",
-      "updatedAt": "2026-11-17T14:51:30.466Z",
+      "runId": "01a1ea23-9620-7503-860e-ffd7d642dd94",
+      "startedAt": "2026-11-17T15:32:43.234Z",
+      "updatedAt": "2026-11-17T15:33:45Z",
       "completedAt": null,
       "exitCode": null,
-      "reason": "Codex turn timed out.",
-      "source": "Original run 2292b770-bcb8-41ea-8abc-ec694c7dcf84 was blocked by model_not_found. Retry 051b134e-10f5-41c8-b858-c0280e7c8721 selected gpt-5.6-sol and passed Windows sandbox initialization, but the 30-minute run ended FAILED with all required checks missing; Issue #19 remains open."
+      "reason": null,
+      "source": "Direct Codex CLI gpt-5.6-sol acceptance completed read-only P00-05 inspection, recovery tests, format, lint, typecheck, full tests, and build with exit 0; matching CI for this status update is pending. See harness/logs/P00-05-direct-codex-acceptance.jsonl. Earlier autopilot timeout and model_not_found runs remain documented as historical failures."
     }
   }
 }
