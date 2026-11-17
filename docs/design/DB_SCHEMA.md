@@ -330,4 +330,4 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 - [SQLite user_version PRAGMA](https://www.sqlite.org/pragma.html#pragma_user_version)：为应用保留的数据库头版本字段，SQLite 本身不解释它。
 - [SQLite Online Backup API](https://sqlite.org/backup.html) 与 [WAL](https://www.sqlite.org/wal.html)：活动库一致性快照与 WAL 文件/网络文件系统限制。
 - 需求映射：FR-Trade-004–010 / AC-TRD-001–015、FR-Trade-013 / AC-TRD-019、FR-Research-003–012、NFR-003/005/006/007 / AC-NFR-007–015、RQ-010/011/015–028。
-- 设计未接入产品数据库；实际迁移应用/运行时恢复测试由 P04/P05/P10/P12 执行，见 [需求追踪矩阵](../requirements/TRACEABILITY.md)。
+- P10-01 已将显式开户、追加账本、现金/持仓重放、费用与权益快照接入运行时；缺少行情或 FX 估值依据时快照为 `UNRESOLVED`。P10 后续审批、确定性风控、成交引擎与 P12 恢复审计仍待实现/验证，见 [需求追踪矩阵](../requirements/TRACEABILITY.md)。

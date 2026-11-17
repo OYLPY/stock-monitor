@@ -88,6 +88,7 @@ export function initializeDefaultPaperAccount(database: AppDatabase) {
         idempotencyKey: `account-opening:v${capital.version}`,
         effectiveAtMs: initializedAtMs,
         recordedAtMs: initializedAtMs,
+        ruleVersion: "account-opening-v1",
       })
       .run();
     database.orm

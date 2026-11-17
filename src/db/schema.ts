@@ -121,6 +121,47 @@ export const sourceRecords = sqliteTable(
   ],
 );
 
+export const instruments = sqliteTable(
+  "instruments",
+  {
+    id: text("id").primaryKey(),
+    marketCode: text("market_code").notNull(),
+    assetClass: text("asset_class").notNull(),
+    quoteCurrencyCode: text("quote_currency_code").notNull(),
+    tradingUnit: sqliteInt64("trading_unit").notNull(),
+    exchangeTimeZone: text("exchange_time_zone").notNull(),
+    classificationStatus: text("classification_status").notNull(),
+    classificationSourceRecordId: text(
+      "classification_source_record_id",
+    ).references(() => sourceRecords.id, { onDelete: "restrict" }),
+    createdAtMs: sqliteInt64("created_at_ms").notNull(),
+  },
+  (table) => [
+    check("instruments_market", sql`${table.marketCode} IN ('JP', 'US')`),
+    check(
+      "instruments_asset_class",
+      sql`${table.assetClass} IN ('COMMON_STOCK', 'NON_LEVERAGED_ETF', 'UNKNOWN')`,
+    ),
+    check(
+      "instruments_currency",
+      sql`(${table.marketCode} = 'JP' AND ${table.quoteCurrencyCode} = 'JPY') OR (${table.marketCode} = 'US' AND ${table.quoteCurrencyCode} = 'USD')`,
+    ),
+    check("instruments_trading_unit", sql`${table.tradingUnit} > 0`),
+    check(
+      "instruments_exchange_time_zone",
+      sql`(${table.marketCode} = 'JP' AND ${table.exchangeTimeZone} = 'Asia/Tokyo') OR (${table.marketCode} = 'US' AND ${table.exchangeTimeZone} = 'America/New_York')`,
+    ),
+    check(
+      "instruments_classification_status",
+      sql`${table.classificationStatus} IN ('VERIFIED', 'NOT_VERIFIED')`,
+    ),
+    check(
+      "instruments_verified_classification",
+      sql`${table.classificationStatus} <> 'VERIFIED' OR (${table.assetClass} <> 'UNKNOWN' AND ${table.classificationSourceRecordId} IS NOT NULL)`,
+    ),
+  ],
+);
+
 export const marketEvents = sqliteTable("market_events", {
   id: text("id").primaryKey(),
   createdAtMs: sqliteInt64("created_at_ms").notNull(),
@@ -420,6 +461,7 @@ export const ledgerEvents = sqliteTable(
     idempotencyKey: text("idempotency_key").notNull(),
     effectiveAtMs: sqliteInt64("effective_at_ms").notNull(),
     recordedAtMs: sqliteInt64("recorded_at_ms").notNull(),
+    ruleVersion: text("rule_version").notNull().default("account-opening-v1"),
     sourceRecordId: text("source_record_id").references(
       () => sourceRecords.id,
       { onDelete: "restrict" },
@@ -467,5 +509,98 @@ export const cashLedgerEntries = sqliteTable(
       sql`(${table.currencyCode} = 'JPY' AND ${table.currencyScale} = 0) OR (${table.currencyCode} = 'USD' AND ${table.currencyScale} = 2)`,
     ),
     check("cash_ledger_entries_amount", sql`${table.amountMinor} <> 0`),
+  ],
+);
+
+export const positionLedgerEntries = sqliteTable(
+  "position_ledger_entries",
+  {
+    id: text("id").primaryKey(),
+    ledgerEventId: text("ledger_event_id")
+      .notNull()
+      .references(() => ledgerEvents.id, { onDelete: "restrict" }),
+    instrumentId: text("instrument_id")
+      .notNull()
+      .references(() => instruments.id, { onDelete: "restrict" }),
+    quantityShares: sqliteInt64("quantity_shares").notNull(),
+  },
+  (table) => [
+    index("position_ledger_entries_instrument").on(table.instrumentId),
+    check(
+      "position_ledger_entries_quantity",
+      sql`${table.quantityShares} <> 0`,
+    ),
+  ],
+);
+
+export const equityValuations = sqliteTable(
+  "equity_valuations",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => paperAccounts.id, { onDelete: "restrict" }),
+    asOfMs: sqliteInt64("as_of_ms").notNull(),
+    ledgerSequenceNo: sqliteInt64("ledger_sequence_no").notNull(),
+    inputHashSha256: text("input_hash_sha256").notNull(),
+    status: text("status").notNull(),
+    equityMinor: sqliteInt64("equity_minor"),
+    currencyCode: text("currency_code").notNull(),
+    currencyScale: sqliteSmallInteger("currency_scale").notNull(),
+    unresolvedReason: text("unresolved_reason"),
+    ruleVersion: text("rule_version").notNull(),
+    createdAtMs: sqliteInt64("created_at_ms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("equity_valuations_input").on(
+      table.accountId,
+      table.asOfMs,
+      table.inputHashSha256,
+      table.ruleVersion,
+    ),
+    index("equity_valuations_account_sequence").on(
+      table.accountId,
+      table.ledgerSequenceNo,
+    ),
+    check("equity_valuations_sequence", sql`${table.ledgerSequenceNo} >= 0`),
+    check(
+      "equity_valuations_input_hash",
+      sql`length(${table.inputHashSha256}) = 64 AND ${table.inputHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+    check(
+      "equity_valuations_currency",
+      sql`${table.currencyCode} = 'JPY' AND ${table.currencyScale} = 0`,
+    ),
+    check(
+      "equity_valuations_status",
+      sql`(${table.status} = 'VERIFIED' AND ${table.equityMinor} IS NOT NULL AND ${table.unresolvedReason} IS NULL) OR (${table.status} = 'UNRESOLVED' AND ${table.equityMinor} IS NULL AND ${table.unresolvedReason} IS NOT NULL)`,
+    ),
+    check(
+      "equity_valuations_rule_version",
+      sql`length(${table.ruleVersion}) BETWEEN 1 AND 64`,
+    ),
+  ],
+);
+
+export const equityValuationEvidence = sqliteTable(
+  "equity_valuation_evidence",
+  {
+    id: text("id").primaryKey(),
+    valuationId: text("valuation_id")
+      .notNull()
+      .references(() => equityValuations.id, { onDelete: "restrict" }),
+    ledgerEventId: text("ledger_event_id")
+      .notNull()
+      .references(() => ledgerEvents.id, { onDelete: "restrict" }),
+    sourceRecordId: text("source_record_id").references(
+      () => sourceRecords.id,
+      { onDelete: "restrict" },
+    ),
+  },
+  (table) => [
+    uniqueIndex("equity_valuation_evidence_event").on(
+      table.valuationId,
+      table.ledgerEventId,
+    ),
   ],
 );

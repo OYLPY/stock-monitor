@@ -1,6 +1,8 @@
 import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import {
+  copyFile,
   mkdir,
   mkdtemp,
   readFile,
@@ -55,7 +57,7 @@ describe("local SQLite database", () => {
       const { client, orm } = fixture.database;
       expect(client.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(client.pragma("foreign_keys", { simple: true })).toBe(BigInt(1));
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(3));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(4));
       expect(
         (
           client
@@ -80,13 +82,13 @@ describe("local SQLite database", () => {
           .prepare("SELECT COUNT(*) AS count FROM schema_migrations")
           .pluck()
           .get(),
-      ).toBe(BigInt(3));
+      ).toBe(BigInt(4));
 
       client.close();
       const restarted = await openDatabase(fixture.filePath);
       try {
         expect(restarted.client.pragma("user_version", { simple: true })).toBe(
-          BigInt(3),
+          BigInt(4),
         );
         expect(
           restarted.orm.select().from(initialCapitalConfigs).all(),
@@ -96,12 +98,120 @@ describe("local SQLite database", () => {
             .prepare("SELECT COUNT(*) FROM schema_migrations")
             .pluck()
             .get(),
-        ).toBe(BigInt(3));
+        ).toBe(BigInt(4));
       } finally {
         restarted.client.close();
       }
     } finally {
       await fixture.cleanup();
+    }
+  });
+
+  it("preserves an existing opening ledger while adding P10 schema", async () => {
+    const directory = await mkdtemp(
+      join(tmpdir(), "stock-monitor-p10-migration-"),
+    );
+    const migrationDirectory = join(directory, "migrations");
+    const metadataDirectory = join(migrationDirectory, "meta");
+    const databasePath = join(directory, "database.sqlite");
+    const currentMigrationDirectory = join(
+      process.cwd(),
+      "src",
+      "db",
+      "migrations",
+    );
+    let client: SqliteClient | undefined;
+
+    try {
+      await mkdir(metadataDirectory, { recursive: true });
+      const currentJournal = JSON.parse(
+        await readFile(
+          join(currentMigrationDirectory, "meta", "_journal.json"),
+          "utf8",
+        ),
+      ) as {
+        version: string;
+        dialect: string;
+        entries: { idx: number; tag: string }[];
+      };
+      const previousEntries = currentJournal.entries.slice(0, 3);
+      await writeFile(
+        join(metadataDirectory, "_journal.json"),
+        JSON.stringify({ ...currentJournal, entries: previousEntries }),
+      );
+      for (const { tag } of previousEntries) {
+        await copyFile(
+          join(currentMigrationDirectory, `${tag}.sql`),
+          join(migrationDirectory, `${tag}.sql`),
+        );
+      }
+
+      client = new Database(databasePath, { timeout: 200 });
+      client.defaultSafeIntegers(true);
+      client.pragma("foreign_keys = ON");
+      await migrateDatabase(client, migrationDirectory);
+
+      const accountId = randomUUID();
+      const eventId = randomUUID();
+      client
+        .prepare(
+          `INSERT INTO paper_accounts
+            (id, account_key, base_currency, initial_capital_version, initialized_at_ms)
+            VALUES (?, 'local-default', 'JPY', 1, ?)`,
+        )
+        .run(accountId, BigInt(100));
+      client
+        .prepare(
+          `INSERT INTO ledger_events
+            (id, account_id, sequence_no, event_type, idempotency_key, effective_at_ms, recorded_at_ms)
+            VALUES (?, ?, 1, 'ACCOUNT_OPENED', 'account-opening:v1', 100, 100)`,
+        )
+        .run(eventId, accountId);
+      client
+        .prepare(
+          `INSERT INTO cash_ledger_entries
+            (id, ledger_event_id, bucket, currency_code, currency_scale, amount_minor)
+            VALUES (?, ?, 'SETTLED', 'JPY', 0, 1000000)`,
+        )
+        .run(randomUUID(), eventId);
+      const cashBefore = client
+        .prepare(
+          "SELECT amount_minor FROM cash_ledger_entries WHERE ledger_event_id = ?",
+        )
+        .pluck()
+        .get(eventId);
+
+      await migrateDatabase(client, currentMigrationDirectory);
+
+      expect(
+        client
+          .prepare(
+            "SELECT amount_minor FROM cash_ledger_entries WHERE ledger_event_id = ?",
+          )
+          .pluck()
+          .get(eventId),
+      ).toBe(cashBefore);
+      expect(
+        client
+          .prepare("SELECT rule_version FROM ledger_events WHERE id = ?")
+          .pluck()
+          .get(eventId),
+      ).toBe("account-opening-v1");
+      expect(
+        client.prepare("SELECT COUNT(*) FROM schema_migrations").pluck().get(),
+      ).toBe(BigInt(4));
+      expect(
+        client
+          .prepare(
+            "SELECT strict FROM pragma_table_list WHERE name = 'position_ledger_entries'",
+          )
+          .pluck()
+          .get(),
+      ).toBe(BigInt(1));
+      expect(client.pragma("foreign_key_check")).toEqual([]);
+    } finally {
+      if (client?.open) client.close();
+      await rm(directory, { recursive: true, force: true });
     }
   });
 
