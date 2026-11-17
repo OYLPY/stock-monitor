@@ -172,7 +172,7 @@
 
 | ID | 任务与实施重点 | 交付物 | 验收/依赖 |
 |---|---|---|---|
-| [`P09-01`](https://github.com/OYLPY/stock-monitor/issues/58) | **OHLCV 归一化与指标库**：实现复权与缺口处理、连续交易日映射、ATR(14)、MA、收益、实现波动率/分位、相对强度；统一精度。 | src/features/quant/indicators、单测数据 | 手算样本与代码一致；缺数据与分红/拆股变化有明确状态；依赖：P07-02, P07-03, P05-02 |
+| [`P09-01`](https://github.com/OYLPY/stock-monitor/issues/58) | **OHLCV 归一化与指标库**：按显式来源的预期交易日映射 OHLCV，复权与缺口状态可追溯；实现 Wilder ATR(14)、SMA(20)、简单日收益、20 日收益样本波动率（√252 年化）/线性分位数（P05/P50/P95）和 RSI(14)，统一 8 位定点精度。 | src/features/quant/indicators、单测数据 | 手算 Fixture 与代码一致；缺数据/日历/分红/拆股有明确状态，窗口不跨缺口；依赖：P05-02。行情源接入 P07-02/P07-03 独立推进，不阻塞纯计算库；Fixture 不得宣称真实行情。 |
 | [`P09-02`](https://github.com/OYLPY/stock-monitor/issues/59) | **无未来函数的回测撮合引擎**：定义信号时点、下一可交易价、订单成交规则、价差/滑点、手续费、资金与持仓、公司行为及缺口条件；可重播。 | src/features/backtest/engine、Fixture | 同K线先知交易被禁止；相同输入输出相同；现金/仓位不为负；依赖：P09-01, P03-04 |
 | [`P09-03`](https://github.com/OYLPY/stock-monitor/issues/60) | **三类初始策略与参数边界**：实现财报后漂移、趋势/放量突破、过度反应均值回归或板块轮动的最小策略接口；参数是研究假设，不自动优化。 | src/features/strategies、参数 Schema | 至少三种不同逻辑可调用；规则有明确入场/退出/止损与缺数据路径；依赖：P09-01, P09-02 |
 | [`P09-04`](https://github.com/OYLPY/stock-monitor/issues/61) | **样本内/样本外与 Walk-forward 实验**：实现时间序列划分、参数冻结、滚动窗口、重采样、避免数据窥探；记录交易次数、胜率、收益分布。 | src/features/validation、测试报告 | 测试集不参与参数选择；小样本不通过；同一配置可重算结果；依赖：P09-02, P09-03 |
