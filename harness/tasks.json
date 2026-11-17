@@ -50,16 +50,16 @@
       "source": "Issue #18 implementation commit c7d764712333b73f886beac1d0c53b7d396a1923 passed local checks and main Quality run 43689402274; isolated no-credentials run returned BLOCKED_EXTERNAL as expected (runner exit 3)."
     },
     "P00-05": {
-      "status": "BLOCKED_EXTERNAL",
-      "attempts": 1,
-      "repairAttempts": 0,
-      "runId": "2292b770-bcb8-41ea-8abc-ec694c7dcf84",
-      "startedAt": "2026-11-15T07:34:39.898Z",
-      "updatedAt": "2026-11-15T08:05:27Z",
+      "status": "FAILED",
+      "attempts": 3,
+      "repairAttempts": 1,
+      "runId": "051b134e-10f5-41c8-b858-c0280e7c8721",
+      "startedAt": "2026-11-17T14:21:30.328Z",
+      "updatedAt": "2026-11-17T14:51:30.466Z",
       "completedAt": null,
       "exitCode": null,
-      "reason": "Codex provider returned model_not_found for the configured model; no command execution occurred.",
-      "source": "Run 2292b770-bcb8-41ea-8abc-ec694c7dcf84 was externally blocked; P00-05 commit da74069cd6de3470d05803df041586e721ebeade passed Quality run 43692753061; offline fixture passes."
+      "reason": "Codex turn timed out.",
+      "source": "Original run 2292b770-bcb8-41ea-8abc-ec694c7dcf84 was blocked by model_not_found. Retry 051b134e-10f5-41c8-b858-c0280e7c8721 selected gpt-5.6-sol and passed Windows sandbox initialization, but the 30-minute run ended FAILED with all required checks missing; Issue #19 remains open."
     }
   }
 }

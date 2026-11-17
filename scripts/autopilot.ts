@@ -640,6 +640,7 @@ type ExecutionRecord = {
   schemaVersion: 1;
   runId: string;
   taskId: string;
+  model?: string;
   status: string;
   startedAt: string;
   finishedAt: string | null;
@@ -660,16 +661,18 @@ type ExecutionRecord = {
 };
 
 function usage() {
-  return "Usage: pnpm autopilot --task P00-03";
+  return "Usage: pnpm autopilot --task P00-03 [--model <model>]";
 }
 
 export async function main(args: string[], root = process.cwd()) {
-  const [option, taskId] = args;
+  const [option, taskId, modelOption, model] = args;
   if (
-    args.length !== 2 ||
+    (args.length !== 2 && args.length !== 4) ||
     option !== "--task" ||
     typeof taskId !== "string" ||
-    !/^P\d{2}-\d{2}$/.test(taskId)
+    !/^P\d{2}-\d{2}$/.test(taskId) ||
+    (args.length === 4 &&
+      (modelOption !== "--model" || typeof model !== "string" || !model))
   ) {
     console.error(usage());
     return 2;
@@ -700,6 +703,7 @@ export async function main(args: string[], root = process.cwd()) {
     schemaVersion: 1,
     runId,
     taskId,
+    ...(model ? { model } : {}),
     status: "RUNNING",
     startedAt: new Date().toISOString(),
     finishedAt: null,
@@ -792,10 +796,16 @@ export async function main(args: string[], root = process.cwd()) {
           await flushRecord();
           const codex = new Codex({
             env,
-            config: { default_permissions: "autopilot" },
+            config: {
+              default_permissions: "autopilot",
+              ...(process.platform === "win32"
+                ? { features: { prefer_mxc: true } }
+                : {}),
+            },
             configOverrides: permissionOverrides(),
           });
           const thread = codex.startThread({
+            ...(model ? { model } : {}),
             workingDirectory: root,
             approvalPolicy: "never",
             webSearchMode: "disabled",

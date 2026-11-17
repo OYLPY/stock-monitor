@@ -354,16 +354,26 @@ describe("autopilot state and run controls", () => {
     const before = await readFile(statePath, "utf8");
     vi.spyOn(console, "info").mockImplementation(() => undefined);
 
-    const exitCode = await main(["--task", "P00-01"], root);
+    const exitCode = await main(
+      ["--task", "P00-01", "--model", "gpt-5.6-sol"],
+      root,
+    );
     const record = await executionRecord(root);
 
     expect(exitCode).toBe(0);
+    expect(record.model).toBe("gpt-5.6-sol");
     expect(await readFile(statePath, "utf8")).toBe(before);
     expect(record.status).toBe("SKIPPED_DONE");
     expect(record.runnerExitCode).toBe(0);
     expect(record.steps).toEqual([]);
     expect(record.turns).toEqual([]);
     expect(record.contextSources).toEqual([]);
+  });
+
+  it("requires a model value when the model override is requested", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(await main(["--task", "P00-01", "--model"])).toBe(2);
   });
 
   it("fails closed on corrupted task state and preserves the source", async () => {
