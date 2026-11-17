@@ -1,6 +1,6 @@
 # 风控引擎与订单仓位计算
 
-> 状态：P03-03 设计基线；风控运行时代码尚未实现。本文件落实 [FR-Trade](../requirements/FR_TRADE.md) 的固定规则，不新增或放宽风险阈值。
+> 状态：P03-03 设计基线已由 P10-02 的 [`checker.ts`](../../src/features/risk/checker.ts) 部分接入运行时，包括不可变计划版本、证据 hash、确定性风险裁决和本机批准。当前只有 P10-01 可核验的 JPY 现金账户能产生 `PASS`；持仓或 USD 账户权益仍为 `UNRESOLVED`，跨币种权益与订单/成交接入由 P10-03/P10-04 完成。本文件落实 [FR-Trade](../requirements/FR_TRADE.md) 的固定规则，不新增或放宽风险阈值。
 >
 > 相关设计：[DB Schema](DB_SCHEMA.md)、[API/DTO 契约](API_CONTRACTS.md)、[数据溯源](DATA_PROVENANCE.md)。
 

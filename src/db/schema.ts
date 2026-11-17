@@ -604,3 +604,183 @@ export const equityValuationEvidence = sqliteTable(
     ),
   ],
 );
+
+export const paperPlans = sqliteTable("paper_plans", {
+  id: text("id").primaryKey(),
+  candidateId: text("candidate_id").notNull(),
+  createdAtMs: sqliteInt64("created_at_ms").notNull(),
+});
+
+export const paperPlanVersions = sqliteTable(
+  "paper_plan_versions",
+  {
+    id: text("id").primaryKey(),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => paperPlans.id, { onDelete: "restrict" }),
+    versionNo: sqliteInt64("version_no").notNull(),
+    instrumentId: text("instrument_id")
+      .notNull()
+      .references(() => instruments.id, { onDelete: "restrict" }),
+    requestedQuantityShares: sqliteInt64("requested_quantity_shares").notNull(),
+    candidateSnapshotJson: text("candidate_snapshot_json").notNull(),
+    inputSnapshotJson: text("input_snapshot_json").notNull(),
+    planHashSha256: text("plan_hash_sha256").notNull(),
+    createdAtMs: sqliteInt64("created_at_ms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("paper_plan_versions_plan_number").on(
+      table.planId,
+      table.versionNo,
+    ),
+    index("paper_plan_versions_instrument_time").on(
+      table.instrumentId,
+      table.createdAtMs,
+    ),
+    check("paper_plan_versions_number", sql`${table.versionNo} > 0`),
+    check(
+      "paper_plan_versions_quantity",
+      sql`${table.requestedQuantityShares} > 0`,
+    ),
+    check(
+      "paper_plan_versions_candidate_json",
+      sql`json_valid(${table.candidateSnapshotJson})`,
+    ),
+    check(
+      "paper_plan_versions_input_json",
+      sql`json_valid(${table.inputSnapshotJson})`,
+    ),
+    check(
+      "paper_plan_versions_hash",
+      sql`length(${table.planHashSha256}) = 64 AND ${table.planHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+  ],
+);
+
+export const planInputEvidence = sqliteTable(
+  "plan_input_evidence",
+  {
+    id: text("id").primaryKey(),
+    planVersionId: text("plan_version_id")
+      .notNull()
+      .references(() => paperPlanVersions.id, { onDelete: "restrict" }),
+    sourceRecordId: text("source_record_id")
+      .notNull()
+      .references(() => sourceRecords.id, { onDelete: "restrict" }),
+    role: text("role").notNull(),
+    contentHashSha256: text("content_hash_sha256").notNull(),
+  },
+  (table) => [
+    uniqueIndex("plan_input_evidence_reference").on(
+      table.planVersionId,
+      table.role,
+      table.sourceRecordId,
+    ),
+    check(
+      "plan_input_evidence_role",
+      sql`${table.role} IN ('CANDIDATE', 'CLASSIFICATION', 'QUOTE', 'RISK_MODEL', 'FX')`,
+    ),
+    check(
+      "plan_input_evidence_hash",
+      sql`length(${table.contentHashSha256}) = 64 AND ${table.contentHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+  ],
+);
+
+export const riskDecisions = sqliteTable(
+  "risk_decisions",
+  {
+    id: text("id").primaryKey(),
+    planVersionId: text("plan_version_id")
+      .notNull()
+      .references(() => paperPlanVersions.id, { onDelete: "restrict" }),
+    decisionNo: sqliteInt64("decision_no").notNull(),
+    planHashSha256: text("plan_hash_sha256").notNull(),
+    status: text("status").notNull(),
+    reasonCodesJson: text("reason_codes_json").notNull(),
+    requestedQuantityShares: sqliteInt64("requested_quantity_shares").notNull(),
+    maxAllowedQuantityShares: sqliteInt64("max_allowed_quantity_shares"),
+    equityMinor: sqliteInt64("equity_minor"),
+    riskBudgetMinor: sqliteInt64("risk_budget_minor"),
+    plannedLossJpyMinor: sqliteInt64("planned_loss_jpy_minor"),
+    availableCashJson: text("available_cash_json").notNull(),
+    calculationJson: text("calculation_json").notNull(),
+    inputHashSha256: text("input_hash_sha256").notNull(),
+    ruleVersion: text("rule_version").notNull(),
+    decidedAtMs: sqliteInt64("decided_at_ms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("risk_decisions_version_number").on(
+      table.planVersionId,
+      table.decisionNo,
+    ),
+    index("risk_decisions_version_time").on(
+      table.planVersionId,
+      table.decidedAtMs,
+    ),
+    check("risk_decisions_number", sql`${table.decisionNo} > 0`),
+    check(
+      "risk_decisions_status",
+      sql`${table.status} IN ('PASS', 'REJECT', 'UNRESOLVED')`,
+    ),
+    check(
+      "risk_decisions_plan_hash",
+      sql`length(${table.planHashSha256}) = 64 AND ${table.planHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+    check(
+      "risk_decisions_input_hash",
+      sql`length(${table.inputHashSha256}) = 64 AND ${table.inputHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+    check(
+      "risk_decisions_reasons_json",
+      sql`json_valid(${table.reasonCodesJson}) AND json_type(${table.reasonCodesJson}) = 'array'`,
+    ),
+    check(
+      "risk_decisions_cash_json",
+      sql`json_valid(${table.availableCashJson}) AND json_type(${table.availableCashJson}) = 'object'`,
+    ),
+    check(
+      "risk_decisions_calculation_json",
+      sql`json_valid(${table.calculationJson}) AND json_type(${table.calculationJson}) = 'object'`,
+    ),
+    check(
+      "risk_decisions_requested_quantity",
+      sql`${table.requestedQuantityShares} > 0`,
+    ),
+    check(
+      "risk_decisions_max_quantity",
+      sql`${table.maxAllowedQuantityShares} IS NULL OR ${table.maxAllowedQuantityShares} >= 0`,
+    ),
+    check(
+      "risk_decisions_money",
+      sql`(${table.riskBudgetMinor} IS NULL OR ${table.riskBudgetMinor} >= 0) AND (${table.plannedLossJpyMinor} IS NULL OR ${table.plannedLossJpyMinor} >= 0)`,
+    ),
+    check(
+      "risk_decisions_rule_version",
+      sql`length(${table.ruleVersion}) BETWEEN 1 AND 64`,
+    ),
+  ],
+);
+
+export const planApprovals = sqliteTable(
+  "plan_approvals",
+  {
+    id: text("id").primaryKey(),
+    planVersionId: text("plan_version_id")
+      .notNull()
+      .unique()
+      .references(() => paperPlanVersions.id, { onDelete: "restrict" }),
+    planHashSha256: text("plan_hash_sha256").notNull(),
+    riskDecisionId: text("risk_decision_id")
+      .notNull()
+      .unique()
+      .references(() => riskDecisions.id, { onDelete: "restrict" }),
+    approvedAtMs: sqliteInt64("approved_at_ms").notNull(),
+  },
+  (table) => [
+    check(
+      "plan_approvals_hash",
+      sql`length(${table.planHashSha256}) = 64 AND ${table.planHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+  ],
+);

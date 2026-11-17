@@ -36,6 +36,20 @@
       "when": 1794888140749,
       "tag": "0004_p10_01_equity_asof_index",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794891596809,
+      "tag": "0005_p10_02_risk_plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794893247945,
+      "tag": "0006_p10_02_decision_order",
+      "breakpoints": true
     }
   ]
 }

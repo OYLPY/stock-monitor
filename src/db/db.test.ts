@@ -57,7 +57,7 @@ describe("local SQLite database", () => {
       const { client, orm } = fixture.database;
       expect(client.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(client.pragma("foreign_keys", { simple: true })).toBe(BigInt(1));
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(5));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(7));
       expect(
         (
           client
@@ -82,13 +82,13 @@ describe("local SQLite database", () => {
           .prepare("SELECT COUNT(*) AS count FROM schema_migrations")
           .pluck()
           .get(),
-      ).toBe(BigInt(5));
+      ).toBe(BigInt(7));
 
       client.close();
       const restarted = await openDatabase(fixture.filePath);
       try {
         expect(restarted.client.pragma("user_version", { simple: true })).toBe(
-          BigInt(5),
+          BigInt(7),
         );
         expect(
           restarted.orm.select().from(initialCapitalConfigs).all(),
@@ -98,7 +98,7 @@ describe("local SQLite database", () => {
             .prepare("SELECT COUNT(*) FROM schema_migrations")
             .pluck()
             .get(),
-        ).toBe(BigInt(5));
+        ).toBe(BigInt(7));
       } finally {
         restarted.client.close();
       }
@@ -199,7 +199,7 @@ describe("local SQLite database", () => {
       ).toBe("account-opening-v1");
       expect(
         client.prepare("SELECT COUNT(*) FROM schema_migrations").pluck().get(),
-      ).toBe(BigInt(5));
+      ).toBe(BigInt(7));
       expect(
         client
           .prepare(
@@ -232,7 +232,10 @@ describe("local SQLite database", () => {
           "UPDATE schema_migrations SET checksum_sha256 = ? WHERE version = 4",
         )
         .run(legacyChecksum);
-      client.prepare("DELETE FROM schema_migrations WHERE version = 5").run();
+      client.exec(
+        "DROP TABLE plan_approvals; DROP TABLE plan_input_evidence; DROP TABLE risk_decisions; DROP TABLE paper_plan_versions; DROP TABLE paper_plans",
+      );
+      client.prepare("DELETE FROM schema_migrations WHERE version >= 5").run();
       client.pragma("user_version = 4");
       client
         .prepare(
@@ -246,7 +249,7 @@ describe("local SQLite database", () => {
         join(process.cwd(), "src", "db", "migrations"),
       );
 
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(5));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(7));
       expect(
         client
           .prepare(

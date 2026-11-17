@@ -46,6 +46,7 @@ Complete the reopened [UI-COMP-01 / Issue #89](https://github.com/OYLPY/stock-mo
 ## Latest UI change
 
 - Updated the overview to separate market monitoring, event records, and research reports into shadcn Cards with `Empty` states and route buttons. Rechecked business source for raw controls and imports from protected `src/components/ui`; none were found.
+- 2026-11-17: The user reported a Base UI runtime warning because a navigation `Link` was rendered through `Button`. The current source uses a plain Next `Link` with `buttonVariants`; the active Next dev RSC chunk has recompiled to that markup. No browser or Playwright recheck was run, per the user's instruction to focus on UI changes first. Issue #89 is open again and remains unaccepted until its full UI verification is completed.
 
 ## Dead ends
 
@@ -55,5 +56,5 @@ Complete the reopened [UI-COMP-01 / Issue #89](https://github.com/OYLPY/stock-mo
 
 ## Remaining plan
 
-1. Implementation, local verification, push, and matching Quality CI for #89 are complete; Issue #89 is closed.
-2. P10-01 / Issue #64 is now active. Its dependencies P05-01 / #37 and P03-01 / #28 are closed.
+1. Issue #89 remains open; the runtime warning fix is present in the active P10-02 working tree, but the current UI diff has not received browser/Playwright verification.
+2. P10-02 / Issue #65 is the active implementation task; its dependencies P10-01 / #64 and P03-03 / #30 are closed.

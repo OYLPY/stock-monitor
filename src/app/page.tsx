@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Activity, Bell, FileText } from "lucide-react";
 
 import { Badge } from "@/components/shadcn/badge";
-import { Button } from "@/components/shadcn/button";
+import { buttonVariants } from "@/components/shadcn/button";
 import {
   Card,
   CardAction,
@@ -81,7 +81,9 @@ export default function Home() {
                       </EmptyDescription>
                     </EmptyHeader>
                     <EmptyContent>
-                      <Button render={<Link href={href} />}>{action}</Button>
+                      <Link className={buttonVariants()} href={href}>
+                        {action}
+                      </Link>
                     </EmptyContent>
                   </Empty>
                 </CardContent>
