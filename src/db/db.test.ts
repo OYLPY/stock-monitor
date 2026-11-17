@@ -239,6 +239,7 @@ describe("local SQLite database", () => {
           "INSERT INTO equity_valuations (id, account_id, as_of_ms, ledger_sequence_no, input_hash_sha256, status, equity_minor, currency_code, currency_scale, unresolved_reason, rule_version, created_at_ms) VALUES (?, ?, 100, 1, ?, 'VERIFIED', 1000000, 'JPY', 0, NULL, 'equity-ledger-v1', 100)",
         )
         .run(valuationId, account.id, "a".repeat(64));
+      const previousBackups = new Set(await readdir(dirname(fixture.filePath)));
 
       await migrateDatabase(
         client,
@@ -274,7 +275,10 @@ describe("local SQLite database", () => {
       ]);
 
       const snapshotName = (await readdir(dirname(fixture.filePath))).find(
-        (file) => file.includes(".pre-v5-") && file.endsWith(".sqlite"),
+        (file) =>
+          file.includes(".pre-v5-") &&
+          file.endsWith(".sqlite") &&
+          !previousBackups.has(file),
       );
       expect(snapshotName).toBeDefined();
       backupClient = new Database(
