@@ -64,6 +64,10 @@
 
 **P07-03 / #50 当前结论：`BLOCKED_EXTERNAL`。** 免费数据既滞后 12 周又只有 2 年，无法满足策略经数十年市场行情验证的要求；更长的历史范围需要付费，项目没有授权购买。Premium 当前列出的数据起点也不到数十年。本次未注册、未申请 key、未请求 API；没有把 Fixture 当作真实行情。
 
+#### P07-03 计划与条款复核（2026-11-18）
+
+J-Quants 官方[计划数据表](https://jpx-jquants.com/en/spec/data-spec)复核结果未变：股票日线 Free 为最近 2 年、延迟 12 周；Light、Standard、Premium 为 5、10、20 年，Premium 数据期始于 2008-05-07。官方[限流表](https://jpx-jquants.com/en/spec/rate-limits)列 Free 每分钟 5 次，且 Free 不提供 bulk CSV。官方[服务条款](https://jpx-jquants.com/en/termsofservice)要求注册并同意后使用；Free 订阅一年后自动取消，订阅取消且剩余期限结束后须删除数据。即使考虑此来源，历史长度仍无法满足数十年回测。本次只读取官方文档，未注册、购买或请求 API。
+
 ### 美国：交易所行情、延迟展示和历史产品
 
 | 产品                                  | 范围和时效                                                                                                                                                                                                                                                                                                                                                                                                                                           | 访问、价格和使用条件                                                                                                                                                                                                                                                                                                                                                                                                   | 可访问性证据                                                                           |
@@ -134,7 +138,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - SEC 与 EDINET 有公开/免费 API，可供披露与结构化财务事实使用；两者不是股票报价数据源。SEC investor API 无 key，EDINET v2 需要 key。[^sec][^edinet]
 - 日本存在面向个人的免费官方日线 API，但 Free 数据只有 2 年窗口且滞后 12 周；公开说明不提供日内实时行情。该授权只针对注册人的 own use，免费不意味着可向其他用户分发数据。[J-Quants 计划与条款](https://jpx-jquants.com/en)
 - J-Quants 官方计划页列出 Light、Standard、Premium 的日线历史跨度分别为 5 年、10 年、20 年；因此公开计划资料也不支持“免费或默认可得几十年日线”的说法。这里记录的是计划说明，未订阅或验证实际账户可用范围。[J-Quants 计划页](https://jpx-jquants.com/en)
-- 2026-11-16 复核的 J-Quants 数据规格将 Free 日线列为 2 年且延迟 12 周，Free API 限流为 5 次/分钟；Premium 列 20 年并标注数据期起点 2008-05-07，仍不足以证明满足数十年行情验证。#50 因此保持 `BLOCKED_EXTERNAL`。
+- 2026-11-18 复核的 J-Quants 数据规格仍将 Free 日线列为 2 年且延迟 12 周，Free API 限流为 5 次/分钟；Premium 列 20 年并标注数据期起点 2008-05-07，仍不足以满足数十年行情验证。#50 因此保持 `BLOCKED_EXTERNAL`。
 - JPX 官方免费月度表覆盖最长 10 年，但月度频率无法替代逐交易日回测；同一目录卡注明外部再分发不可。[JPX 月间相场表目录卡](https://clientportal.jpx.co.jp/ClientPortal/s/datacatalog/a085j00000Ip94b/a037?language=ja)
 - JPX 日线历史可追溯到 1974 年，NYSE Daily TAQ 可追溯到 1993 年；这些支持多年代跨度的官方历史产品都有明确费用或订阅/许可门槛。[JPX Data Cloud 价表](https://db-ec.jpx.co.jp/client_info/JPX_DLSITE/html/price_en.pdf)、[NYSE 历史价表](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)
 - Nasdaq/NYSE 的延迟展示政策仍涉及产品级许可、展示提示或访问条件；“交易所网站可打开”不足以证明应用可建立免费、稳定、可保存的行情通道。
@@ -167,7 +171,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 6. P07-03 / #50 的 Free 日线仅 2 年并延迟 12 周；付费数据不在当前授权范围。保持 `BLOCKED_EXTERNAL`，不以短历史或 Fixture 宣称满足数十年回测。
 7. P07-04 / #51 已实现 SEC、BOJ、BLS 与 Fed RSS 的原生响应适配器，并以 mock fetch 和本地 SQLite 验证解析、请求限额、降级及幂等写入；没有请求真实数据，因此线上可用性仍为 `NOT_VERIFIED`。EDINET/BEA 缺少 API key、TDnet 需要未授权的付费服务、公司 IR 仅支持逐站手工引用。完整验收证据见 [P07-04 六字段交接](../../harness/handoffs/P07-04.md)。
 
-## 主要来源（既有来源于 2026-11-16 复核；Twelve Data 与 Alpaca 于 2026-11-17 复核；Alpha Vantage 与 Tiingo 于 2026-11-18 复核）
+## 主要来源（既有来源于 2026-11-16 复核；Twelve Data 与 Alpaca 于 2026-11-17 复核；Alpha Vantage、Tiingo 与 J-Quants 于 2026-11-18 复核）
 
 - [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)（页面列更新日期 2025-04-08）；[SEC Accessing EDGAR Data](https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data)；[SEC Developer Resources](https://www.sec.gov/about/developer-resources)；[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions)（含 1–3 分钟可见延迟、User-Agent 与 EDGAR 重用说明）。
 - [EDINET API v2 Spec PDF](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf)（2026 年 1 月版本）；[EDINET FAQ](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0090_001.html)（2026-11-05 更新）；[EDINET 使用规约](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0030.html)；[EDINET API 功能规约 PDF](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140191.pdf)。
