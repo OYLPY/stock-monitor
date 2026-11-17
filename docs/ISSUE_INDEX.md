@@ -76,8 +76,8 @@
 
 - [x] [P01-01 — PRD 与用户场景/范围](https://github.com/OYLPY/stock-monitor/issues/20) · 依赖：P00-02
 - [x] [P01-02 — 晨报、异常监控与 AI 研究功能需求](https://github.com/OYLPY/stock-monitor/issues/21) · 依赖：P01-01
-- [ ] [P01-03 — 纸面交易、回测、风控需求](https://github.com/OYLPY/stock-monitor/issues/22) · 依赖：P01-01
-- [ ] [P01-04 — 非功能需求与验收追踪矩阵](https://github.com/OYLPY/stock-monitor/issues/23) · 依赖：P01-02, P01-03
+- [x] [P01-03 — 纸面交易、回测、风控需求](https://github.com/OYLPY/stock-monitor/issues/22) · 依赖：P01-01
+- [x] [P01-04 — 非功能需求与验收追踪矩阵](https://github.com/OYLPY/stock-monitor/issues/23) · 依赖：P01-02, P01-03
 
 #### P01-02 需求—设计—验证追踪
 

@@ -59,7 +59,7 @@
       "completedAt": "2026-11-17T15:33:45Z",
       "exitCode": 0,
       "reason": null,
-      "source": "Direct Codex CLI gpt-5.6-sol acceptance completed read-only P00-05 inspection, recovery tests, format, lint, typecheck, full tests, and build with exit 0. Evidence commit cf4676fe7d49b133c03fd5b53898205a5b7dbcee passed Quality CI 44117548907. See harness/logs/P00-05-direct-codex-acceptance.jsonl. Earlier autopilot timeout and model_not_found runs remain documented as historical failures."
+      "source": "Direct Codex CLI gpt-5.6-sol acceptance completed read-only P00-05 inspection, recovery tests, format, lint, typecheck, full tests, and build with exit 0. Evidence commit cf4676fe7d49b133c03fd5b53898205a5b7dbcee passed Quality CI 44117548907; final state commit 5508d5941ddc0e614d84e253979c194187a72251 passed Quality CI 44118235154; Issues #19 and #1 closed. See harness/logs/P00-05-direct-codex-acceptance.jsonl. Earlier autopilot timeout and model_not_found runs remain documented as historical failures."
     }
   }
 }
