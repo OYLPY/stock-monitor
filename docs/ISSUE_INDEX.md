@@ -176,7 +176,7 @@
 ### [P10 纸面模拟与独立风控](https://github.com/OYLPY/stock-monitor/issues/11)
 
 - [x] [P10-01 — 模拟账户及不可变资金流水](https://github.com/OYLPY/stock-monitor/issues/64) · 交付：[纸面账本](../src/features/paper/ledger.ts)、[六字段交接](../harness/handoffs/P10-01.md) · 实现提交 f3d87fc / [Quality CI 44012299880](https://github.com/OYLPY/stock-monitor/actions/runs/44012299880)；迁移兼容修复 fa7331c / [Quality CI 44016190625](https://github.com/OYLPY/stock-monitor/actions/runs/44016190625)；备份测试修正 8a077c9 / [Quality CI 44017397513](https://github.com/OYLPY/stock-monitor/actions/runs/44017397513) · 依赖：P05-01, P03-01
-- [ ] [P10-02 — 纸面计划审批与确定性风险官](https://github.com/OYLPY/stock-monitor/issues/65) · 依赖：P10-01, P03-03
+- [x] [P10-02 — 纸面计划审批与确定性风险官](https://github.com/OYLPY/stock-monitor/issues/65) · 交付：[风险检查器](../src/features/risk/checker.ts)、[六字段交接](../harness/handoffs/P10-02.md) · 提交 [`5bb5141`](https://github.com/OYLPY/stock-monitor/commit/5bb5141d441c6f256250375f5daf4a25282b40c8) / [Quality CI 44025841254](https://github.com/OYLPY/stock-monitor/actions/runs/44025841254) success · 依赖：P10-01, P03-03
 - [ ] [P10-03 — 20%峰值回撤阻断及跨币种权益](https://github.com/OYLPY/stock-monitor/issues/66) · 依赖：P10-01, P10-02
 - [ ] [P10-04 — 模拟成交引擎、手续费与滑点](https://github.com/OYLPY/stock-monitor/issues/67) · 依赖：P10-02, P10-03, P09-02
 - [ ] [P10-05 — 账本审计、指标及恢复](https://github.com/OYLPY/stock-monitor/issues/68) · 依赖：P10-04, P05-05
@@ -207,7 +207,7 @@
 
 ### 跨阶段 UI 组件治理
 
-- [x] [UI-COMP-01 — 全页面 shadcn 标准组件与分类布局 UX](https://github.com/OYLPY/stock-monitor/issues/89) · 交付：`components.json`、`src/components/shadcn`、`src/app`、`src/components`、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/UI-COMP-01.md) · 覆盖：RQ-027、NFR-011/012 · 依赖：P06-01–06
+- [x] [UI-COMP-01 — 全页面 shadcn 标准组件与分类布局 UX](https://github.com/OYLPY/stock-monitor/issues/89) · 交付：`components.json`、`src/components/shadcn`、`src/app`、`src/components`、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/UI-COMP-01.md) · 最终修复 `5bb5141` / [Quality CI 44025841254](https://github.com/OYLPY/stock-monitor/actions/runs/44025841254) success · 覆盖：RQ-027、NFR-011/012 · 依赖：P06-01–06
 
 ## 规则
 

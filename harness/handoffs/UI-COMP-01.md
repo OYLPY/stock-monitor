@@ -46,7 +46,7 @@ Complete the reopened [UI-COMP-01 / Issue #89](https://github.com/OYLPY/stock-mo
 ## Latest UI change
 
 - Updated the overview to separate market monitoring, event records, and research reports into shadcn Cards with `Empty` states and route buttons. Rechecked business source for raw controls and imports from protected `src/components/ui`; none were found.
-- 2026-11-17: The user reported a Base UI runtime warning because a navigation `Link` was rendered through `Button`. The current source uses a plain Next `Link` with `buttonVariants`; the active Next dev RSC chunk has recompiled to that markup. No browser or Playwright recheck was run, per the user's instruction to focus on UI changes first. Issue #89 is open again and remains unaccepted until its full UI verification is completed.
+- 2026-11-17: The user reported a Base UI runtime warning because a navigation `Link` was rendered through `Button`. The source now uses a plain Next `Link` with `buttonVariants`, and the active Next dev RSC chunk recompiled to that markup. The matching [Quality CI run 44025841254](https://github.com/OYLPY/stock-monitor/actions/runs/44025841254) passed, including all five Playwright E2E tests. The runtime correction shipped in commit `5bb5141d441c6f256250375f5daf4a25282b40c8`.
 
 ## Dead ends
 
@@ -56,5 +56,5 @@ Complete the reopened [UI-COMP-01 / Issue #89](https://github.com/OYLPY/stock-mo
 
 ## Remaining plan
 
-1. Issue #89 remains open; the runtime warning fix is present in the active P10-02 working tree, but the current UI diff has not received browser/Playwright verification.
-2. P10-02 / Issue #65 is the active implementation task; its dependencies P10-01 / #64 and P03-03 / #30 are closed.
+1. Issue #89 is closed; its latest runtime warning fix is in `5bb5141d441c6f256250375f5daf4a25282b40c8`, and matching Quality CI `44025841254` passed. The automated E2E suite does not directly assert console warnings.
+2. Continue with P10-03 / Issue #66 after verifying the repository baseline and recording its start state.
