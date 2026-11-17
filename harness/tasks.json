@@ -50,16 +50,16 @@
       "source": "Issue #18 implementation commit c7d764712333b73f886beac1d0c53b7d396a1923 passed local checks and main Quality run 43689402274; isolated no-credentials run returned BLOCKED_EXTERNAL as expected (runner exit 3)."
     },
     "P00-05": {
-      "status": "RUNNING",
+      "status": "DONE",
       "attempts": 4,
       "repairAttempts": 1,
       "runId": "01a1ea23-9620-7503-860e-ffd7d642dd94",
       "startedAt": "2026-11-17T15:32:43.234Z",
       "updatedAt": "2026-11-17T15:33:45Z",
-      "completedAt": null,
-      "exitCode": null,
+      "completedAt": "2026-11-17T15:33:45Z",
+      "exitCode": 0,
       "reason": null,
-      "source": "Direct Codex CLI gpt-5.6-sol acceptance completed read-only P00-05 inspection, recovery tests, format, lint, typecheck, full tests, and build with exit 0; matching CI for this status update is pending. See harness/logs/P00-05-direct-codex-acceptance.jsonl. Earlier autopilot timeout and model_not_found runs remain documented as historical failures."
+      "source": "Direct Codex CLI gpt-5.6-sol acceptance completed read-only P00-05 inspection, recovery tests, format, lint, typecheck, full tests, and build with exit 0. Evidence commit cf4676fe7d49b133c03fd5b53898205a5b7dbcee passed Quality CI 44117548907. See harness/logs/P00-05-direct-codex-acceptance.jsonl. Earlier autopilot timeout and model_not_found runs remain documented as historical failures."
     }
   }
 }

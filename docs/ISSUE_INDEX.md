@@ -33,7 +33,7 @@
 - [x] [P00-02 — 建立质量、安全和仓库协作规范](https://github.com/OYLPY/stock-monitor/issues/16) · 依赖：P00-01
 - [x] [P00-03 — 实现 Codex 自动任务执行器](https://github.com/OYLPY/stock-monitor/issues/17) · 依赖：P00-02
 - [x] [P00-04 — NVIDIA 短上下文压缩与交接能力](https://github.com/OYLPY/stock-monitor/issues/18) · 依赖：P00-03
-- [ ] [P00-05 — P00 故障恢复与阶段验收](https://github.com/OYLPY/stock-monitor/issues/19) · 依赖：P00-03, P00-04
+- [x] [P00-05 — P00 故障恢复与阶段验收](https://github.com/OYLPY/stock-monitor/issues/19) · 依赖：P00-03, P00-04
 
 #### P00-02 需求—设计—验证追踪
 
