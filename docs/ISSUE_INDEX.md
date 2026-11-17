@@ -175,7 +175,7 @@
 
 ### [P10 纸面模拟与独立风控](https://github.com/OYLPY/stock-monitor/issues/11)
 
-- [ ] [P10-01 — 模拟账户及不可变资金流水](https://github.com/OYLPY/stock-monitor/issues/64) · 依赖：P05-01, P03-01
+- [x] [P10-01 — 模拟账户及不可变资金流水](https://github.com/OYLPY/stock-monitor/issues/64) · 交付：[纸面账本](../src/features/paper/ledger.ts)、[六字段交接](../harness/handoffs/P10-01.md) · 实现提交 f3d87fc / [Quality CI 44012299880](https://github.com/OYLPY/stock-monitor/actions/runs/44012299880) · 依赖：P05-01, P03-01
 - [ ] [P10-02 — 纸面计划审批与确定性风险官](https://github.com/OYLPY/stock-monitor/issues/65) · 依赖：P10-01, P03-03
 - [ ] [P10-03 — 20%峰值回撤阻断及跨币种权益](https://github.com/OYLPY/stock-monitor/issues/66) · 依赖：P10-01, P10-02
 - [ ] [P10-04 — 模拟成交引擎、手续费与滑点](https://github.com/OYLPY/stock-monitor/issues/67) · 依赖：P10-02, P10-03, P09-02
