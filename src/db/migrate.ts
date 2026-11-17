@@ -14,6 +14,15 @@ interface AppliedMigration {
   checksum_sha256: string;
 }
 
+const legacyMigrationChecksums = new Map([
+  [
+    4,
+    new Set([
+      "492f24e7d6ca9b86cbc22f1d9bf9a806cc106c89e75080e6ccd786f57433adca",
+    ]),
+  ],
+]);
+
 export async function migrateDatabase(
   client: SqliteClient,
   migrationsDirectory = join(process.cwd(), "src", "db", "migrations"),
@@ -88,10 +97,12 @@ export async function migrateDatabase(
         AppliedMigration | undefined;
 
       if (applied) {
-        if (
-          applied.migration_name !== migration.name ||
-          applied.checksum_sha256 !== checksum
-        ) {
+        const checksumMatches =
+          applied.checksum_sha256 === checksum ||
+          legacyMigrationChecksums
+            .get(migration.version)
+            ?.has(applied.checksum_sha256) === true;
+        if (applied.migration_name !== migration.name || !checksumMatches) {
           throw new Error(`migration_checksum_mismatch:${migration.version}`);
         }
         return false;

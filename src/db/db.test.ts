@@ -57,7 +57,7 @@ describe("local SQLite database", () => {
       const { client, orm } = fixture.database;
       expect(client.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(client.pragma("foreign_keys", { simple: true })).toBe(BigInt(1));
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(4));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(5));
       expect(
         (
           client
@@ -82,13 +82,13 @@ describe("local SQLite database", () => {
           .prepare("SELECT COUNT(*) AS count FROM schema_migrations")
           .pluck()
           .get(),
-      ).toBe(BigInt(4));
+      ).toBe(BigInt(5));
 
       client.close();
       const restarted = await openDatabase(fixture.filePath);
       try {
         expect(restarted.client.pragma("user_version", { simple: true })).toBe(
-          BigInt(4),
+          BigInt(5),
         );
         expect(
           restarted.orm.select().from(initialCapitalConfigs).all(),
@@ -98,7 +98,7 @@ describe("local SQLite database", () => {
             .prepare("SELECT COUNT(*) FROM schema_migrations")
             .pluck()
             .get(),
-        ).toBe(BigInt(4));
+        ).toBe(BigInt(5));
       } finally {
         restarted.client.close();
       }
@@ -199,7 +199,7 @@ describe("local SQLite database", () => {
       ).toBe("account-opening-v1");
       expect(
         client.prepare("SELECT COUNT(*) FROM schema_migrations").pluck().get(),
-      ).toBe(BigInt(4));
+      ).toBe(BigInt(5));
       expect(
         client
           .prepare(
@@ -212,6 +212,88 @@ describe("local SQLite database", () => {
     } finally {
       if (client?.open) client.close();
       await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("upgrades the observed legacy P10 checksum without losing local records", async () => {
+    const fixture = await createTestDatabase();
+    let backupClient: SqliteClient | undefined;
+    try {
+      const { client } = fixture.database;
+      const account = initializeDefaultPaperAccount(fixture.database);
+      const valuationId = randomUUID();
+      const legacyChecksum =
+        "492f24e7d6ca9b86cbc22f1d9bf9a806cc106c89e75080e6ccd786f57433adca";
+      client.exec(
+        "DROP INDEX equity_valuations_input; CREATE UNIQUE INDEX equity_valuations_input ON equity_valuations (account_id, input_hash_sha256, rule_version)",
+      );
+      client
+        .prepare(
+          "UPDATE schema_migrations SET checksum_sha256 = ? WHERE version = 4",
+        )
+        .run(legacyChecksum);
+      client.prepare("DELETE FROM schema_migrations WHERE version = 5").run();
+      client.pragma("user_version = 4");
+      client
+        .prepare(
+          "INSERT INTO equity_valuations (id, account_id, as_of_ms, ledger_sequence_no, input_hash_sha256, status, equity_minor, currency_code, currency_scale, unresolved_reason, rule_version, created_at_ms) VALUES (?, ?, 100, 1, ?, 'VERIFIED', 1000000, 'JPY', 0, NULL, 'equity-ledger-v1', 100)",
+        )
+        .run(valuationId, account.id, "a".repeat(64));
+
+      await migrateDatabase(
+        client,
+        join(process.cwd(), "src", "db", "migrations"),
+      );
+
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(5));
+      expect(
+        client
+          .prepare(
+            "SELECT checksum_sha256 FROM schema_migrations WHERE version = 4",
+          )
+          .pluck()
+          .get(),
+      ).toBe(legacyChecksum);
+      expect(
+        client
+          .prepare("SELECT equity_minor FROM equity_valuations WHERE id = ?")
+          .pluck()
+          .get(valuationId),
+      ).toBe(BigInt(1_000_000));
+      expect(
+        (
+          client
+            .prepare("PRAGMA index_info('equity_valuations_input')")
+            .all() as { name: string }[]
+        ).map(({ name }) => name),
+      ).toEqual([
+        "account_id",
+        "as_of_ms",
+        "input_hash_sha256",
+        "rule_version",
+      ]);
+
+      const snapshotName = (await readdir(dirname(fixture.filePath))).find(
+        (file) => file.includes(".pre-v5-") && file.endsWith(".sqlite"),
+      );
+      expect(snapshotName).toBeDefined();
+      backupClient = new Database(
+        join(dirname(fixture.filePath), snapshotName!),
+        { readonly: true },
+      );
+      backupClient.defaultSafeIntegers(true);
+      expect(backupClient.pragma("user_version", { simple: true })).toBe(
+        BigInt(4),
+      );
+      expect(
+        backupClient
+          .prepare("SELECT equity_minor FROM equity_valuations WHERE id = ?")
+          .pluck()
+          .get(valuationId),
+      ).toBe(BigInt(1_000_000));
+    } finally {
+      if (backupClient?.open) backupClient.close();
+      await fixture.cleanup();
     }
   });
 
