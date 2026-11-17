@@ -12,7 +12,7 @@ Complete the reopened [UI-COMP-01 / Issue #89](https://github.com/OYLPY/stock-mo
 - The original `src/components/ui/*` files were not changed. Business pages no longer import from that directory or render native select/table/button/input controls.
 - The [Modern Web Guidance navigation drawer guide](../../.agents/skills/modern-web-guidance/guides/ui-components/navigation-drawer.md) says, “The browser makes the rest of the page inert”; narrow-screen Sidebar behavior uses the generated Sheet primitive and was verified open/close in Playwright.
 - The user-provided reference app is `D:\dev\self\ai-enhance-hrm\frontend`; its shell uses the generated shadcn Sidebar with `collapsible="offcanvas"` and standard nav button sizes.
-- The completed UI change separates backtest research from the paper account with the CLI-provided Tabs, groups report history by type, splits task runtime from notifications, uses a required shadcn InputGroup with the Calendar/Popover date picker, and keeps the shared header sticky. This revision has passed the local verification listed below; matching Quality CI is still pending.
+- The completed UI change separates backtest research from the paper account with the CLI-provided Tabs, groups report history by type, splits task runtime from notifications, uses a required shadcn InputGroup with the Calendar/Popover date picker, and keeps the shared header sticky. Commit `523431e0f1d71dc78502900b95e6da9991bf8d48` is pushed to `main`; matching [Quality CI run 44007310184](https://github.com/OYLPY/stock-monitor/actions/runs/44007310184) succeeded; Issue #89 is closed.
 
 ## Applied changes
 
@@ -55,6 +55,5 @@ Complete the reopened [UI-COMP-01 / Issue #89](https://github.com/OYLPY/stock-mo
 
 ## Remaining plan
 
-1. Commit/push the locally verified #89 implementation and confirm its matching Quality CI succeeds.
-2. Record the commit and CI evidence in this handoff/current state and Issue #89, then close it.
-3. Continue with dependency-ready P10-01 / Issue #64.
+1. Implementation, local verification, push, and matching Quality CI for #89 are complete; Issue #89 is closed.
+2. P10-01 / Issue #64 is now active. Its dependencies P05-01 / #37 and P03-01 / #28 are closed.

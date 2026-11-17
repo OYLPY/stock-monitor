@@ -207,7 +207,7 @@
 
 ### 跨阶段 UI 组件治理
 
-- [ ] [UI-COMP-01 — 全页面 shadcn 标准组件与分类布局 UX](https://github.com/OYLPY/stock-monitor/issues/89) · 交付：`components.json`、`src/components/shadcn`、`src/app`、`src/components`、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/UI-COMP-01.md) · 覆盖：RQ-027、NFR-011/012 · 依赖：P06-01–06
+- [x] [UI-COMP-01 — 全页面 shadcn 标准组件与分类布局 UX](https://github.com/OYLPY/stock-monitor/issues/89) · 交付：`components.json`、`src/components/shadcn`、`src/app`、`src/components`、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/UI-COMP-01.md) · 覆盖：RQ-027、NFR-011/012 · 依赖：P06-01–06
 
 ## 规则
 
