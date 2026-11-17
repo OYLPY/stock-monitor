@@ -16,23 +16,23 @@ import {
   sources,
 } from "@/db/schema";
 import { parseFixedDecimal } from "@/domain/primitives";
+import { readPaperLedger } from "@/features/paper/ledger";
 import {
   createPaperEquitySnapshot,
-  readPaperLedger,
-} from "@/features/paper/ledger";
+  equityMarketEvidenceInputSchema,
+  isDrawdownLimitReached,
+} from "./drawdown";
+import {
+  evidenceInputSchema,
+  getSourceEvidence,
+  isTrustedSourceRole,
+} from "./evidence";
 
 const maxSqliteInteger = (BigInt(1) << BigInt(63)) - BigInt(1);
 const priceScale = 8;
 const priceDenominator = BigInt(10) ** BigInt(priceScale);
 const bpsDenominator = BigInt(10_000);
 const checkerVersion = "risk-checker-v1";
-const trustedRoles = new Set([
-  "REGULATORY_PRIMARY",
-  "EXCHANGE_PRIMARY",
-  "ISSUER_PRIMARY",
-  "AUTHORIZED_VENDOR",
-]);
-
 const decimalSchema = z.string().regex(/^\d+(?:\.\d{1,8})?$/);
 const integerStringSchema = z
   .string()
@@ -42,13 +42,6 @@ const positiveIntegerStringSchema = integerStringSchema.refine(
   (value) => BigInt(value) > BigInt(0),
 );
 const timestampSchema = z.number().int().nonnegative().safe();
-const evidenceInputSchema = z
-  .strictObject({
-    sourceRecordId: z.uuid(),
-    content: z.string().min(1).max(16_384),
-  })
-  .nullable();
-
 const planInputSchema = z
   .strictObject({
     candidate: z.strictObject({
@@ -63,6 +56,10 @@ const planInputSchema = z
     quoteEvidence: evidenceInputSchema,
     riskModelEvidence: evidenceInputSchema,
     fxEvidence: evidenceInputSchema,
+    equityEvidence: z
+      .array(equityMarketEvidenceInputSchema)
+      .max(100)
+      .default([]),
   })
   .superRefine(({ candidate }, context) => {
     if (
@@ -281,58 +278,6 @@ function unavailable(
   };
 }
 
-function getRawEvidence(
-  database: AppDatabase,
-  evidence: PlanInput["classificationEvidence"],
-  recordTypes: string[],
-  nowMs: bigint,
-  allowHistorical = false,
-) {
-  if (!evidence) return { reasonCode: "EVIDENCE_UNAVAILABLE" } as const;
-  const record = database.orm
-    .select({
-      id: sourceRecords.id,
-      recordType: sourceRecords.recordType,
-      dataClass: sourceRecords.dataClass,
-      contentHashSha256: sourceRecords.contentHashSha256,
-      occurredAtMs: sourceRecords.occurredAtMs,
-      collectedAtMs: sourceRecords.collectedAtMs,
-      authorityRole: sources.authorityRole,
-      licenseStatus: sources.licenseStatus,
-    })
-    .from(sourceRecords)
-    .innerJoin(sources, eq(sources.id, sourceRecords.sourceId))
-    .where(eq(sourceRecords.id, evidence.sourceRecordId))
-    .get();
-  if (!record) return { reasonCode: "EVIDENCE_UNAVAILABLE" } as const;
-  if (record.dataClass === "FIXTURE" || record.authorityRole === "FIXTURE") {
-    return { reasonCode: "FIXTURE_EVIDENCE" } as const;
-  }
-  if (
-    !recordTypes.includes(record.recordType) ||
-    record.licenseStatus !== "VERIFIED" ||
-    !trustedRoles.has(record.authorityRole) ||
-    (record.dataClass !== "REAL" &&
-      record.dataClass !== "DELAYED" &&
-      !(allowHistorical && record.dataClass === "HISTORICAL")) ||
-    record.collectedAtMs > nowMs ||
-    (record.occurredAtMs !== null && record.occurredAtMs > nowMs)
-  ) {
-    return { reasonCode: "EVIDENCE_SOURCE_UNVERIFIED" } as const;
-  }
-  if (hash(evidence.content) !== record.contentHashSha256) {
-    return { reasonCode: "EVIDENCE_HASH_MISMATCH" } as const;
-  }
-  const successor = database.orm
-    .select({ id: sourceRecords.id })
-    .from(sourceRecords)
-    .where(eq(sourceRecords.supersedesRecordId, record.id))
-    .limit(1)
-    .get();
-  if (successor) return { reasonCode: "EVIDENCE_SUPERSEDED" } as const;
-  return { record } as const;
-}
-
 function parsePayload<T>(content: string, schema: z.ZodType<T>) {
   try {
     const parsed = schema.safeParse(JSON.parse(content) as unknown);
@@ -371,7 +316,7 @@ function candidateEvidenceReason(database: AppDatabase, input: PlanInput) {
     }
     if (
       record.licenseStatus !== "VERIFIED" ||
-      !trustedRoles.has(record.authorityRole) ||
+      !isTrustedSourceRole(record.authorityRole) ||
       !["REAL", "DELAYED", "HISTORICAL"].includes(record.dataClass)
     ) {
       return "CANDIDATE_EVIDENCE_UNAVAILABLE";
@@ -396,12 +341,16 @@ function availableCash(
   );
 }
 
-function maxVerifiedEquity(database: AppDatabase, accountId: string) {
+function maxVerifiedEquity(
+  database: AppDatabase,
+  accountId: string,
+  asOfMs: bigint,
+) {
   const peak = database.client
     .prepare(
-      "SELECT MAX(equity_minor) AS peak FROM equity_valuations WHERE account_id = ? AND status = 'VERIFIED'",
+      "SELECT MAX(equity_minor) AS peak FROM equity_valuations WHERE account_id = ? AND status = 'VERIFIED' AND as_of_ms <= ?",
     )
-    .get(accountId) as { peak: bigint | null };
+    .get(accountId, asOfMs) as { peak: bigint | null };
   return peak.peak ?? BigInt(0);
 }
 
@@ -434,7 +383,7 @@ function assess(
     };
   }
 
-  const classEvidence = getRawEvidence(
+  const classEvidence = getSourceEvidence(
     database,
     input.classificationEvidence,
     ["DISCLOSURE", "MARKET_QUOTE", "OTHER"],
@@ -472,7 +421,7 @@ function assess(
     return unavailable(input, "ASSET_CLASS_UNVERIFIED");
   }
 
-  const quoteEvidence = getRawEvidence(
+  const quoteEvidence = getSourceEvidence(
     database,
     input.quoteEvidence,
     ["MARKET_QUOTE"],
@@ -527,7 +476,7 @@ function assess(
     };
   }
 
-  const modelEvidence = getRawEvidence(
+  const modelEvidence = getSourceEvidence(
     database,
     input.riskModelEvidence,
     ["OTHER"],
@@ -562,7 +511,7 @@ function assess(
 
   let fxRate: string | null = null;
   if (instrument.quoteCurrencyCode === "USD") {
-    const fxEvidence = getRawEvidence(
+    const fxEvidence = getSourceEvidence(
       database,
       input.fxEvidence,
       ["MARKET_QUOTE"],
@@ -587,7 +536,39 @@ function assess(
   if (!ledger)
     return unavailable(input, "ACCOUNT_NOT_INITIALIZED", {}, {}, model.version);
   const cash = availableCash(ledger);
-  const valuation = createPaperEquitySnapshot(database, nowMs);
+  const valuationEvidence = [...input.equityEvidence];
+  if (
+    input.quoteEvidence &&
+    !valuationEvidence.some(
+      (evidence) =>
+        evidence.role === "POSITION_QUOTE" &&
+        evidence.instrumentId === input.instrumentId &&
+        evidence.sourceRecordId === input.quoteEvidence?.sourceRecordId &&
+        evidence.content === input.quoteEvidence?.content,
+    )
+  ) {
+    valuationEvidence.push({
+      role: "POSITION_QUOTE",
+      instrumentId: input.instrumentId,
+      ...input.quoteEvidence,
+    });
+  }
+  if (
+    input.fxEvidence &&
+    !valuationEvidence.some(
+      (evidence) =>
+        evidence.role === "FX_RATE" &&
+        evidence.sourceRecordId === input.fxEvidence?.sourceRecordId &&
+        evidence.content === input.fxEvidence?.content,
+    )
+  ) {
+    valuationEvidence.push({ role: "FX_RATE", ...input.fxEvidence });
+  }
+  const valuation = createPaperEquitySnapshot(
+    database,
+    nowMs,
+    valuationEvidence,
+  );
   if (valuation.status !== "VERIFIED" || valuation.equityMinor === null) {
     return unavailable(
       input,
@@ -632,9 +613,9 @@ function assess(
   }
   const peak = [
     initialCapital.amountMinor,
-    maxVerifiedEquity(database, account.id),
+    maxVerifiedEquity(database, account.id, nowMs),
   ].reduce((highest, value) => (value > highest ? value : highest));
-  if ((peak - equity) * BigInt(5) >= peak) {
+  if (isDrawdownLimitReached(equity, peak)) {
     return {
       ...unavailable(
         input,
@@ -805,6 +786,10 @@ function collectEvidenceBindings(database: AppDatabase, input: PlanInput) {
     ).flatMap(([role, evidence]) =>
       evidence ? [{ role, sourceRecordId: evidence.sourceRecordId }] : [],
     ),
+    ...input.equityEvidence.map((evidence) => ({
+      role: evidence.role === "FX_RATE" ? "FX" : "QUOTE",
+      sourceRecordId: evidence.sourceRecordId,
+    })),
   ];
   const seen = new Set<string>();
   const bindings: {

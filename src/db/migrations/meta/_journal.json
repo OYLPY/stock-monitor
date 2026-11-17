@@ -50,6 +50,13 @@
       "when": 1794893247945,
       "tag": "0006_p10_02_decision_order",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794896941205,
+      "tag": "0007_p10_03_cross_currency_equity",
+      "breakpoints": true
     }
   ]
 }

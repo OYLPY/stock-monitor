@@ -605,6 +605,44 @@ export const equityValuationEvidence = sqliteTable(
   ],
 );
 
+export const equityValuationMarketEvidence = sqliteTable(
+  "equity_valuation_market_evidence",
+  {
+    id: text("id").primaryKey(),
+    valuationId: text("valuation_id")
+      .notNull()
+      .references(() => equityValuations.id, { onDelete: "restrict" }),
+    role: text("role").notNull(),
+    instrumentId: text("instrument_id").references(() => instruments.id, {
+      onDelete: "restrict",
+    }),
+    sourceRecordId: text("source_record_id")
+      .notNull()
+      .references(() => sourceRecords.id, { onDelete: "restrict" }),
+    contentHashSha256: text("content_hash_sha256").notNull(),
+    content: text("content").notNull(),
+  },
+  (table) => [
+    index("equity_valuation_market_evidence_valuation").on(
+      table.valuationId,
+      table.role,
+      table.instrumentId,
+    ),
+    check(
+      "equity_valuation_market_evidence_role",
+      sql`(${table.role} = 'POSITION_QUOTE' AND ${table.instrumentId} IS NOT NULL) OR (${table.role} = 'FX_RATE' AND ${table.instrumentId} IS NULL)`,
+    ),
+    check(
+      "equity_valuation_market_evidence_hash",
+      sql`length(${table.contentHashSha256}) = 64 AND ${table.contentHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+    check(
+      "equity_valuation_market_evidence_content",
+      sql`json_valid(${table.content})`,
+    ),
+  ],
+);
+
 export const paperPlans = sqliteTable("paper_plans", {
   id: text("id").primaryKey(),
   candidateId: text("candidate_id").notNull(),

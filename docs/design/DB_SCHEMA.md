@@ -141,7 +141,7 @@ erDiagram
 | `paper_fills`                                     | 模拟 fill key、订单、数量、精确价格/币种/费用、市场与执行时刻、quote/source ID、结算日、撮合和成本版本、对应唯一 ledger event。`UNIQUE(order_id, fill_key)`。数据类别仅允许 `REAL`/符合单独规则版本的 `DELAYED`；数据库与确定性用例共同拒绝历史/Fixture/未验证输入。                                                                                                                    |
 | `ledger_events`                                   | 每账户单调 `sequence_no`、事件类型、有效/记录时间、账户内唯一 idempotency key、规则版本、来源记录和 correction/reversal 链接。`UNIQUE(account_id, sequence_no)` 与 `UNIQUE(account_id, idempotency_key)`。                                                                                                                                                                              |
 | `cash_ledger_entries` / `position_ledger_entries` | 按事件追加带符号现金最小单位/整数股数；现金行保存币种和 scale，并区分已结算、应收、应付。金额是所属 bucket 的带符号增量；应收为正资产，应付以负值表示负债。预留只记录在订单/ledger 事件中，不作为额外现金资产；可用现金扣除未结算应付及有效预留，应收不能用于买入。FX 转换要在同一 event 中记录两种币及引用汇率，不可隐式借款。余额、现金可用额与持仓是投影，不是可手工覆盖的系统记录。 |
-| `equity_valuations` / `equity_valuation_evidence` | 估值保存账户、as-of、账本 sequence 水位、输入清单 hash、JPY 权益整数、VERIFIED/UNRESOLVED、缺失原因和规则版本；证据连接表逐项链接报价、FX 和来源记录。只有 VERIFIED 行有金额；按新的市场/FX 证据重算时追加新输入 hash。历史峰值来自有效快照，不填补无报价/汇率的权益。                                                                                                                  |
+| `equity_valuations` / `equity_valuation_evidence` / `equity_valuation_market_evidence` | 估值保存账户、as-of、账本 sequence 水位、含行情输入的 hash、JPY 权益整数、VERIFIED/UNRESOLVED、缺失原因和规则版本；账本证据连接表链接账本事件，市场证据表保存估值使用的报价/FX 原文、来源记录、内容 hash 与证券标识。三类估值记录均只追加。只有 VERIFIED 行有金额；按新的市场/FX 证据重算时追加新输入 hash。历史峰值仅使用 as-of 不晚于当前裁决时点的有效快照，不填补无报价/汇率的权益。 |
 
 账户开立、模拟 fill、费用、换汇、预留/释放、结算和公司行为均在数据库短事务内追加 ledger event 和相应流水；预留/释放写入订单事件和 ledger audit event，不伪装成现金流；换汇的 `fx_conversion_details` 要能复算两种现金 posting。事务提交成功才确认完成。回放从同一事件序列重建现金/持仓投影。重复 fill 或重复任务结果不能重复记账；纠错只能追加带 `reversal_of_event_id` 的冲正/调整。AI 只生成研究输出，不获得数据库连接、账本 repository 或写入 SQL；单一本地进程共享文件这一事实不提供抵御同 OS 账户恶意进程的安全保证。
 
@@ -330,4 +330,4 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 - [SQLite user_version PRAGMA](https://www.sqlite.org/pragma.html#pragma_user_version)：为应用保留的数据库头版本字段，SQLite 本身不解释它。
 - [SQLite Online Backup API](https://sqlite.org/backup.html) 与 [WAL](https://www.sqlite.org/wal.html)：活动库一致性快照与 WAL 文件/网络文件系统限制。
 - 需求映射：FR-Trade-004–010 / AC-TRD-001–015、FR-Trade-013 / AC-TRD-019、FR-Research-003–012、NFR-003/005/006/007 / AC-NFR-007–015、RQ-010/011/015–028。
-- P10-01 已将显式开户、追加账本、现金/持仓重放、费用与权益快照接入运行时；P10-02 已增加计划/版本/证据/风险/批准记录及确定性 checker。当前只有可核验 JPY 现金权益可通过；持仓估值、USD 权益与订单/成交仍待 P10-03/P10-04，P12 恢复审计与完整回归也待验证，见 [需求追踪矩阵](../requirements/TRACEABILITY.md)。
+- P10-01 已将显式开户、追加账本、现金/持仓重放、费用与权益快照接入运行时；P10-02 增加计划/版本/证据/风险/批准记录及确定性 checker；P10-03 增加可信持仓报价与 USD/JPY 估值、只追加的市场估值证据和峰值回撤门禁。订单/成交仍待 P10-04，P12 恢复审计与完整回归也待验证，见 [需求追踪矩阵](../requirements/TRACEABILITY.md)。

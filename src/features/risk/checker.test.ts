@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { createTestDatabase } from "@/db/test-database";
 import { initializeDefaultPaperAccount } from "@/db/paper-account-repository";
 import { appendPaperLedgerEvent } from "@/features/paper/ledger";
+import { createPaperEquitySnapshot } from "./drawdown";
 import {
   appendSourceRecord,
   registerSource,
@@ -388,6 +389,69 @@ describe("deterministic paper risk checker", () => {
       ]);
     } finally {
       await insufficientCash.cleanup();
+    }
+  });
+
+  it("keeps the verified peak when one day of required quote evidence is missing", async () => {
+    const fixture = await createPlanFixture({ price: "50", stop: "40" });
+    try {
+      const peak = createPaperEquitySnapshot(
+        fixture.database,
+        BigInt(Date.now()),
+      );
+      expect(peak).toMatchObject({
+        status: "VERIFIED",
+        equityMinor: BigInt(1_000_000),
+      });
+
+      appendPaperLedgerEvent(fixture.database, {
+        eventType: "FILL",
+        idempotencyKey: "drawdown-position",
+        effectiveAtMs: BigInt(Date.now()),
+        ruleVersion: "paper-fill-v1",
+        sourceRecordId: fixture.input.quoteEvidence.sourceRecordId,
+        cashPosting: {
+          bucket: "SETTLED",
+          currencyCode: "JPY",
+          currencyScale: 0,
+          amountMinor: BigInt(-5_000),
+        },
+        positionPosting: {
+          instrumentId: fixture.instrumentId,
+          quantityShares: BigInt(100),
+        },
+      });
+      appendPaperLedgerEvent(fixture.database, {
+        eventType: "FEE",
+        idempotencyKey: "peak-loss",
+        effectiveAtMs: BigInt(Date.now()),
+        ruleVersion: "paper-fee-v1",
+        cashPosting: {
+          bucket: "SETTLED",
+          currencyCode: "JPY",
+          currencyScale: 0,
+          amountMinor: BigInt(-200_000),
+        },
+      });
+      const missingQuote = createPaperEquitySnapshot(
+        fixture.database,
+        BigInt(Date.now()),
+      );
+      expect(missingQuote).toMatchObject({
+        status: "UNRESOLVED",
+        equityMinor: null,
+        unresolvedReason: "position_market_value_unavailable",
+      });
+
+      const plan = createPaperPlan(fixture.database, fixture.input);
+      expect(plan.decision.status).toBe("REJECT");
+      expect(plan.decision.reasonCodes).toEqual(["DRAWDOWN_LIMIT_REACHED"]);
+      expect(plan.decision.calculation).toMatchObject({
+        equityMinor: "800000",
+        peakEquityMinor: "1000000",
+      });
+    } finally {
+      await fixture.cleanup();
     }
   });
 });

@@ -1,12 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 
 import type { AppDatabase } from "@/db";
 import { withTransaction } from "@/db";
 import {
   cashLedgerEntries,
-  equityValuationEvidence,
-  equityValuations,
   instruments,
   ledgerEvents,
   paperAccounts,
@@ -74,7 +72,6 @@ export type PaperLedgerEventInput =
     };
 
 const accountOpeningRuleVersion = "account-opening-v1";
-const equityRuleVersion = "equity-ledger-v1";
 
 export function replayPaperLedger(
   events: PaperLedgerEvent[],
@@ -524,7 +521,7 @@ export function appendPaperLedgerEvent(
   });
 }
 
-function paperLedgerInputHash(events: PaperLedgerEvent[]) {
+export function paperLedgerInputHash(events: PaperLedgerEvent[]) {
   return createHash("sha256")
     .update(
       JSON.stringify(
@@ -559,81 +556,4 @@ function paperLedgerInputHash(events: PaperLedgerEvent[]) {
       ),
     )
     .digest("hex");
-}
-
-export function createPaperEquitySnapshot(
-  database: AppDatabase,
-  asOfMs: bigint,
-) {
-  return withTransaction(database, () => {
-    const account = getLocalPaperAccount(database);
-    if (!account) throw new Error("paper_account_not_initialized");
-    const events = loadPaperLedger(database, account.id);
-    const projection = replayPaperLedger(events);
-    const lastEvent = events.at(-1)!;
-    const createdAtMs = BigInt(Date.now());
-    if (asOfMs < lastEvent.effectiveAtMs || asOfMs > createdAtMs)
-      throw new Error("paper_equity_snapshot_time_invalid");
-
-    const inputHashSha256 = paperLedgerInputHash(events);
-    const existing = database.orm
-      .select()
-      .from(equityValuations)
-      .where(
-        and(
-          eq(equityValuations.accountId, account.id),
-          eq(equityValuations.asOfMs, asOfMs),
-          eq(equityValuations.inputHashSha256, inputHashSha256),
-          eq(equityValuations.ruleVersion, equityRuleVersion),
-        ),
-      )
-      .get();
-    if (existing) return existing;
-
-    const hasUnpricedPosition = projection.positions.size > 0;
-    const hasUnconvertedCash = [...projection.cashBalances].some(
-      ([currencyCode, balance]) =>
-        currencyCode !== "JPY" &&
-        balance.settled + balance.receivable + balance.payable !== BigInt(0),
-    );
-    const unresolvedReason = hasUnpricedPosition
-      ? "position_market_value_unavailable"
-      : hasUnconvertedCash
-        ? "fx_rate_unavailable"
-        : null;
-    const jpyCash = projection.cashBalances.get("JPY") ?? {
-      settled: BigInt(0),
-      receivable: BigInt(0),
-      payable: BigInt(0),
-    };
-    const valuation = {
-      id: randomUUID(),
-      accountId: account.id,
-      asOfMs,
-      ledgerSequenceNo: projection.sequenceNo,
-      inputHashSha256,
-      status: unresolvedReason ? "UNRESOLVED" : "VERIFIED",
-      equityMinor: unresolvedReason
-        ? null
-        : jpyCash.settled + jpyCash.receivable + jpyCash.payable,
-      currencyCode: "JPY",
-      currencyScale: 0,
-      unresolvedReason,
-      ruleVersion: equityRuleVersion,
-      createdAtMs,
-    } as const;
-    database.orm.insert(equityValuations).values(valuation).run();
-    database.orm
-      .insert(equityValuationEvidence)
-      .values(
-        events.map((event) => ({
-          id: randomUUID(),
-          valuationId: valuation.id,
-          ledgerEventId: event.id,
-          sourceRecordId: event.sourceRecordId,
-        })),
-      )
-      .run();
-    return valuation;
-  });
 }

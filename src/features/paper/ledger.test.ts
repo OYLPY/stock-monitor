@@ -1,12 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { createTestDatabase } from "@/db/test-database";
+import { createPaperEquitySnapshot } from "@/features/risk/drawdown";
 import { initializeDefaultPaperAccount } from "@/db/paper-account-repository";
 import {
   cashLedgerEntries,
   equityValuationEvidence,
+  equityValuationMarketEvidence,
   equityValuations,
   instruments,
   ledgerEvents,
@@ -17,12 +19,57 @@ import {
 } from "@/db/schema";
 import {
   appendPaperLedgerEvent,
-  createPaperEquitySnapshot,
   readPaperLedger,
   registerPaperInstrument,
   replayPaperLedger,
   type PaperLedgerEvent,
 } from "./ledger";
+
+function trustedMarketRecord(
+  database: Awaited<ReturnType<typeof createTestDatabase>>["database"],
+  recordType: "DISCLOSURE" | "MARKET_QUOTE",
+  content: string,
+  occurredAtMs: number,
+) {
+  const sourceId = randomUUID();
+  const sourceRecordId = randomUUID();
+  database.orm
+    .insert(sources)
+    .values({
+      id: sourceId,
+      sourceKey: `test-source-${randomUUID()}`,
+      publisher: "Test exchange",
+      sourceType: "EXCHANGE",
+      authorityRole: "EXCHANGE_PRIMARY",
+      referenceUrl: "https://example.com/source",
+      licenseUrl: "https://example.com/license",
+      licenseStatus: "VERIFIED",
+      credentialRequirement: "NOT_REQUIRED",
+      registeredAtMs: BigInt(occurredAtMs),
+    })
+    .run();
+  database.orm
+    .insert(sourceRecords)
+    .values({
+      id: sourceRecordId,
+      sourceId,
+      recordKey: `test-record-${randomUUID()}`,
+      recordType,
+      recordVersion: 1,
+      supersedesRecordId: null,
+      publishedAtMs: null,
+      occurredAtMs: BigInt(occurredAtMs),
+      availableAtMs: null,
+      collectedAtMs: BigInt(Date.now()),
+      rawTimeText: null,
+      sourceTimeZone: "Asia/Tokyo",
+      canonicalUrl: null,
+      contentHashSha256: createHash("sha256").update(content).digest("hex"),
+      dataClass: "REAL",
+    })
+    .run();
+  return sourceRecordId;
+}
 
 function openingEvent(): PaperLedgerEvent {
   return {
@@ -322,6 +369,102 @@ describe("paper ledger", () => {
           .where(eq(equityValuationEvidence.valuationId, first.id))
           .run(),
       ).toThrow("equity_valuation_evidence are append-only");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("values verified holdings from the matching licensed quote", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      initializeDefaultPaperAccount(fixture.database);
+      const marketAtMs = Date.now() - 1_000;
+      const classificationContent = JSON.stringify({ schemaVersion: 1 });
+      const classificationSourceRecordId = trustedMarketRecord(
+        fixture.database,
+        "DISCLOSURE",
+        classificationContent,
+        marketAtMs,
+      );
+      const instrument = registerPaperInstrument(fixture.database, {
+        marketCode: "JP",
+        assetClass: "COMMON_STOCK",
+        tradingUnit: BigInt(100),
+        classificationSourceRecordId,
+      });
+      const quoteContent = JSON.stringify({
+        schemaVersion: 1,
+        instrumentId: instrument.id,
+        currencyCode: "JPY",
+        price: "1000",
+        marketAtMs,
+        validFromMs: marketAtMs - 60_000,
+        validUntilMs: marketAtMs + 60_000,
+      });
+      const quoteSourceRecordId = trustedMarketRecord(
+        fixture.database,
+        "MARKET_QUOTE",
+        quoteContent,
+        marketAtMs,
+      );
+      appendPaperLedgerEvent(fixture.database, {
+        eventType: "FILL",
+        idempotencyKey: "equity-mark-fill",
+        effectiveAtMs: BigInt(Date.now()),
+        ruleVersion: "paper-fill-v1",
+        sourceRecordId: quoteSourceRecordId,
+        cashPosting: {
+          bucket: "SETTLED",
+          currencyCode: "JPY",
+          currencyScale: 0,
+          amountMinor: BigInt(-100_000),
+        },
+        positionPosting: {
+          instrumentId: instrument.id,
+          quantityShares: BigInt(100),
+        },
+      });
+
+      const valuation = createPaperEquitySnapshot(
+        fixture.database,
+        BigInt(Date.now()),
+        [
+          {
+            role: "POSITION_QUOTE",
+            instrumentId: instrument.id,
+            sourceRecordId: quoteSourceRecordId,
+            content: quoteContent,
+          },
+        ],
+      );
+
+      expect(valuation).toMatchObject({
+        status: "VERIFIED",
+        equityMinor: BigInt(1_000_000),
+        unresolvedReason: null,
+      });
+      const evidence = fixture.database.orm
+        .select()
+        .from(equityValuationMarketEvidence)
+        .all();
+      expect(evidence).toHaveLength(1);
+      expect(evidence[0]).toMatchObject({
+        valuationId: valuation.id,
+        role: "POSITION_QUOTE",
+        instrumentId: instrument.id,
+        sourceRecordId: quoteSourceRecordId,
+        contentHashSha256: createHash("sha256")
+          .update(quoteContent)
+          .digest("hex"),
+        content: quoteContent,
+      });
+      expect(() =>
+        fixture.database.orm
+          .update(equityValuationMarketEvidence)
+          .set({ content: "{}" })
+          .where(eq(equityValuationMarketEvidence.id, evidence[0].id))
+          .run(),
+      ).toThrow("equity_valuation_market_evidence are append-only");
     } finally {
       await fixture.cleanup();
     }

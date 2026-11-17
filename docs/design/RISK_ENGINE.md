@@ -1,6 +1,6 @@
 # 风控引擎与订单仓位计算
 
-> 状态：P03-03 设计基线已由 P10-02 的 [`checker.ts`](../../src/features/risk/checker.ts) 部分接入运行时，包括不可变计划版本、证据 hash、确定性风险裁决和本机批准。当前只有 P10-01 可核验的 JPY 现金账户能产生 `PASS`；持仓或 USD 账户权益仍为 `UNRESOLVED`，跨币种权益与订单/成交接入由 P10-03/P10-04 完成。本文件落实 [FR-Trade](../requirements/FR_TRADE.md) 的固定规则，不新增或放宽风险阈值。
+> 状态：P03-03 风险规则已由 P10-02/P10-03 接入运行时。计划版本、证据 hash、确定性裁决和本机批准由 [`checker.ts`](../../src/features/risk/checker.ts) 执行；[`drawdown.ts`](../../src/features/risk/drawdown.ts) 按可信报价和 USD/JPY 证据估值，并在峰值回撤达到 20% 时阻止新头寸。报价或汇率缺失、失效、冲突或无法验证时权益保持 `UNRESOLVED`。模拟订单与成交接入仍由 P10-04 完成。本文件落实 [FR-Trade](../requirements/FR_TRADE.md) 的固定规则，不新增或放宽风险阈值。
 >
 > 相关设计：[DB Schema](DB_SCHEMA.md)、[API/DTO 契约](API_CONTRACTS.md)、[数据溯源](DATA_PROVENANCE.md)。
 
@@ -28,7 +28,8 @@ equityJPY(t) = Σc [settledCash(c) + unsettledReceivables(c) - unsettledPayables
 ```
 
 - `FXJPYper(c, t)` 表示每 1 单位币种 `c` 可折算的 JPY；JPY 的汇率固定为 1。USD/JPY 必须使用方向明确、时点有效的观测，不猜测倒数、不把 USD 当 JPY。
-- 持仓估值使用有来源、有效时间、币种和估值口径的 `verifiedMark`。估值口径由具版本的市场数据规则选择；不允许在报价失效或冲突时静默退回旧价、收盘价或零。
+- 持仓估值使用 `EXCHANGE_PRIMARY` 或 `AUTHORIZED_VENDOR` 来源的报价，并核对来源许可、内容 hash、来源时间、报价币种及有效期。估值快照保存所用报价/FX 原文、来源记录与 hash；价格乘数量和 FX 换算均向下舍入到 JPY 最小单位。
+- 不允许在报价或 FX 失效、缺失、冲突、被替代或无法核验时静默退回旧价、收盘价或零。任何必需输入不可用，整体权益即为 `UNRESOLVED`。
 - 任何持仓报价、所需 FX、成本负债或账本投影无法核验时，整体权益为 `UNRESOLVED`。不能剔除缺价或不利持仓后继续批准。
 - 未结算卖出款可以进入权益的应收项，但不是可买现金。可用现金按币种计算，扣除尚未由现金流水结清的买单预留、买入应付款和费用；各项在生命周期中只能扣减一次。未成交订单预留不重复降低账户权益。
 - USD 购买力必须来自已有已结算 USD 现金，或先完成可审计的模拟 FX 转换并记账。JPY 现金不足以隐式生成 USD 购买力。
@@ -43,7 +44,7 @@ drawdown(t) = max(0, (peakEquityJPY(t) - verifiedEquityJPY(t))
                      / peakEquityJPY(t))
 ```
 
-- 初始峰值来自 `ACCOUNT_OPENED` 事件。只有完整、可核验的权益快照可更新峰值；缺数据、过期数据、冲突数据或 Fixture 不能降低、重置或抬高峰值。
+- 初始峰值来自 `ACCOUNT_OPENED` 的配置本金。峰值取初始本金与当前时点之前所有 `VERIFIED` 权益快照的最大值；只有完整、可核验的权益快照可更新峰值。缺数据、过期数据、冲突数据或 Fixture 不能降低、重置或抬高峰值。
 - 峰值或当前权益不可核验时返回 `UNRESOLVED` 并禁止新增头寸。已知当前权益 `<= 0` 时返回 `REJECT`；不以 0 权益计算一个可用预算。
 - `drawdown >= 0.20` 时返回 `REJECT`，精确等于 20% 也阻断新增头寸。低于 20% 只表示回撤门禁未触发，仍须通过全部其他条件。
 - 达到门槛不强制平仓；减少风险的计划不因该门禁而被禁止，但模拟成交仍须独立满足有效价格和成交规则。
