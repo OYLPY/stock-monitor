@@ -205,6 +205,10 @@
 - [ ] [P13-03 — 本地发布脚本、备份及重装验收](https://github.com/OYLPY/stock-monitor/issues/82) · 依赖：P13-01, P05-05
 - [ ] [P13-04 — 最终交付报告与未完成事项登记](https://github.com/OYLPY/stock-monitor/issues/83) · 依赖：P13-02, P13-03
 
+### 跨阶段 UI 组件治理
+
+- [ ] [UI-COMP-01 — 全页面改用 shadcn 标准组件](https://github.com/OYLPY/stock-monitor/issues/89) · 交付：`components.json`、`src/components/shadcn`、`src/app`、`src/components`、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/UI-COMP-01.md) · 覆盖：RQ-027、NFR-011/012 · 依赖：P06-01–06
+
 ## 规则
 
 - 每项工作关联一个 GitHub Issue；保存具体验证命令、实际退出码和 main 提交 SHA；不能以手写勾选代替 GitHub 当前状态。
