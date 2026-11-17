@@ -4,7 +4,7 @@
 
 ## 问题与 as-of 日期
 
-**核验时点：2026-11-17。**调查美国与日本上市股票的数据可行性，重点区分监管披露、交易所行情、免费延迟/历史数据和需要许可的行情产品，并记录数据范围、时效、时间字段、认证、频率限制、价格、使用/再分发条件及本次访问证据。
+**核验时点：2026-11-18。**调查美国与日本上市股票的数据可行性，重点区分监管披露、交易所行情、免费延迟/历史数据和需要许可的行情产品，并记录数据范围、时效、时间字段、认证、频率限制、价格、使用/再分发条件及本次访问证据。
 
 本调查始于 GitHub Issue [#35](https://github.com/OYLPY/stock-monitor/issues/35)，并由 P07-02 / [#49](https://github.com/OYLPY/stock-monitor/issues/49)、P07-03 / [#50](https://github.com/OYLPY/stock-monitor/issues/50) 与 P07-04 / [#51](https://github.com/OYLPY/stock-monitor/issues/51) 延续。来源研究和引用归一化不等于生产 API 接入、数据授权或产品验收。
 
@@ -81,15 +81,22 @@
 
 #### P07-02 条款复核（2026-11-16）
 
-Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_service/) 提供个人、非商业用途许可，并把私人个人的投资分析、研究、测试和监控与“超出该范围”的商业用途相区分；因此不能仅凭本地个人研究本身就判定为商业用途。条款另含组织代用、向他人提供信息及特定行业任职等判定条件，本项目未核验具体使用者是否触发这些条件。其 [免费 API key 说明](https://www.alphavantage.co/support/api-key/) 对多数数据集列出每天 25 次请求；无限请求只面向经确认的开源或教育项目，本项目资格未获确认。官方 [日线 API 文档](https://www.alphavantage.co/documentation/) 说明免费 key 的 `TIME_SERIES_DAILY` 只返回最近 100 个数据点，完整 25 年以上日线需要 Premium；复权日线、实时及 15 分钟延迟行情也需 Premium。TOS 没有在本次核验中明确本地长期保存/缓存期限或离线回测保留权。
+Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_service/) 将超出个人用途的使用列为商业用途条件，并在该项下列出投资分析、研究、测试和监控等活动。按该条文不能推定本项目的个人投资研究符合免费个人用途；具体适用范围没有书面确认。其 [免费 API key 说明](https://www.alphavantage.co/support/api-key/) 对多数数据集列出每天 25 次请求；无限请求只面向经确认的开源或教育项目，本项目资格未获确认。官方 [日线 API 文档](https://www.alphavantage.co/documentation/) 说明 `TIME_SERIES_DAILY` 的免费 `compact` 只返回最近 100 个数据点，完整 25 年以上日线需要 Premium；复权日线、实时及 15 分钟延迟行情也需 Premium。TOS 没有在本次核验中明确本地长期保存/缓存期限或离线回测保留权。
 
-**P07-02 / #49 当前结论：`BLOCKED_EXTERNAL`。** 当前路线要求跨数十年历史验证，但免费日线只返回最新 100 条；完整历史、复权日线和实时/延迟行情都需要付费，项目不允许购买数据服务。没有 API key，也没有注册、发起 API 请求或读取行情载荷。条款允许私人个人研究这一点已核实；阻断原因是完整历史数据和凭据不可用，不是将研究用途误判为商业用途。Nasdaq Data Link 与 NYSE 历史产品仍按各自订阅和许可条件处理。
+**P07-02 / #49 当前结论：`BLOCKED_EXTERNAL`。** 当前路线要求跨数十年历史验证，但 Alpha Vantage 免费日线只返回最新 100 条，完整历史、复权日线和实时/延迟行情需要 Premium；其条文也没有确认本项目研究用途符合免费个人许可。Tiingo Starter 虽列出 30 年以上历史，但条款禁止持久保存行情和派生回测结果，不能满足 SQLite 历史仓储。项目没有授权购买服务；没有 API key，也没有注册、发起 API 请求或读取行情载荷。Nasdaq Data Link 与 NYSE 历史产品仍按各自订阅和许可条件处理。
 
 #### P07-02 其他美股历史数据候选复核（2026-11-17）
 
 - Twelve Data 官方历史价格说明称，日线及更高周期对大多数证券覆盖完整交易历史，单次 `time_series` 最多返回 5,000 条；美国市场页列出的历史范围从 1980-01-01 起。套餐页将 Basic 免费计划的用途列为 `Internal non-display usage`；同一页把 `Internal display data access` 列在 Grow（页面列价 79 美元/月）中。因此不能把免费 Basic 当作本地 UI 行情图表和报价的已授权显示来源。条款还限制超出文档规定期限的缓存；本次没有确认可保留数十年供离线回测的具体权利。该服务需要注册账户和 API key；本次未注册、未申请 key 或请求 API。
 - Alpaca 官方计划表将 Basic 列为免费、实时行情仅覆盖 IEX、历史起点为 2016 年，并将历史数据限制写作 `latest 15 minutes`；该页面没有进一步解释这项限制的具体语义。Algo Trader Plus 当前列价每月 99 美元、覆盖全美交易所且无该历史数据限制，但其历史起点仍为 2016 年。两档都不能满足数十年历史要求；API 需账户凭据，本次未注册或请求数据。
 - 以上是供应商对自有服务的说明，不等于实际账户可用范围、输出完整性或长期回测留存权。它们没有消除 #49 的外部授权阻断。
+
+#### P07-02 免费来源与留存条款复核（2026-11-18）
+
+- Tiingo 当前 [Starter 价格页](https://www.tiingo.com/about/pricing)列出 30 年以上历史价格、每月 500 个不同证券代码、每日 1,000 次请求和每月 1 GB；使用 API 需注册账户并使用 token。其[官方日终价格文档](https://www.tiingo.com/documentation/end-of-day)说明可请求历史价格。
+- Tiingo 当前发布的[服务条款 §1.6](https://www.tiingo.com/tos/)禁止 Starter/Trial 用户把 Tiingo 数据或派生产品写入持久/耐久存储，只允许在易失内存或非持久临时缓存中处理，并要求计算结束、进程/任务/用户会话结束前删除。此限制覆盖本地设备、数据库、文件、日志与备份；不能保存到本地 SQLite，也不能持久保存回测结果。§1.7 另含 AI/ML 限制；本项目的具体推理链路没有取得许可确认。
+- 因此 Tiingo Starter 的历史覆盖虽达到数十年，但留存限制不符合本地历史回测和可复核账本设计，不能作为 #49 的合规数据源。没有注册、申请 token 或请求 API。
+- Alpha Vantage 当前[服务条款](https://www.alphavantage.co/terms_of_service/)的商业用途条件列出投资分析、研究、测试和监控等情形；官方[日线文档](https://www.alphavantage.co/documentation/)仍将 25 年以上 `full` 日线列为 Premium key 专属，免费 key 仅能取最新 100 点。个人研究用途的免费计划适用性与长期留存权均未确认；没有注册或请求 API。
 
 ## P07-04：官方披露与宏观来源复核（2026-11-16）
 
@@ -131,12 +138,12 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - JPX 官方免费月度表覆盖最长 10 年，但月度频率无法替代逐交易日回测；同一目录卡注明外部再分发不可。[JPX 月间相场表目录卡](https://clientportal.jpx.co.jp/ClientPortal/s/datacatalog/a085j00000Ip94b/a037?language=ja)
 - JPX 日线历史可追溯到 1974 年，NYSE Daily TAQ 可追溯到 1993 年；这些支持多年代跨度的官方历史产品都有明确费用或订阅/许可门槛。[JPX Data Cloud 价表](https://db-ec.jpx.co.jp/client_info/JPX_DLSITE/html/price_en.pdf)、[NYSE 历史价表](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)
 - Nasdaq/NYSE 的延迟展示政策仍涉及产品级许可、展示提示或访问条件；“交易所网站可打开”不足以证明应用可建立免费、稳定、可保存的行情通道。
-- Alpha Vantage 服务条款不把私人个人投资研究/监控本身定义为商业用途，但其他条件仍需按实际使用者核验；其免费美股日线 API 仅返回最近 100 条，完整 25 年以上历史及复权日线需要 Premium。P07-02 因数据跨度与付费边界标记 `BLOCKED_EXTERNAL`，不是因为个人研究被定义为商业用途。
+- Alpha Vantage 服务条款的商业用途条件列出投资分析、研究、测试和监控；本项目的免费个人用途适用性未获确认。免费美股日线 `compact` 仅返回最近 100 条，完整 25 年以上历史及复权日线需要 Premium，因此 P07-02 保持 `BLOCKED_EXTERNAL`。
 - Twelve Data Basic 的日线历史覆盖说明看似满足多年代数据窗口，但免费计划标为非显示用途；其付费 Grow 套餐才列出内部显示权，且本地长期缓存/回测保留期限仍未核实。Alpaca Basic 的历史范围列为 2016 年起，且计划表另列 `latest 15 minutes` 限制（未解释其具体语义）；付费方案移除该限制但历史仍始于 2016 年，也不足数十年。因此这两项候选都不能在当前授权下接入本地价格图表并替代 #49 的阻断。
 
 ### 基于上述材料的推论
 
-- **截至本次检索，未发现同时满足“免费、官方一手、可授权机器访问、覆盖美日股票日线、跨度数十年、可用于本地策略回测”的单一来源。**这是对这次检索范围的结论，不是证明市场上绝不存在其他合规免费资料。
+- **截至 2026-11-18 本次检索，未发现同时满足“免费、官方一手、可授权机器访问、覆盖美日股票日线、跨度数十年、可在本地持久保存并用于策略回测”的来源。**这是对这次检索范围的结论，不是证明市场上绝不存在其他合规免费资料。
 - 按当前“不得引入付费服务”的项目约束，仅靠已确认的免费官方报价方案，不能满足美日跨市场数十年日线回测：日本 J-Quants Free 仅 2 年并滞后 12 周，JPX 免费月度资料不是日线；美国官方市场报价的可见页面未形成获许可的免费 API 证据。要将“数十年历史验证”视为硬性验收条件，后续必须调整市场范围/历史跨度/粒度或获得符合预算与用途的历史数据权利。
 - 基本面披露和行情应走不同来源类别及时间语义。比如 SEC acceptance time、EDINET submitDateTime 或 TDnet 披露时刻不能替代 OHLC 的市场时间；下载时间只能说明本地观察时刻。
 
@@ -145,8 +152,9 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - 未测试任何生产/测试 API、注册流程、账号授权、当前网络地区可用性、请求限额之外的实际行为或具体返回字段。除 J-Quants/JPX 文档写明的更新表外，不把文档阅读等同于实际运行可达。
 - Nasdaq Data Link 的实时/延迟产品价格、个人用户实际费用、具体延迟级别、API 限额及本地单人使用许可需要按产品和账户确认；没有在本任务中申请或购买。
 - NYSE/JPX 行情合同下，内部单人本地工具的缓存期限、离线回测留存期限和导出权须按具体产品条款确认。网页公开延迟报价不自动授予这些权利。
-- Alpha Vantage 条款将私人个人投资研究/测试/监控与商业用途区分，但用户是否触发组织使用、对外提供数据或行业任职等条件未确认；免费额度的本项目资格、长期本地保存/缓存期限和回测保留权也未确认。本项目没有 API key；完整历史和复权日线需 Premium。
+- Alpha Vantage 条款的商业用途条件列出投资分析、研究、测试和监控；本项目是否符合免费个人用途没有得到确认。免费 `TIME_SERIES_DAILY` 仅可获取最新 100 点，完整历史、复权日线及实时/延迟数据需 Premium。长期本地保存/缓存期限和回测保留权未确认；本项目没有 API key。
 - Twelve Data Basic 的免费套餐显示为 `Internal non-display usage`，Grow 才列出 `Internal display data access`；完整历史数据可用说明不单独确认该本地应用的显示及数十年缓存/回测权。本项目没有用户提供的 Twelve Data 或 Alpaca 凭据；未注册或调用其 API。
+- Tiingo Starter 页面列出 30 年以上历史价格，但当前发布条款禁止持久保存行情和派生产品，包括本地数据库及备份；AI/ML 使用还受单独条款限制。该套餐不适用于当前本地历史回测和持久化要求。
 - 发行人层级的公司公告、新闻源、经济日历和 ETF 专项数据不在这项行情/披露产品范围内；本文件没有选择其供应商。
 
 ## 决策影响与下一步
@@ -155,11 +163,11 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 2. 将 J-Quants Free 仅记录为个人开发/验证或有限近期日线研究的候选；它的数据延迟、窗口和个人使用条款不满足多年代跨市场回测验收。
 3. JPX/TDnet、JPX 延迟行情、NYSE TAQ、Nasdaq Data Link 属于收费或需要进一步许可的候选。本任务没有授权采购，也未尝试访问。
 4. P04-03 仅交付研究文档；没有选定生产供应商、写入配置、创建适配器或把示例/测试数据接入应用。实现前应对当前条款、账户类型、存储与展示范围、具体字段、时间戳、价格调整和实际连接能力重新核验。
-5. P07-02 / #49 在完整历史数据需要付费、项目未授权付费且没有 API key 时保持 `BLOCKED_EXTERNAL`；不以 Fixture 替代真实行情适配器的完成验收，继续处理其他已满足依赖的任务。Twelve Data Basic 和 Alpaca Basic 的当前限制也没有解除该阻断。
+5. P07-02 / #49 保持 `BLOCKED_EXTERNAL`：Alpha Vantage 免费完整历史需 Premium且免费研究用途未获确认；Twelve Data Basic 的显示许可不符；Alpaca 历史起于 2016；Tiingo Starter 禁止持久留存行情及派生回测结果。没有授权购买或 API key，不以 Fixture 替代真实行情适配器验收。
 6. P07-03 / #50 的 Free 日线仅 2 年并延迟 12 周；付费数据不在当前授权范围。保持 `BLOCKED_EXTERNAL`，不以短历史或 Fixture 宣称满足数十年回测。
 7. P07-04 / #51 已实现 SEC、BOJ、BLS 与 Fed RSS 的原生响应适配器，并以 mock fetch 和本地 SQLite 验证解析、请求限额、降级及幂等写入；没有请求真实数据，因此线上可用性仍为 `NOT_VERIFIED`。EDINET/BEA 缺少 API key、TDnet 需要未授权的付费服务、公司 IR 仅支持逐站手工引用。完整验收证据见 [P07-04 六字段交接](../../harness/handoffs/P07-04.md)。
 
-## 主要来源（既有来源于 2026-11-16 复核；Twelve Data 与 Alpaca 于 2026-11-17 复核）
+## 主要来源（既有来源于 2026-11-16 复核；Twelve Data 与 Alpaca 于 2026-11-17 复核；Alpha Vantage 与 Tiingo 于 2026-11-18 复核）
 
 - [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)（页面列更新日期 2025-04-08）；[SEC Accessing EDGAR Data](https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data)；[SEC Developer Resources](https://www.sec.gov/about/developer-resources)；[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions)（含 1–3 分钟可见延迟、User-Agent 与 EDGAR 重用说明）。
 - [EDINET API v2 Spec PDF](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf)（2026 年 1 月版本）；[EDINET FAQ](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0090_001.html)（2026-11-05 更新）；[EDINET 使用规约](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0030.html)；[EDINET API 功能规约 PDF](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140191.pdf)。
@@ -168,6 +176,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - [JPX 月间相场表](https://www.jpx.co.jp/markets/statistics-equities/price/index.html)；[JPX 数据目录卡](https://clientportal.jpx.co.jp/ClientPortal/s/datacatalog/a085j00000Ip94b/a037?language=ja)；[JPX Data Cloud 股票 OHLC 价表 PDF](https://db-ec.jpx.co.jp/client_info/JPX_DLSITE/html/price_en.pdf)；[JPX FLEX Historical](https://www.jpx.co.jp/english/markets/paid-info-equities/historical/01.html)。
 - [Nasdaq Data Link API](https://www.nasdaq.com/products/data/data-link/api)；[Nasdaq XNDQ API 产品文档](https://data.nasdaq.com/databases/NB/documentation?anchor=nasdaq-cloud-data-service-api)；[Nasdaq 展示要求政策](https://www.nasdaq.com/content/AdministrationSupport/Policy/DisplayRequirementsPolicy)；[Nasdaq.com Market Activity](https://www.nasdaq.com/market-activity)。
 - [Alpha Vantage API 文档](https://www.alphavantage.co/documentation/)；[服务条款](https://www.alphavantage.co/terms_of_service/)；[实时数据政策](https://www.alphavantage.co/realtime_data_policy/)；[API key / 免费额度说明](https://www.alphavantage.co/support/api-key/)（供应商对自身产品条款的一手来源）。
+- [Tiingo EOD 文档](https://www.tiingo.com/documentation/end-of-day)；[官方价格与额度](https://www.tiingo.com/about/pricing)；[Terms of Use §1.6 数据留存与 §1.7 AI/ML 条款](https://www.tiingo.com/tos/)。
 - [Twelve Data 套餐与用途](https://twelvedata.com/pricing)；[美国市场历史范围](https://twelvedata.com/exchanges/stocks)；[历史价格获取方式与单次记录限制](https://support.twelvedata.com/en/articles/5656039-how-to-get-historical-prices)；[个人用途及显示边界](https://support.twelvedata.com/en/articles/5332349-commercial-and-personal-usage)；[服务条款](https://twelvedata.com/terms)。
 - [Alpaca 市场数据计划与历史范围](https://docs.alpaca.markets/us/docs/about-market-data-api)；[历史 API 说明](https://alpaca.markets/learn/fetch-historical-data)。
 - [NYSE Market Data Pricing](https://www.nyse.com/market-data/pricing)；[NYSE Proprietary Market Data Policies PDF](https://www.nyse.com/publicdocs/nyse/data/NYSE_Proprietary_Market_Data_Comprehensive_Policy_Package.pdf)；[NYSE Historical Market Data Pricing PDF（2026-10）](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)。
