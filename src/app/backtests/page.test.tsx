@@ -14,18 +14,18 @@ describe("BacktestsPage", () => {
     loadLedger.mockResolvedValue({ state: "NOT_INITIALIZED" });
   });
 
-  it("shows the uninitialized ledger and blocks unsupported execution", async () => {
+  it("separates paper-account content from the default research tab", async () => {
     const html = renderToStaticMarkup(
       await BacktestsPage({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(html).toContain("纸面账本未建立");
+    expect(html).toContain("回测研究");
+    expect(html).toContain("纸面账户");
+    expect(html).toContain('role="tab" aria-selected="true"');
+    expect(html).not.toContain("纸面账本未建立");
     expect(html).toContain("NOT_VERIFIED");
     expect(html).toContain('method="get"');
     expect(html).toMatch(/<button(?=[^>]*disabled="")[^>]*>[\s\S]*?开始回测/);
-    expect(html).toMatch(
-      /<button(?=[^>]*disabled="")[^>]*>[\s\S]*?创建模拟订单/,
-    );
     expect(html).toContain("不显示胜率、收益或策略评分");
     expect(html).not.toContain("18/25");
   });
@@ -73,7 +73,7 @@ describe("BacktestsPage", () => {
     expect(html).toContain("选择周期");
   });
 
-  it("renders only actual persisted account events when the account exists", async () => {
+  it("does not mix persisted account events into the default research tab", async () => {
     loadLedger.mockResolvedValue({
       state: "INITIALIZED",
       baseCurrency: "JPY",
@@ -98,10 +98,9 @@ describe("BacktestsPage", () => {
       await BacktestsPage({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(html).toContain("已建立");
-    expect(html).toContain("账户开户");
-    expect(html).toContain("JPY 1,000,000");
-    expect(html).toContain('aria-labelledby="account-heading"');
-    expect(html).toContain('scope="col"');
+    expect(html).toContain("纸面账户");
+    expect(html).not.toContain("账户开户");
+    expect(html).not.toContain("JPY 1,000,000");
+    expect(html).not.toContain('aria-labelledby="account-heading"');
   });
 });

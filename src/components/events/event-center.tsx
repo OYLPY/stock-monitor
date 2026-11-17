@@ -23,6 +23,7 @@ import {
   EmptyTitle,
 } from "@/components/shadcn/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/shadcn/field";
+import { Item } from "@/components/shadcn/item";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/shadcn/select";
+import { Separator } from "@/components/shadcn/separator";
 import { MARKET_TIME_ZONES } from "@/domain/primitives";
 import type { getMarketEvent } from "@/features/evidence/repository";
 
@@ -192,20 +194,23 @@ function EventCard({ event }: { event: MarketEvent }) {
             </div>
           </dl>
 
-          <div className="grid gap-2 border-t pt-3 text-sm sm:grid-cols-2">
-            <p>
-              <span className="text-muted-foreground">重要性依据：</span>
-              {latest.importanceReason}
-            </p>
-            <p>
-              <span className="text-muted-foreground">风险评估：</span>
-              尚无已保存的风险裁决记录。
-            </p>
-            <p className="sm:col-span-2">
-              <span className="text-muted-foreground">通知状态：</span>
-              扫描水位与通知决策尚未接入，当前无法判断是否符合新发现和高重要性条件。
-            </p>
-          </div>
+          <Separator />
+          <dl className="grid gap-2 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">重要性依据</dt>
+              <dd>{latest.importanceReason}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">风险评估</dt>
+              <dd>尚无已保存的风险裁决记录。</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-muted-foreground">通知状态</dt>
+              <dd>
+                扫描水位与通知决策尚未接入，当前无法判断是否符合新发现和高重要性条件。
+              </dd>
+            </div>
+          </dl>
 
           <Collapsible>
             <CollapsibleTrigger
@@ -218,159 +223,174 @@ function EventCard({ event }: { event: MarketEvent }) {
             <CollapsibleContent>
               <ol className="mt-3 flex flex-col gap-4">
                 {event.revisions.map((revision) => (
-                  <li className="min-w-0 border-l-2 pl-4" key={revision.id}>
-                    <h4 className="text-sm font-semibold">
-                      修订 {revision.revisionNo}
-                    </h4>
-                    <p className="mt-1 break-words text-sm">
-                      {revision.summary}
-                    </p>
-                    <dl className="mt-3 grid min-w-0 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <dt className="text-muted-foreground">记录时间</dt>
-                        <dd className="break-words">
-                          {formatTime(revision.recordedAtMs, marketTimeZone)}
-                        </dd>
-                      </div>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <dt className="text-muted-foreground">核验说明</dt>
-                        <dd className="break-words">
-                          {revision.verificationReason ?? "未提供"}
-                        </dd>
-                      </div>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <dt className="text-muted-foreground">
-                          数据状态 / 核验等级
-                        </dt>
-                        <dd>
-                          {dataClassLabels[revision.dataClass] ??
-                            "未知数据状态"}{" "}
-                          /{" "}
-                          {verificationLabels[revision.verificationLevel] ??
-                            "未知核验等级"}
-                        </dd>
-                      </div>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <dt className="text-muted-foreground">
-                          指纹规则 / 摘要
-                        </dt>
-                        <dd className="break-all">
-                          {revision.fingerprintAlgorithmVersion} /{" "}
-                          {revision.fingerprintSha256}
-                        </dd>
-                      </div>
-                    </dl>
-
-                    {revision.evidence.length ? (
-                      <ul className="mt-3 flex min-w-0 flex-col gap-3">
-                        {revision.evidence.map((evidence) => {
-                          const sourceUrl =
-                            evidence.canonicalUrl ??
-                            evidence.sourceReferenceUrl;
-                          const sourceZone = validTimeZone(
-                            evidence.sourceTimeZone,
-                          );
-                          return (
-                            <li
-                              className="min-w-0 rounded-lg bg-muted/40 p-3 text-sm"
-                              key={evidence.sourceRecordId}
-                            >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium">
-                                  {evidence.publisher}
-                                </span>
-                                <Badge variant="outline">
-                                  {evidenceRelationLabels[evidence.relation] ??
-                                    "未知证据关系"}
-                                </Badge>
-                                <Badge variant="secondary">
-                                  {dataClassLabels[evidence.dataClass] ??
-                                    "未知数据状态"}
-                                </Badge>
-                                <Badge variant="outline">
-                                  {sourceRoleLabels[evidence.authorityRole] ??
-                                    "未知来源角色"}
-                                </Badge>
-                                <Badge variant="outline">
-                                  {licenseStatusLabels[
-                                    evidence.sourceLicenseStatus
-                                  ] ?? "许可未知"}
-                                </Badge>
-                              </div>
-                              <p className="mt-1 break-words text-xs text-muted-foreground">
-                                来源标识 <code>{evidence.sourceKey}</code> ·
-                                记录标识 <code>{evidence.recordKey}</code> ·
-                                版本 {evidence.recordVersion}
-                              </p>
-                              <dl className="mt-3 grid min-w-0 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-                                <div className="flex min-w-0 flex-col gap-1">
-                                  <dt className="text-muted-foreground">
-                                    来源发生时间
-                                  </dt>
-                                  <dd className="break-words">
-                                    {formatTime(
-                                      evidence.occurredAtMs,
-                                      sourceZone,
-                                    )}
-                                    {` · 记录时区 ${evidence.sourceTimeZone ?? "未提供"}`}
-                                    {evidence.rawTimeText
-                                      ? ` · ${evidence.rawTimeText}`
-                                      : ""}
-                                  </dd>
-                                </div>
-                                <div className="flex min-w-0 flex-col gap-1">
-                                  <dt className="text-muted-foreground">
-                                    来源发布时间
-                                  </dt>
-                                  <dd className="break-words">
-                                    {formatTime(
-                                      evidence.publishedAtMs,
-                                      sourceZone,
-                                    )}
-                                  </dd>
-                                </div>
-                                <div className="flex min-w-0 flex-col gap-1">
-                                  <dt className="text-muted-foreground">
-                                    本机采集时间
-                                  </dt>
-                                  <dd className="break-words">
-                                    {formatTime(evidence.collectedAtMs, "UTC")}
-                                  </dd>
-                                </div>
-                                <div className="flex min-w-0 flex-col gap-1">
-                                  <dt className="text-muted-foreground">
-                                    来源内容 SHA-256
-                                  </dt>
-                                  <dd className="break-all">
-                                    {evidence.contentHashSha256}
-                                  </dd>
-                                </div>
-                              </dl>
-                              <p className="mt-3">
-                                {sourceUrl ? (
-                                  <a
-                                    className="underline underline-offset-4"
-                                    href={sourceUrl}
-                                    rel="noreferrer noopener"
-                                    target="_blank"
-                                  >
-                                    打开来源记录
-                                  </a>
-                                ) : (
-                                  <span className="text-muted-foreground">
-                                    未提供可打开的来源链接
-                                  </span>
-                                )}
-                              </p>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        此修订没有关联来源证据，不能显示为已验证。
+                  <li className="min-w-0" key={revision.id}>
+                    <Item
+                      className="min-w-0 flex-col items-stretch gap-3"
+                      variant="muted"
+                    >
+                      <h4 className="text-sm font-semibold">
+                        修订 {revision.revisionNo}
+                      </h4>
+                      <p className="mt-1 break-words text-sm">
+                        {revision.summary}
                       </p>
-                    )}
+                      <dl className="mt-3 grid min-w-0 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <dt className="text-muted-foreground">记录时间</dt>
+                          <dd className="break-words">
+                            {formatTime(revision.recordedAtMs, marketTimeZone)}
+                          </dd>
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <dt className="text-muted-foreground">核验说明</dt>
+                          <dd className="break-words">
+                            {revision.verificationReason ?? "未提供"}
+                          </dd>
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <dt className="text-muted-foreground">
+                            数据状态 / 核验等级
+                          </dt>
+                          <dd>
+                            {dataClassLabels[revision.dataClass] ??
+                              "未知数据状态"}{" "}
+                            /{" "}
+                            {verificationLabels[revision.verificationLevel] ??
+                              "未知核验等级"}
+                          </dd>
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <dt className="text-muted-foreground">
+                            指纹规则 / 摘要
+                          </dt>
+                          <dd className="break-all">
+                            {revision.fingerprintAlgorithmVersion} /{" "}
+                            {revision.fingerprintSha256}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      {revision.evidence.length ? (
+                        <ul className="mt-3 flex min-w-0 flex-col gap-3">
+                          {revision.evidence.map((evidence) => {
+                            const sourceUrl =
+                              evidence.canonicalUrl ??
+                              evidence.sourceReferenceUrl;
+                            const sourceZone = validTimeZone(
+                              evidence.sourceTimeZone,
+                            );
+                            return (
+                              <li
+                                className="min-w-0"
+                                key={evidence.sourceRecordId}
+                              >
+                                <Item
+                                  className="min-w-0 flex-col items-stretch gap-2"
+                                  variant="muted"
+                                >
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-medium">
+                                      {evidence.publisher}
+                                    </span>
+                                    <Badge variant="outline">
+                                      {evidenceRelationLabels[
+                                        evidence.relation
+                                      ] ?? "未知证据关系"}
+                                    </Badge>
+                                    <Badge variant="secondary">
+                                      {dataClassLabels[evidence.dataClass] ??
+                                        "未知数据状态"}
+                                    </Badge>
+                                    <Badge variant="outline">
+                                      {sourceRoleLabels[
+                                        evidence.authorityRole
+                                      ] ?? "未知来源角色"}
+                                    </Badge>
+                                    <Badge variant="outline">
+                                      {licenseStatusLabels[
+                                        evidence.sourceLicenseStatus
+                                      ] ?? "许可未知"}
+                                    </Badge>
+                                  </div>
+                                  <p className="mt-1 break-words text-xs text-muted-foreground">
+                                    来源标识 <code>{evidence.sourceKey}</code> ·
+                                    记录标识 <code>{evidence.recordKey}</code> ·
+                                    版本 {evidence.recordVersion}
+                                  </p>
+                                  <dl className="mt-3 grid min-w-0 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+                                    <div className="flex min-w-0 flex-col gap-1">
+                                      <dt className="text-muted-foreground">
+                                        来源发生时间
+                                      </dt>
+                                      <dd className="break-words">
+                                        {formatTime(
+                                          evidence.occurredAtMs,
+                                          sourceZone,
+                                        )}
+                                        {` · 记录时区 ${evidence.sourceTimeZone ?? "未提供"}`}
+                                        {evidence.rawTimeText
+                                          ? ` · ${evidence.rawTimeText}`
+                                          : ""}
+                                      </dd>
+                                    </div>
+                                    <div className="flex min-w-0 flex-col gap-1">
+                                      <dt className="text-muted-foreground">
+                                        来源发布时间
+                                      </dt>
+                                      <dd className="break-words">
+                                        {formatTime(
+                                          evidence.publishedAtMs,
+                                          sourceZone,
+                                        )}
+                                      </dd>
+                                    </div>
+                                    <div className="flex min-w-0 flex-col gap-1">
+                                      <dt className="text-muted-foreground">
+                                        本机采集时间
+                                      </dt>
+                                      <dd className="break-words">
+                                        {formatTime(
+                                          evidence.collectedAtMs,
+                                          "UTC",
+                                        )}
+                                      </dd>
+                                    </div>
+                                    <div className="flex min-w-0 flex-col gap-1">
+                                      <dt className="text-muted-foreground">
+                                        来源内容 SHA-256
+                                      </dt>
+                                      <dd className="break-all">
+                                        {evidence.contentHashSha256}
+                                      </dd>
+                                    </div>
+                                  </dl>
+                                  <p className="mt-3">
+                                    {sourceUrl ? (
+                                      <a
+                                        className="underline underline-offset-4"
+                                        href={sourceUrl}
+                                        rel="noreferrer noopener"
+                                        target="_blank"
+                                      >
+                                        打开来源记录
+                                      </a>
+                                    ) : (
+                                      <span className="text-muted-foreground">
+                                        未提供可打开的来源链接
+                                      </span>
+                                    )}
+                                  </p>
+                                </Item>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          此修订没有关联来源证据，不能显示为已验证。
+                        </p>
+                      )}
+                    </Item>
                   </li>
                 ))}
               </ol>
@@ -395,13 +415,7 @@ export function EventCenter({
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <p className="text-sm font-medium text-muted-foreground">研究监测</p>
-        <h1
-          className="scroll-mt-6 text-2xl font-semibold tracking-tight sm:text-3xl"
-          id="main-content"
-          tabIndex={-1}
-        >
-          异常与事件
-        </h1>
+        <h1 className="sr-only">异常与事件</h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
           仅展示本机事件库中已保存的修订与来源证据。P07
           来源接入尚未完成；空列表不表示市场没有事件。
@@ -430,10 +444,7 @@ export function EventCenter({
                       defaultValue={filters.market || "ALL"}
                       name="market"
                     >
-                      <SelectTrigger
-                        className="min-h-12 w-full"
-                        id="market-filter"
-                      >
+                      <SelectTrigger className="w-full" id="market-filter">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -452,7 +463,7 @@ export function EventCenter({
                       name="verification"
                     >
                       <SelectTrigger
-                        className="min-h-12 w-full"
+                        className="w-full"
                         id="verification-filter"
                       >
                         <SelectValue />
@@ -469,9 +480,7 @@ export function EventCenter({
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Button className="min-h-12" size="lg" type="submit">
-                    应用筛选
-                  </Button>
+                  <Button type="submit">应用筛选</Button>
                 </FieldGroup>
               </form>
             </CardContent>

@@ -51,12 +51,7 @@ export function BackupAction() {
 
   return (
     <>
-      <Button
-        className="min-h-12"
-        disabled={pending}
-        onClick={createBackup}
-        type="button"
-      >
+      <Button disabled={pending} onClick={createBackup} type="button">
         {pending ? "正在备份…" : "创建备份"}
       </Button>
       <AlertDialog
@@ -71,7 +66,7 @@ export function BackupAction() {
             <AlertDialogDescription>{error}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel size="lg">知道了</AlertDialogCancel>
+            <AlertDialogCancel>知道了</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

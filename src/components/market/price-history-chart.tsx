@@ -44,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { Separator } from "@/components/shadcn/separator";
 import type { CurrencyCode, MarketCode } from "@/domain/primitives";
 import { MARKET_TIME_ZONES } from "@/domain/primitives";
 
@@ -103,7 +104,7 @@ export function PriceHistoryChart({
   const latestPoint = points.at(-1);
 
   const metadata = (
-    <dl className="grid gap-3 border-b pb-4 text-sm sm:grid-cols-2">
+    <dl className="grid gap-3 text-sm sm:grid-cols-2">
       <div className="flex min-w-0 flex-col gap-1">
         <dt className="text-muted-foreground">数据来源</dt>
         <dd className="break-words">{sourceName}</dd>
@@ -172,6 +173,7 @@ export function PriceHistoryChart({
       </CardHeader>
       <CardContent className="flex min-w-0 flex-col gap-4">
         {metadata}
+        <Separator />
         {points.length === 0 ? (
           <Empty>
             <EmptyHeader>

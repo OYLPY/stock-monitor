@@ -31,13 +31,7 @@ export default function MarketsPage() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <p className="text-sm font-medium text-muted-foreground">美日市场</p>
-        <h1
-          className="scroll-mt-6 text-2xl font-semibold tracking-tight sm:text-3xl"
-          id="main-content"
-          tabIndex={-1}
-        >
-          市场监测
-        </h1>
+        <h1 className="sr-only">市场监测</h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
           当前未接入经过核验的交易日历或行情来源。页面不会推断开市状态，也不会用示例价格填充图表。
         </p>

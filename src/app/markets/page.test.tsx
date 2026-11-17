@@ -8,7 +8,7 @@ describe("market dashboard", () => {
   it("reports unavailable calendars and quotes without inventing prices", () => {
     const html = renderToStaticMarkup(createElement(MarketsPage));
 
-    expect(html).toContain('id="main-content"');
+    expect(html).toContain('<h1 class="sr-only">市场监测</h1>');
     expect(html).toContain("美国市场");
     expect(html).toContain("日本市场");
     expect(html).toContain("America/New_York");

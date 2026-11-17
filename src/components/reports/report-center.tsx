@@ -24,6 +24,7 @@ import {
   EmptyTitle,
 } from "@/components/shadcn/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/shadcn/field";
+import { Item } from "@/components/shadcn/item";
 import {
   InputGroup,
   InputGroupAddon,
@@ -36,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/shadcn/select";
+import { Separator } from "@/components/shadcn/separator";
 
 type ReportType = "MORNING" | "ANOMALY" | "DAILY_AUDIT" | "WEEKLY_AUDIT";
 type ExecutionStatus =
@@ -222,9 +224,9 @@ function EvidenceIds({ ids }: { ids: string[] }) {
     <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
       <span>证据</span>
       {ids.map((id) => (
-        <code className="rounded bg-muted px-1.5 py-0.5" key={id}>
-          {id}
-        </code>
+        <Badge key={id} variant="outline">
+          <code>{id}</code>
+        </Badge>
       ))}
     </p>
   );
@@ -249,12 +251,14 @@ function StatementGroup({
       ) : (
         <ul className="flex min-w-0 flex-col gap-3">
           {items.map((item, index) => (
-            <li
-              className="flex min-w-0 flex-col gap-1.5 rounded-lg bg-muted/40 p-3"
-              key={`${label}-${index}`}
-            >
-              <p className="break-words text-sm">{item.text}</p>
-              <EvidenceIds ids={item.evidenceIds} />
+            <li key={`${label}-${index}`}>
+              <Item
+                className="min-w-0 flex-col items-stretch gap-1.5"
+                variant="muted"
+              >
+                <p className="break-words text-sm">{item.text}</p>
+                <EvidenceIds ids={item.evidenceIds} />
+              </Item>
             </li>
           ))}
         </ul>
@@ -299,7 +303,6 @@ function ReportCard({ report }: { report: ResearchReport }) {
             </CardDescription>
           </div>
           <CardAction className="flex flex-wrap gap-2">
-            <Badge variant="outline">{reportTypeLabels[report.type]}</Badge>
             <Badge variant="secondary">
               {executionLabels[report.executionStatus]} ·{" "}
               {report.executionStatus}
@@ -346,9 +349,12 @@ function ReportCard({ report }: { report: ResearchReport }) {
               </span>
             </h4>
             {report.type === "MORNING" && report.marketSummary.length !== 5 ? (
-              <p className="text-sm text-destructive">
-                晨报应包含五行摘要；当前记录 {report.marketSummary.length} 行。
-              </p>
+              <Alert variant="destructive">
+                <AlertDescription>
+                  晨报应包含五行摘要；当前记录 {report.marketSummary.length}{" "}
+                  行。
+                </AlertDescription>
+              </Alert>
             ) : null}
             {report.marketSummary.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -357,17 +363,19 @@ function ReportCard({ report }: { report: ResearchReport }) {
             ) : (
               <ol className="flex flex-col gap-2">
                 {report.marketSummary.map((line, index) => (
-                  <li
-                    className="flex min-w-0 flex-col gap-1.5 rounded-lg bg-muted/40 p-3"
-                    key={`summary-${index}`}
-                  >
-                    <p className="break-words text-sm">
-                      <span className="mr-2 font-medium text-muted-foreground">
-                        {index + 1}.
-                      </span>
-                      {line.text}
-                    </p>
-                    <EvidenceIds ids={line.evidenceIds} />
+                  <li key={`summary-${index}`}>
+                    <Item
+                      className="min-w-0 flex-col items-stretch gap-1.5"
+                      variant="muted"
+                    >
+                      <p className="break-words text-sm">
+                        <span className="mr-2 font-medium text-muted-foreground">
+                          {index + 1}.
+                        </span>
+                        {line.text}
+                      </p>
+                      <EvidenceIds ids={line.evidenceIds} />
+                    </Item>
                   </li>
                 ))}
               </ol>
@@ -376,7 +384,7 @@ function ReportCard({ report }: { report: ResearchReport }) {
 
           <section
             aria-labelledby={`risk-${report.id}`}
-            className="flex flex-col gap-3 rounded-lg border p-3 sm:p-4"
+            className="flex flex-col gap-3"
           >
             <h4 className="text-sm font-semibold" id={`risk-${report.id}`}>
               确定性风控裁决
@@ -388,7 +396,7 @@ function ReportCard({ report }: { report: ResearchReport }) {
                   <code>{report.riskVerdict.status}</code>
                 </p>
                 {report.riskVerdict.reasons.length ? (
-                  <ul className="list-disc space-y-1 pl-5 text-sm">
+                  <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
                     {report.riskVerdict.reasons.map((reason, index) => (
                       <li className="break-words" key={`risk-reason-${index}`}>
                         {reason}
@@ -402,9 +410,11 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 )}
               </>
             ) : (
-              <p className="text-sm text-destructive">
-                未记录确定性裁决；裁决缺失不等于通过。
-              </p>
+              <Alert variant="destructive">
+                <AlertDescription>
+                  未记录确定性裁决；裁决缺失不等于通过。
+                </AlertDescription>
+              </Alert>
             )}
           </section>
 
@@ -442,7 +452,6 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 render={
                   <Button
                     className="w-full justify-between"
-                    size="lg"
                     variant="outline"
                   />
                 }
@@ -450,7 +459,8 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 证据与研究判断
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="flex min-w-0 flex-col gap-5 border-t p-4">
+                <Separator />
+                <div className="flex min-w-0 flex-col gap-5 p-4">
                   <StatementGroup label="事实" items={report.facts} />
                   <StatementGroup label="推论" items={report.inferences} />
                   <StatementGroup label="假设" items={report.hypotheses} />
@@ -463,7 +473,6 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 render={
                   <Button
                     className="w-full justify-between"
-                    size="lg"
                     variant="outline"
                   />
                 }
@@ -471,12 +480,15 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 策略候选（{report.candidates.length} / 3）
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="border-t p-4">
+                <Separator />
+                <div className="p-4">
                   {candidateLimitExceeded ? (
-                    <p className="text-sm text-destructive">
-                      报告含 {report.candidates.length} 个候选，超过 3
-                      个上限；为避免误用，本页不展示该组候选。
-                    </p>
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        报告含 {report.candidates.length} 个候选，超过 3
+                        个上限；为避免误用，本页不展示该组候选。
+                      </AlertDescription>
+                    </Alert>
                   ) : report.candidates.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       没有满足条件的候选；不为凑数生成策略。
@@ -484,53 +496,55 @@ function ReportCard({ report }: { report: ResearchReport }) {
                   ) : (
                     <ol className="flex flex-col gap-4">
                       {report.candidates.map((candidate, index) => (
-                        <li
-                          className="min-w-0 rounded-lg bg-muted/40 p-3 sm:p-4"
-                          key={candidate.id}
-                        >
-                          <h4 className="break-words text-sm font-semibold">
-                            {index + 1}. {candidate.logic}
-                          </h4>
-                          <p className="mt-1 break-all text-xs text-muted-foreground">
-                            候选编号 <code>{candidate.id}</code>
-                          </p>
-                          <dl className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
-                            <Definition label="触发条件">
-                              {candidate.trigger ?? "未提供"}
-                            </Definition>
-                            <Definition label="失效条件">
-                              {candidate.invalidation ?? "未提供"}
-                            </Definition>
-                            <Definition label="对手情形">
-                              {candidate.opposingCase ?? "未提供"}
-                            </Definition>
-                          </dl>
-                          <div className="mt-3 flex flex-col gap-3">
-                            <EvidenceIds ids={candidate.evidenceIds} />
-                            <div>
-                              <h5 className="text-xs font-medium text-muted-foreground">
-                                待验证事项
-                              </h5>
-                              {candidate.unresolvedQuestions.length ? (
-                                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                                  {candidate.unresolvedQuestions.map(
-                                    (question, questionIndex) => (
-                                      <li
-                                        className="break-words"
-                                        key={`question-${questionIndex}`}
-                                      >
-                                        {question}
-                                      </li>
-                                    ),
-                                  )}
-                                </ul>
-                              ) : (
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                  未提供
-                                </p>
-                              )}
+                        <li className="min-w-0" key={candidate.id}>
+                          <Item
+                            className="min-w-0 flex-col items-stretch gap-3"
+                            variant="muted"
+                          >
+                            <h4 className="break-words text-sm font-semibold">
+                              {index + 1}. {candidate.logic}
+                            </h4>
+                            <p className="mt-1 break-all text-xs text-muted-foreground">
+                              候选编号 <code>{candidate.id}</code>
+                            </p>
+                            <dl className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+                              <Definition label="触发条件">
+                                {candidate.trigger ?? "未提供"}
+                              </Definition>
+                              <Definition label="失效条件">
+                                {candidate.invalidation ?? "未提供"}
+                              </Definition>
+                              <Definition label="对手情形">
+                                {candidate.opposingCase ?? "未提供"}
+                              </Definition>
+                            </dl>
+                            <div className="mt-3 flex flex-col gap-3">
+                              <EvidenceIds ids={candidate.evidenceIds} />
+                              <div>
+                                <h5 className="text-xs font-medium text-muted-foreground">
+                                  待验证事项
+                                </h5>
+                                {candidate.unresolvedQuestions.length ? (
+                                  <ul className="mt-1 flex list-disc flex-col gap-1 pl-5 text-sm">
+                                    {candidate.unresolvedQuestions.map(
+                                      (question, questionIndex) => (
+                                        <li
+                                          className="break-words"
+                                          key={`question-${questionIndex}`}
+                                        >
+                                          {question}
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
+                                ) : (
+                                  <p className="mt-1 text-sm text-muted-foreground">
+                                    未提供
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          </Item>
                         </li>
                       ))}
                     </ol>
@@ -544,7 +558,6 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 render={
                   <Button
                     className="w-full justify-between"
-                    size="lg"
                     variant="outline"
                   />
                 }
@@ -552,7 +565,8 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 六角色审计
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <ol className="flex flex-col gap-3 border-t p-4">
+                <Separator />
+                <ol className="flex flex-col gap-3 p-4">
                   {roleOrder.map(({ key, label }) => {
                     const step = report.roleAudit[key];
                     return (
@@ -583,7 +597,6 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 render={
                   <Button
                     className="w-full justify-between"
-                    size="lg"
                     variant="outline"
                   />
                 }
@@ -591,7 +604,8 @@ function ReportCard({ report }: { report: ResearchReport }) {
                 来源覆盖、限制与账本状态
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="flex min-w-0 flex-col gap-5 border-t p-4">
+                <Separator />
+                <div className="flex min-w-0 flex-col gap-5 p-4">
                   <section className="flex flex-col gap-3">
                     <h4 className="text-sm font-semibold">
                       来源覆盖 ({report.sourceCoverage.length})
@@ -601,64 +615,66 @@ function ReportCard({ report }: { report: ResearchReport }) {
                         {report.sourceCoverage.map((source) => {
                           const sourceUrl = safeSourceUrl(source.url);
                           return (
-                            <li
-                              className="flex min-w-0 flex-col gap-2 rounded-lg bg-muted/40 p-3"
-                              key={source.id}
-                            >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h5 className="break-words text-sm font-medium">
-                                  {source.name}
-                                </h5>
-                                <Badge variant="outline">
-                                  {sourceStatusLabels[source.status]}
-                                </Badge>
-                                <Badge variant="secondary">
-                                  {dataClassLabels[source.dataClass]}
-                                </Badge>
-                              </div>
-                              <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
-                                <Definition label="市场时间">
-                                  {formatTime(
-                                    source.marketAtMs,
-                                    source.marketTimeZone,
+                            <li key={source.id}>
+                              <Item
+                                className="flex min-w-0 flex-col items-stretch gap-2"
+                                variant="muted"
+                              >
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h5 className="break-words text-sm font-medium">
+                                    {source.name}
+                                  </h5>
+                                  <Badge variant="outline">
+                                    {sourceStatusLabels[source.status]}
+                                  </Badge>
+                                  <Badge variant="secondary">
+                                    {dataClassLabels[source.dataClass]}
+                                  </Badge>
+                                </div>
+                                <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
+                                  <Definition label="市场时间">
+                                    {formatTime(
+                                      source.marketAtMs,
+                                      source.marketTimeZone,
+                                    )}
+                                  </Definition>
+                                  <Definition label="本机采集时间">
+                                    {formatTime(
+                                      source.collectedAtMs,
+                                      source.collectedTimeZone,
+                                    )}
+                                  </Definition>
+                                  <Definition label="币种">
+                                    {source.currency ?? "未提供"}
+                                  </Definition>
+                                  <Definition label="延迟声明">
+                                    {source.delayStatement ??
+                                      "未提供；时效未核验"}
+                                  </Definition>
+                                </dl>
+                                {source.limitation ? (
+                                  <p className="break-words text-sm">
+                                    {source.limitation}
+                                  </p>
+                                ) : null}
+                                <EvidenceIds ids={source.evidenceIds} />
+                                <p className="text-sm">
+                                  {sourceUrl ? (
+                                    <a
+                                      className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                      href={sourceUrl}
+                                      rel="noreferrer noopener"
+                                      target="_blank"
+                                    >
+                                      打开来源
+                                    </a>
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      没有可打开的 HTTPS 来源链接
+                                    </span>
                                   )}
-                                </Definition>
-                                <Definition label="本机采集时间">
-                                  {formatTime(
-                                    source.collectedAtMs,
-                                    source.collectedTimeZone,
-                                  )}
-                                </Definition>
-                                <Definition label="币种">
-                                  {source.currency ?? "未提供"}
-                                </Definition>
-                                <Definition label="延迟声明">
-                                  {source.delayStatement ??
-                                    "未提供；时效未核验"}
-                                </Definition>
-                              </dl>
-                              {source.limitation ? (
-                                <p className="break-words text-sm">
-                                  {source.limitation}
                                 </p>
-                              ) : null}
-                              <EvidenceIds ids={source.evidenceIds} />
-                              <p className="text-sm">
-                                {sourceUrl ? (
-                                  <a
-                                    className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                                    href={sourceUrl}
-                                    rel="noreferrer noopener"
-                                    target="_blank"
-                                  >
-                                    打开来源
-                                  </a>
-                                ) : (
-                                  <span className="text-muted-foreground">
-                                    没有可打开的 HTTPS 来源链接
-                                  </span>
-                                )}
-                              </p>
+                              </Item>
                             </li>
                           );
                         })}
@@ -675,7 +691,7 @@ function ReportCard({ report }: { report: ResearchReport }) {
                       未解决限制 ({report.limitations.length})
                     </h4>
                     {report.limitations.length ? (
-                      <ul className="list-disc space-y-1 pl-5 text-sm">
+                      <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
                         {report.limitations.map((limitation, index) => (
                           <li
                             className="break-words"
@@ -712,7 +728,8 @@ function ReportCard({ report }: { report: ResearchReport }) {
             </Collapsible>
           </section>
 
-          <section className="flex flex-col gap-1 border-t pt-3">
+          <Separator />
+          <section className="flex flex-col gap-1">
             <h4 className="text-sm font-semibold">最终研究决策</h4>
             <p className="break-words text-sm">
               {report.finalDecision ??
@@ -777,13 +794,7 @@ export function ReportCenter({
     <div className="flex min-w-0 flex-col gap-8">
       <header className="flex flex-col gap-2">
         <p className="text-sm font-medium text-muted-foreground">研究工作区</p>
-        <h1
-          className="scroll-mt-6 text-2xl font-semibold tracking-tight sm:text-3xl"
-          id="main-content"
-          tabIndex={-1}
-        >
-          晨报与策略研究
-        </h1>
+        <h1 className="sr-only">晨报与策略研究</h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
           阅读已保存的报告、证据和六角色审计。研究候选不代表已验证策略、获批计划或模拟成交。
         </p>
@@ -809,9 +820,8 @@ export function ReportCenter({
                     <FieldLabel htmlFor="report-query">
                       搜索报告、候选或证据编号
                     </FieldLabel>
-                    <InputGroup className="min-h-12">
+                    <InputGroup>
                       <InputGroupInput
-                        className="min-h-12"
                         defaultValue={filters.query}
                         id="report-query"
                         name="q"
@@ -825,10 +835,7 @@ export function ReportCenter({
                   <Field className="sm:w-48">
                     <FieldLabel htmlFor="report-type">报告类型</FieldLabel>
                     <Select defaultValue={filters.type || "ALL"} name="type">
-                      <SelectTrigger
-                        className="min-h-12 w-full"
-                        id="report-type"
-                      >
+                      <SelectTrigger className="w-full" id="report-type">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -843,9 +850,7 @@ export function ReportCenter({
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Button className="min-h-12" size="lg" type="submit">
-                    应用筛选
-                  </Button>
+                  <Button type="submit">应用筛选</Button>
                 </FieldGroup>
               </form>
             </CardContent>
@@ -897,11 +902,35 @@ export function ReportCenter({
             </EmptyHeader>
           </Empty>
         ) : (
-          <ol className="flex flex-col gap-4">
-            {matchingReports.map((report) => (
-              <ReportCard key={report.id} report={report} />
-            ))}
-          </ol>
+          <div className="flex flex-col gap-6">
+            {[...new Set(matchingReports.map((report) => report.type))].map(
+              (type) => {
+                const typeReports = matchingReports.filter(
+                  (report) => report.type === type,
+                );
+
+                return (
+                  <section
+                    aria-label={reportTypeLabels[type]}
+                    className="flex flex-col gap-3"
+                    key={type}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold">
+                        {reportTypeLabels[type]}
+                      </p>
+                      <Badge variant="outline">{typeReports.length} 份</Badge>
+                    </div>
+                    <ol className="flex flex-col gap-4">
+                      {typeReports.map((report) => (
+                        <ReportCard key={report.id} report={report} />
+                      ))}
+                    </ol>
+                  </section>
+                );
+              },
+            )}
+          </div>
         )}
       </section>
     </div>

@@ -23,7 +23,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
   SidebarTrigger,
 } from "@/components/shadcn/sidebar";
 
@@ -40,7 +39,7 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader>
         <div className="flex items-center gap-2">
           <SidebarMenu>
@@ -60,14 +59,9 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SidebarTrigger
-            aria-label="关闭主导航"
-            className="min-h-12 min-w-12 md:hidden"
-          />
+          <SidebarTrigger aria-label="关闭主导航" className="md:hidden" />
         </div>
       </SidebarHeader>
-
-      <SidebarSeparator />
 
       <SidebarContent className="px-2">
         <SidebarGroup>
@@ -80,7 +74,6 @@ export function AppSidebar() {
                     aria-current={pathname === "/" ? "page" : undefined}
                     isActive={pathname === "/"}
                     render={<Link href="/" />}
-                    size="lg"
                   >
                     <House aria-hidden="true" />
                     <span>总览</span>
@@ -101,7 +94,6 @@ export function AppSidebar() {
                     aria-current={pathname === href ? "page" : undefined}
                     isActive={pathname === href}
                     render={<Link href={href} />}
-                    size="lg"
                   >
                     <Icon aria-hidden="true" />
                     <span>{label}</span>

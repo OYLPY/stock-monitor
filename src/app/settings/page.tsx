@@ -18,13 +18,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <h1
-          className="text-2xl font-semibold tracking-tight"
-          id="main-content"
-          tabIndex={-1}
-        >
-          设置
-        </h1>
+        <h1 className="sr-only">设置</h1>
         <p className="text-sm text-muted-foreground">本机运行状态与数据保护</p>
       </header>
 

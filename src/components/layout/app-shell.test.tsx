@@ -19,14 +19,11 @@ describe("AppShell", () => {
 
   it("renders semantic navigation and one main landmark", () => {
     const html = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        null,
-        createElement("h1", { id: "main-content", tabIndex: -1 }, "总览"),
-      ),
+      createElement(AppShell, null, createElement("h1", null, "总览")),
     );
 
     expect(html.match(/<main\b/g)).toHaveLength(1);
+    expect(html.match(/id="main-content"/g)).toHaveLength(1);
     expect(html).toContain('<nav aria-label="主导航">');
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('href="/markets"');
@@ -41,11 +38,7 @@ describe("AppShell", () => {
     mockPathname.mockReturnValue("/markets");
 
     const html = renderToStaticMarkup(
-      createElement(
-        AppShell,
-        null,
-        createElement("h1", { id: "main-content", tabIndex: -1 }, "市场监测"),
-      ),
+      createElement(AppShell, null, createElement("h1", null, "市场监测")),
     );
 
     expect(html).toContain('aria-current="page"');
@@ -59,11 +52,7 @@ describe("AppShell", () => {
       createElement(
         AppShell,
         null,
-        createElement(
-          "h1",
-          { id: "main-content", tabIndex: -1 },
-          "晨报与策略研究",
-        ),
+        createElement("h1", null, "晨报与策略研究"),
       ),
     );
 
@@ -77,11 +66,7 @@ describe("AppShell", () => {
       createElement(
         AppShell,
         null,
-        createElement(
-          "h1",
-          { id: "main-content", tabIndex: -1 },
-          "回测与纸面账户",
-        ),
+        createElement("h1", null, "回测与纸面账户"),
       ),
     );
 

@@ -16,13 +16,15 @@ test("all workbench pages retain a heading and fit desktop and narrow screens", 
   for (const route of routes) {
     await page.setViewportSize({ width: 1365, height: 900 });
     await page.goto(route);
-    await expect(page.locator("h1#main-content")).toBeVisible();
+    await expect(page.locator("#main-content")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeAttached();
 
     if (route === "/") {
       const sidebar = page.locator('[data-slot="sidebar"][data-state]');
       await expect(sidebar).toHaveAttribute("data-state", "expanded");
       await page.getByRole("button", { name: "切换主导航" }).click();
       await expect(sidebar).toHaveAttribute("data-state", "collapsed");
+      await expect(sidebar).toHaveAttribute("data-collapsible", "offcanvas");
       await page.getByRole("button", { name: "切换主导航" }).click();
       await expect(sidebar).toHaveAttribute("data-state", "expanded");
     }
@@ -79,4 +81,37 @@ test("shadcn Select controls support keyboard use and preserve GET filters", asy
     page.waitForURL((url) => url.searchParams.get("market") === "JP"),
     page.getByRole("button", { name: "应用筛选" }).click(),
   ]);
+});
+
+test("backtest date picker and account tab use their shadcn interactions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/backtests");
+
+  const startDateButton = page.getByRole("button", { name: "选择开始日期" });
+  await startDateButton.click();
+  await expect(page.getByRole("grid")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  const researchTab = page.getByRole("tab", { name: "回测研究" });
+  const accountTab = page.getByRole("tab", { name: "纸面账户" });
+  await expect(researchTab).toHaveAttribute("aria-selected", "true");
+  await accountTab.click();
+  await expect(accountTab).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.getByRole("heading", { name: "纸面账户与账本" }),
+  ).toBeVisible();
+});
+
+test("keeps the app header sticky while page content scrolls", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/backtests");
+
+  const header = page.locator("main > header");
+  await expect(header).toHaveCSS("position", "sticky");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(header).toBeInViewport();
 });
