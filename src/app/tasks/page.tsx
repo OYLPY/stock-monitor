@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/shadcn/badge";
+import { Card, CardContent } from "@/components/shadcn/card";
 
 export const metadata: Metadata = { title: "任务与通知 | 量化研究工作台" };
 
@@ -12,9 +13,13 @@ const unavailableRecords = [
 
 export default function TasksPage() {
   return (
-    <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight" tabIndex={-1}>
+    <div className="flex flex-col gap-8">
+      <header className="flex flex-col gap-2">
+        <h1
+          className="text-2xl font-semibold tracking-tight"
+          id="main-content"
+          tabIndex={-1}
+        >
           任务与通知
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -22,22 +27,26 @@ export default function TasksPage() {
         </p>
       </header>
 
-      <dl className="divide-y">
-        {unavailableRecords.map(({ description, label }) => (
-          <div
-            className="flex flex-wrap items-center justify-between gap-3 py-4"
-            key={label}
-          >
-            <div>
-              <dt className="text-sm font-medium">{label}</dt>
-              <dd className="mt-1 text-sm text-muted-foreground">
-                {description}
-              </dd>
-            </div>
-            <Badge variant="outline">NOT_VERIFIED</Badge>
-          </div>
-        ))}
-      </dl>
+      <Card>
+        <CardContent>
+          <dl className="divide-y">
+            {unavailableRecords.map(({ description, label }) => (
+              <div
+                className="flex flex-wrap items-center justify-between gap-3 py-4"
+                key={label}
+              >
+                <div>
+                  <dt className="text-sm font-medium">{label}</dt>
+                  <dd className="mt-1 text-sm text-muted-foreground">
+                    {description}
+                  </dd>
+                </div>
+                <Badge variant="outline">NOT_VERIFIED</Badge>
+              </div>
+            ))}
+          </dl>
+        </CardContent>
+      </Card>
     </div>
   );
 }

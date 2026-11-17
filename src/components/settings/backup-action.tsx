@@ -2,15 +2,25 @@
 
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/shadcn/alert-dialog";
+import { Button } from "@/components/shadcn/button";
+import { toast } from "sonner";
 
 export function BackupAction() {
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   async function createBackup() {
     setPending(true);
-    setMessage("");
+    setError(null);
 
     try {
       const response = await fetch("/api/v1/backup", { method: "POST" });
@@ -29,31 +39,42 @@ export function BackupAction() {
         throw new Error("backup_response_invalid");
       }
 
-      setMessage(`备份已创建：${result.data.backupDirectory}`);
+      toast.success("备份已创建", {
+        description: result.data.backupDirectory,
+      });
     } catch {
-      setMessage("本机数据库备份失败，请检查磁盘空间和目录权限。");
+      setError("本机数据库备份失败，请检查磁盘空间和目录权限。");
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <div aria-busy={pending} className="space-y-2">
+    <>
       <Button
-        className="min-h-11"
+        className="min-h-12"
         disabled={pending}
         onClick={createBackup}
         type="button"
       >
         {pending ? "正在备份…" : "创建备份"}
       </Button>
-      <p
-        aria-atomic="true"
-        className="max-w-full break-all text-sm"
-        role="status"
+      <AlertDialog
+        onOpenChange={(open) => {
+          if (!open) setError(null);
+        }}
+        open={error !== null}
       >
-        {message}
-      </p>
-    </div>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>备份失败</AlertDialogTitle>
+            <AlertDialogDescription>{error}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel size="lg">知道了</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

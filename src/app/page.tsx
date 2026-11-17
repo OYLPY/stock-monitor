@@ -1,13 +1,13 @@
 import { Database } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/shadcn/badge";
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty";
+} from "@/components/shadcn/empty";
 
 export default function Home() {
   return (
@@ -44,7 +44,7 @@ export default function Home() {
           <Badge variant="outline">NOT_VERIFIED</Badge>
         </div>
 
-        <Empty className="min-h-72 border bg-card px-4 py-10 sm:px-8">
+        <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <Database aria-hidden="true" />

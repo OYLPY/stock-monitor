@@ -13,11 +13,9 @@ import {
   Settings2,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -27,7 +25,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
   SidebarTrigger,
-} from "@/components/ui/sidebar";
+} from "@/components/shadcn/sidebar";
 
 const availableModules = [
   { icon: Activity, label: "市场监测", href: "/markets" },
@@ -42,22 +40,26 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar>
-      <SidebarHeader className="gap-3 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <Link className="flex min-w-0 items-center gap-3" href="/">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <ChartNoAxesCombined aria-hidden="true" className="size-4" />
-            </span>
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate text-sm font-semibold">
-                量化研究工作台
-              </span>
-              <span className="text-xs text-muted-foreground">
-                本地研究工具
-              </span>
-            </span>
-          </Link>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <div className="flex items-center gap-2">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link href="/" />}
+                size="lg"
+                tooltip="量化研究工作台"
+              >
+                <ChartNoAxesCombined aria-hidden="true" />
+                <span className="flex min-w-0 flex-col items-start gap-0.5">
+                  <span className="truncate font-semibold">量化研究工作台</span>
+                  <span className="text-xs text-muted-foreground">
+                    本地研究工具
+                  </span>
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
           <SidebarTrigger
             aria-label="关闭主导航"
             className="min-h-12 min-w-12 md:hidden"
@@ -76,9 +78,9 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     aria-current={pathname === "/" ? "page" : undefined}
-                    className="min-h-12"
                     isActive={pathname === "/"}
                     render={<Link href="/" />}
+                    size="lg"
                   >
                     <House aria-hidden="true" />
                     <span>总览</span>
@@ -97,9 +99,9 @@ export function AppSidebar() {
                 <SidebarMenuItem key={label}>
                   <SidebarMenuButton
                     aria-current={pathname === href ? "page" : undefined}
-                    className="min-h-12"
                     isActive={pathname === href}
                     render={<Link href={href} />}
+                    size="lg"
                   >
                     <Icon aria-hidden="true" />
                     <span>{label}</span>
@@ -110,17 +112,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="p-4">
-        <div className="flex flex-col gap-2 rounded-lg border bg-sidebar-accent/50 p-3">
-          <Badge className="w-fit" variant="secondary">
-            无需登录
-          </Badge>
-          <p className="text-xs leading-5 text-muted-foreground">
-            本工具不会连接证券账户或提交真实订单。
-          </p>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

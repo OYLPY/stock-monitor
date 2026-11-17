@@ -43,9 +43,11 @@ describe("BacktestsPage", () => {
       }),
     );
 
-    expect(html).toContain('value="JP" selected=""');
+    expect(html).toMatch(/id="market"[^>]*data-slot="select-trigger"/);
+    expect(html).toMatch(/id="interval"[^>]*data-slot="select-trigger"/);
+    expect(html).toContain(">JP</span>");
+    expect(html).toContain(">86400</span>");
     expect(html).toContain('value="7203"');
-    expect(html).toContain('value="86400" selected=""');
     expect(html).toContain('value="2020-01-01"');
     expect(html).toContain('value="2025-12-31"');
     expect(html).toContain("不会写入数据库或启动实验");
@@ -66,8 +68,9 @@ describe("BacktestsPage", () => {
 
     expect(html).toContain("开始日期不能晚于结束日期");
     expect(html).toContain(`value="${"x".repeat(32)}"`);
-    expect(html).not.toContain('value="UNKNOWN" selected=""');
-    expect(html).not.toContain('value="1" selected=""');
+    expect(html).not.toContain(">UNKNOWN</span>");
+    expect(html).toContain("选择市场");
+    expect(html).toContain("选择周期");
   });
 
   it("renders only actual persisted account events when the account exists", async () => {

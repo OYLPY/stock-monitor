@@ -36,10 +36,10 @@ test("settings backup and task status are operable and accessible", async ({
   const backupResponse = await backupResponsePromise;
   expect(backupResponse.status()).toBe(200);
 
-  const status = page.getByRole("status");
-  await expect(status).toContainText("备份已创建：");
-  await expect(status).toContainText("backups");
-  await expect(status).not.toContainText(secretSentinel);
+  const successToast = page.getByRole("region", { name: /Notifications/ });
+  await expect(successToast).toContainText("备份已创建");
+  await expect(successToast).toContainText("backups");
+  await expect(successToast).not.toContainText(secretSentinel);
 
   await page.route("**/api/v1/backup", (route) =>
     route.fulfill({
@@ -51,8 +51,11 @@ test("settings backup and task status are operable and accessible", async ({
     }),
   );
   await backupButton.click();
-  await expect(status).toContainText("备份失败");
-  await expect(status).not.toContainText(secretSentinel);
+  const backupError = page.getByRole("alertdialog");
+  await expect(backupError).toContainText("备份失败");
+  await expect(backupError).not.toContainText(secretSentinel);
+  await page.getByRole("button", { name: "知道了" }).click();
+  await expect(backupError).toBeHidden();
 
   await page.getByRole("link", { name: "任务与通知" }).click();
   await expect(
@@ -62,6 +65,9 @@ test("settings backup and task status are operable and accessible", async ({
   await expect(page.getByText("通知记录与已读状态尚未接入。")).toBeVisible();
 
   await page.setViewportSize({ width: 320, height: 800 });
+  await page.getByRole("button", { name: "切换主导航" }).click();
+  await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
+  await page.getByRole("button", { name: "关闭主导航" }).click();
   const widths = await page.evaluate(() => ({
     document: document.documentElement.scrollWidth,
     viewport: window.innerWidth,

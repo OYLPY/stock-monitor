@@ -1,15 +1,41 @@
-import { CircleHelp } from "lucide-react";
+import { CircleHelp, Search } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/shadcn/alert";
+import { Badge } from "@/components/shadcn/badge";
+import { Button } from "@/components/shadcn/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/shadcn/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/shadcn/collapsible";
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty";
+} from "@/components/shadcn/empty";
+import { Field, FieldGroup, FieldLabel } from "@/components/shadcn/field";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/shadcn/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/shadcn/select";
 
 type ReportType = "MORNING" | "ANOMALY" | "DAILY_AUDIT" | "WEEKLY_AUDIT";
 type ExecutionStatus =
@@ -262,17 +288,17 @@ function ReportCard({ report }: { report: ResearchReport }) {
 
   return (
     <li>
-      <article className="flex min-w-0 flex-col gap-4 rounded-xl border bg-card p-4 sm:p-5">
-        <header className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h3 className="break-words text-base font-semibold">
-              {report.title}
-            </h3>
-            <p className="break-all text-xs text-muted-foreground">
+      <Card className="min-w-0">
+        <CardHeader>
+          <div className="min-w-0">
+            <CardTitle>
+              <h3 className="break-words">{report.title}</h3>
+            </CardTitle>
+            <CardDescription className="break-all">
               报告编号 <code>{report.id}</code>
-            </p>
+            </CardDescription>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <CardAction className="flex flex-wrap gap-2">
             <Badge variant="outline">{reportTypeLabels[report.type]}</Badge>
             <Badge variant="secondary">
               {executionLabels[report.executionStatus]} ·{" "}
@@ -282,372 +308,419 @@ function ReportCard({ report }: { report: ResearchReport }) {
               {verificationLabels[verificationLevel]} · {verificationLevel}
             </Badge>
             <Badge variant="outline">{dataClassLabels[report.dataClass]}</Badge>
-          </div>
-        </header>
-
-        {hasFixtureInput && report.verificationLevel !== "DEMO_ONLY" ? (
-          <p className="rounded-lg border border-destructive/40 p-3 text-sm">
-            报告包含 Fixture 来源，按规则隔离为
-            DEMO_ONLY；原验证等级与此规则不一致。
-          </p>
-        ) : null}
-
-        <dl className="grid min-w-0 gap-x-6 gap-y-3 sm:grid-cols-2">
-          <Definition label="生成时间">
-            {formatTime(report.generatedAtMs, report.timeZone)}
-          </Definition>
-          <Definition label="事实截止时间 asOf">
-            {formatTime(report.asOfMs, report.timeZone)}
-          </Definition>
-          <Definition label="报告时区">
-            {report.timeZone ?? "未提供"}
-          </Definition>
-          <Definition label="业务结果码">
-            {report.resultCode ? <code>{report.resultCode}</code> : "未提供"}
-          </Definition>
-        </dl>
-
-        <section
-          aria-labelledby={`summary-${report.id}`}
-          className="flex flex-col gap-3"
-        >
-          <h4 className="text-sm font-semibold" id={`summary-${report.id}`}>
-            市场摘要{" "}
-            <span className="text-muted-foreground">
-              ({report.marketSummary.length} 行)
-            </span>
-          </h4>
-          {report.type === "MORNING" && report.marketSummary.length !== 5 ? (
-            <p className="text-sm text-destructive">
-              晨报应包含五行摘要；当前记录 {report.marketSummary.length} 行。
-            </p>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="flex min-w-0 flex-col gap-4">
+          {hasFixtureInput && report.verificationLevel !== "DEMO_ONLY" ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                报告包含 Fixture 来源，按规则隔离为
+                DEMO_ONLY；原验证等级与此规则不一致。
+              </AlertDescription>
+            </Alert>
           ) : null}
-          {report.marketSummary.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              没有已保存的摘要；缺失内容保持未核验。
-            </p>
-          ) : (
-            <ol className="flex flex-col gap-2">
-              {report.marketSummary.map((line, index) => (
-                <li
-                  className="flex min-w-0 flex-col gap-1.5 rounded-lg bg-muted/40 p-3"
-                  key={`summary-${index}`}
-                >
-                  <p className="break-words text-sm">
-                    <span className="mr-2 font-medium text-muted-foreground">
-                      {index + 1}.
-                    </span>
-                    {line.text}
-                  </p>
-                  <EvidenceIds ids={line.evidenceIds} />
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
 
-        <section
-          aria-labelledby={`risk-${report.id}`}
-          className="flex flex-col gap-3 rounded-lg border p-3 sm:p-4"
-        >
-          <h4 className="text-sm font-semibold" id={`risk-${report.id}`}>
-            确定性风控裁决
-          </h4>
-          {report.riskVerdict ? (
-            <>
-              <p className="text-sm">
-                {riskVerdictLabels[report.riskVerdict.status]} ·{" "}
-                <code>{report.riskVerdict.status}</code>
+          <dl className="grid min-w-0 gap-x-6 gap-y-3 sm:grid-cols-2">
+            <Definition label="生成时间">
+              {formatTime(report.generatedAtMs, report.timeZone)}
+            </Definition>
+            <Definition label="事实截止时间 asOf">
+              {formatTime(report.asOfMs, report.timeZone)}
+            </Definition>
+            <Definition label="报告时区">
+              {report.timeZone ?? "未提供"}
+            </Definition>
+            <Definition label="业务结果码">
+              {report.resultCode ? <code>{report.resultCode}</code> : "未提供"}
+            </Definition>
+          </dl>
+
+          <section
+            aria-labelledby={`summary-${report.id}`}
+            className="flex flex-col gap-3"
+          >
+            <h4 className="text-sm font-semibold" id={`summary-${report.id}`}>
+              市场摘要{" "}
+              <span className="text-muted-foreground">
+                ({report.marketSummary.length} 行)
+              </span>
+            </h4>
+            {report.type === "MORNING" && report.marketSummary.length !== 5 ? (
+              <p className="text-sm text-destructive">
+                晨报应包含五行摘要；当前记录 {report.marketSummary.length} 行。
               </p>
-              {report.riskVerdict.reasons.length ? (
-                <ul className="list-disc space-y-1 pl-5 text-sm">
-                  {report.riskVerdict.reasons.map((reason, index) => (
-                    <li className="break-words" key={`risk-reason-${index}`}>
-                      {reason}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  没有记录裁决原因。
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-destructive">
-              未记录确定性裁决；裁决缺失不等于通过。
-            </p>
-          )}
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <h4 className="text-sm font-semibold">模型风控意见</h4>
-          {report.riskOfficerReview ? (
-            <>
-              <p className="text-sm">
-                {report.riskOfficerReview.opinion === "VETO"
-                  ? "提出否决"
-                  : "未提出否决"}{" "}
-                · <code>{report.riskOfficerReview.opinion}</code>
+            ) : null}
+            {report.marketSummary.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                没有已保存的摘要；缺失内容保持未核验。
               </p>
-              <p className="break-words text-sm">
-                {report.riskOfficerReview.summary}
-              </p>
-              <EvidenceIds ids={report.riskOfficerReview.evidenceIds} />
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              未记录模型风控意见。
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            模型意见不能修改确定性裁决；未提出模型否决也不代表风险通过。
-          </p>
-        </section>
-
-        <section
-          aria-label={`报告 ${report.id} 详细记录`}
-          className="flex flex-col gap-3"
-        >
-          <details className="rounded-lg border">
-            <summary className="min-h-12 cursor-pointer px-4 py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              证据与研究判断
-            </summary>
-            <div className="flex min-w-0 flex-col gap-5 border-t p-4">
-              <StatementGroup label="事实" items={report.facts} />
-              <StatementGroup label="推论" items={report.inferences} />
-              <StatementGroup label="假设" items={report.hypotheses} />
-            </div>
-          </details>
-
-          <details className="rounded-lg border">
-            <summary className="min-h-12 cursor-pointer px-4 py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              策略候选（{report.candidates.length} / 3）
-            </summary>
-            <div className="border-t p-4">
-              {candidateLimitExceeded ? (
-                <p className="text-sm text-destructive">
-                  报告含 {report.candidates.length} 个候选，超过 3
-                  个上限；为避免误用，本页不展示该组候选。
-                </p>
-              ) : report.candidates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  没有满足条件的候选；不为凑数生成策略。
-                </p>
-              ) : (
-                <ol className="flex flex-col gap-4">
-                  {report.candidates.map((candidate, index) => (
-                    <li
-                      className="min-w-0 rounded-lg bg-muted/40 p-3 sm:p-4"
-                      key={candidate.id}
-                    >
-                      <h4 className="break-words text-sm font-semibold">
-                        {index + 1}. {candidate.logic}
-                      </h4>
-                      <p className="mt-1 break-all text-xs text-muted-foreground">
-                        候选编号 <code>{candidate.id}</code>
-                      </p>
-                      <dl className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
-                        <Definition label="触发条件">
-                          {candidate.trigger ?? "未提供"}
-                        </Definition>
-                        <Definition label="失效条件">
-                          {candidate.invalidation ?? "未提供"}
-                        </Definition>
-                        <Definition label="对手情形">
-                          {candidate.opposingCase ?? "未提供"}
-                        </Definition>
-                      </dl>
-                      <div className="mt-3 flex flex-col gap-3">
-                        <EvidenceIds ids={candidate.evidenceIds} />
-                        <div>
-                          <h5 className="text-xs font-medium text-muted-foreground">
-                            待验证事项
-                          </h5>
-                          {candidate.unresolvedQuestions.length ? (
-                            <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                              {candidate.unresolvedQuestions.map(
-                                (question, questionIndex) => (
-                                  <li
-                                    className="break-words"
-                                    key={`question-${questionIndex}`}
-                                  >
-                                    {question}
-                                  </li>
-                                ),
-                              )}
-                            </ul>
-                          ) : (
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              未提供
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-          </details>
-
-          <details className="rounded-lg border">
-            <summary className="min-h-12 cursor-pointer px-4 py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              六角色审计
-            </summary>
-            <ol className="flex flex-col gap-3 border-t p-4">
-              {roleOrder.map(({ key, label }) => {
-                const step = report.roleAudit[key];
-                return (
-                  <li className="flex min-w-0 flex-col gap-1.5" key={key}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-sm font-semibold">{label}</h4>
-                      {step ? (
-                        <Badge variant="outline">
-                          {executionLabels[step.status]} · {step.status}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">未记录</Badge>
-                      )}
-                    </div>
-                    <p className="break-words text-sm text-muted-foreground">
-                      {step?.summary ?? "没有已保存的步骤摘要。"}
+            ) : (
+              <ol className="flex flex-col gap-2">
+                {report.marketSummary.map((line, index) => (
+                  <li
+                    className="flex min-w-0 flex-col gap-1.5 rounded-lg bg-muted/40 p-3"
+                    key={`summary-${index}`}
+                  >
+                    <p className="break-words text-sm">
+                      <span className="mr-2 font-medium text-muted-foreground">
+                        {index + 1}.
+                      </span>
+                      {line.text}
                     </p>
-                    {step ? <EvidenceIds ids={step.evidenceIds} /> : null}
+                    <EvidenceIds ids={line.evidenceIds} />
                   </li>
-                );
-              })}
-            </ol>
-          </details>
+                ))}
+              </ol>
+            )}
+          </section>
 
-          <details className="rounded-lg border">
-            <summary className="min-h-12 cursor-pointer px-4 py-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              来源覆盖、限制与账本状态
-            </summary>
-            <div className="flex min-w-0 flex-col gap-5 border-t p-4">
-              <section className="flex flex-col gap-3">
-                <h4 className="text-sm font-semibold">
-                  来源覆盖 ({report.sourceCoverage.length})
-                </h4>
-                {report.sourceCoverage.length ? (
-                  <ul className="flex min-w-0 flex-col gap-3">
-                    {report.sourceCoverage.map((source) => {
-                      const sourceUrl = safeSourceUrl(source.url);
-                      return (
-                        <li
-                          className="flex min-w-0 flex-col gap-2 rounded-lg bg-muted/40 p-3"
-                          key={source.id}
-                        >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h5 className="break-words text-sm font-medium">
-                              {source.name}
-                            </h5>
-                            <Badge variant="outline">
-                              {sourceStatusLabels[source.status]}
-                            </Badge>
-                            <Badge variant="secondary">
-                              {dataClassLabels[source.dataClass]}
-                            </Badge>
-                          </div>
-                          <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
-                            <Definition label="市场时间">
-                              {formatTime(
-                                source.marketAtMs,
-                                source.marketTimeZone,
-                              )}
-                            </Definition>
-                            <Definition label="本机采集时间">
-                              {formatTime(
-                                source.collectedAtMs,
-                                source.collectedTimeZone,
-                              )}
-                            </Definition>
-                            <Definition label="币种">
-                              {source.currency ?? "未提供"}
-                            </Definition>
-                            <Definition label="延迟声明">
-                              {source.delayStatement ?? "未提供；时效未核验"}
-                            </Definition>
-                          </dl>
-                          {source.limitation ? (
-                            <p className="break-words text-sm">
-                              {source.limitation}
-                            </p>
-                          ) : null}
-                          <EvidenceIds ids={source.evidenceIds} />
-                          <p className="text-sm">
-                            {sourceUrl ? (
-                              <a
-                                className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                                href={sourceUrl}
-                                rel="noreferrer noopener"
-                                target="_blank"
-                              >
-                                打开来源
-                              </a>
-                            ) : (
-                              <span className="text-muted-foreground">
-                                没有可打开的 HTTPS 来源链接
-                              </span>
-                            )}
-                          </p>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    没有已保存的来源覆盖记录。
-                  </p>
-                )}
-              </section>
-
-              <section className="flex flex-col gap-2">
-                <h4 className="text-sm font-semibold">
-                  未解决限制 ({report.limitations.length})
-                </h4>
-                {report.limitations.length ? (
+          <section
+            aria-labelledby={`risk-${report.id}`}
+            className="flex flex-col gap-3 rounded-lg border p-3 sm:p-4"
+          >
+            <h4 className="text-sm font-semibold" id={`risk-${report.id}`}>
+              确定性风控裁决
+            </h4>
+            {report.riskVerdict ? (
+              <>
+                <p className="text-sm">
+                  {riskVerdictLabels[report.riskVerdict.status]} ·{" "}
+                  <code>{report.riskVerdict.status}</code>
+                </p>
+                {report.riskVerdict.reasons.length ? (
                   <ul className="list-disc space-y-1 pl-5 text-sm">
-                    {report.limitations.map((limitation, index) => (
-                      <li className="break-words" key={`limitation-${index}`}>
-                        {limitation}
+                    {report.riskVerdict.reasons.map((reason, index) => (
+                      <li className="break-words" key={`risk-reason-${index}`}>
+                        {reason}
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    未提供限制说明。
+                    没有记录裁决原因。
                   </p>
                 )}
-              </section>
+              </>
+            ) : (
+              <p className="text-sm text-destructive">
+                未记录确定性裁决；裁决缺失不等于通过。
+              </p>
+            )}
+          </section>
 
-              <section className="flex flex-col gap-2">
-                <h4 className="text-sm font-semibold">纸面账本</h4>
+          <section className="flex flex-col gap-2">
+            <h4 className="text-sm font-semibold">模型风控意见</h4>
+            {report.riskOfficerReview ? (
+              <>
                 <p className="text-sm">
-                  {report.ledgerState === "INITIALIZED"
-                    ? "已初始化"
-                    : report.ledgerState === "NOT_INITIALIZED"
-                      ? "未初始化"
-                      : "不可用"}{" "}
-                  · <code>{report.ledgerState}</code>
+                  {report.riskOfficerReview.opinion === "VETO"
+                    ? "提出否决"
+                    : "未提出否决"}{" "}
+                  · <code>{report.riskOfficerReview.opinion}</code>
                 </p>
-                <p className="break-words text-sm text-muted-foreground">
-                  {report.ledgerSummary ??
-                    "未提供账本摘要；不推算权益、持仓、订单或盈亏。"}
+                <p className="break-words text-sm">
+                  {report.riskOfficerReview.summary}
                 </p>
-              </section>
-            </div>
-          </details>
-        </section>
+                <EvidenceIds ids={report.riskOfficerReview.evidenceIds} />
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                未记录模型风控意见。
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              模型意见不能修改确定性裁决；未提出模型否决也不代表风险通过。
+            </p>
+          </section>
 
-        <section className="flex flex-col gap-1 border-t pt-3">
-          <h4 className="text-sm font-semibold">最终研究决策</h4>
-          <p className="break-words text-sm">
-            {report.finalDecision ??
-              "未提供；不能据此认为候选已通过或计划已获批。"}
-          </p>
-        </section>
-      </article>
+          <section
+            aria-label={`报告 ${report.id} 详细记录`}
+            className="flex flex-col gap-3"
+          >
+            <Collapsible>
+              <CollapsibleTrigger
+                render={
+                  <Button
+                    className="w-full justify-between"
+                    size="lg"
+                    variant="outline"
+                  />
+                }
+              >
+                证据与研究判断
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="flex min-w-0 flex-col gap-5 border-t p-4">
+                  <StatementGroup label="事实" items={report.facts} />
+                  <StatementGroup label="推论" items={report.inferences} />
+                  <StatementGroup label="假设" items={report.hypotheses} />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible>
+              <CollapsibleTrigger
+                render={
+                  <Button
+                    className="w-full justify-between"
+                    size="lg"
+                    variant="outline"
+                  />
+                }
+              >
+                策略候选（{report.candidates.length} / 3）
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="border-t p-4">
+                  {candidateLimitExceeded ? (
+                    <p className="text-sm text-destructive">
+                      报告含 {report.candidates.length} 个候选，超过 3
+                      个上限；为避免误用，本页不展示该组候选。
+                    </p>
+                  ) : report.candidates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      没有满足条件的候选；不为凑数生成策略。
+                    </p>
+                  ) : (
+                    <ol className="flex flex-col gap-4">
+                      {report.candidates.map((candidate, index) => (
+                        <li
+                          className="min-w-0 rounded-lg bg-muted/40 p-3 sm:p-4"
+                          key={candidate.id}
+                        >
+                          <h4 className="break-words text-sm font-semibold">
+                            {index + 1}. {candidate.logic}
+                          </h4>
+                          <p className="mt-1 break-all text-xs text-muted-foreground">
+                            候选编号 <code>{candidate.id}</code>
+                          </p>
+                          <dl className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+                            <Definition label="触发条件">
+                              {candidate.trigger ?? "未提供"}
+                            </Definition>
+                            <Definition label="失效条件">
+                              {candidate.invalidation ?? "未提供"}
+                            </Definition>
+                            <Definition label="对手情形">
+                              {candidate.opposingCase ?? "未提供"}
+                            </Definition>
+                          </dl>
+                          <div className="mt-3 flex flex-col gap-3">
+                            <EvidenceIds ids={candidate.evidenceIds} />
+                            <div>
+                              <h5 className="text-xs font-medium text-muted-foreground">
+                                待验证事项
+                              </h5>
+                              {candidate.unresolvedQuestions.length ? (
+                                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+                                  {candidate.unresolvedQuestions.map(
+                                    (question, questionIndex) => (
+                                      <li
+                                        className="break-words"
+                                        key={`question-${questionIndex}`}
+                                      >
+                                        {question}
+                                      </li>
+                                    ),
+                                  )}
+                                </ul>
+                              ) : (
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                  未提供
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible>
+              <CollapsibleTrigger
+                render={
+                  <Button
+                    className="w-full justify-between"
+                    size="lg"
+                    variant="outline"
+                  />
+                }
+              >
+                六角色审计
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ol className="flex flex-col gap-3 border-t p-4">
+                  {roleOrder.map(({ key, label }) => {
+                    const step = report.roleAudit[key];
+                    return (
+                      <li className="flex min-w-0 flex-col gap-1.5" key={key}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-semibold">{label}</h4>
+                          {step ? (
+                            <Badge variant="outline">
+                              {executionLabels[step.status]} · {step.status}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">未记录</Badge>
+                          )}
+                        </div>
+                        <p className="break-words text-sm text-muted-foreground">
+                          {step?.summary ?? "没有已保存的步骤摘要。"}
+                        </p>
+                        {step ? <EvidenceIds ids={step.evidenceIds} /> : null}
+                      </li>
+                    );
+                  })}
+                </ol>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible>
+              <CollapsibleTrigger
+                render={
+                  <Button
+                    className="w-full justify-between"
+                    size="lg"
+                    variant="outline"
+                  />
+                }
+              >
+                来源覆盖、限制与账本状态
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="flex min-w-0 flex-col gap-5 border-t p-4">
+                  <section className="flex flex-col gap-3">
+                    <h4 className="text-sm font-semibold">
+                      来源覆盖 ({report.sourceCoverage.length})
+                    </h4>
+                    {report.sourceCoverage.length ? (
+                      <ul className="flex min-w-0 flex-col gap-3">
+                        {report.sourceCoverage.map((source) => {
+                          const sourceUrl = safeSourceUrl(source.url);
+                          return (
+                            <li
+                              className="flex min-w-0 flex-col gap-2 rounded-lg bg-muted/40 p-3"
+                              key={source.id}
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h5 className="break-words text-sm font-medium">
+                                  {source.name}
+                                </h5>
+                                <Badge variant="outline">
+                                  {sourceStatusLabels[source.status]}
+                                </Badge>
+                                <Badge variant="secondary">
+                                  {dataClassLabels[source.dataClass]}
+                                </Badge>
+                              </div>
+                              <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
+                                <Definition label="市场时间">
+                                  {formatTime(
+                                    source.marketAtMs,
+                                    source.marketTimeZone,
+                                  )}
+                                </Definition>
+                                <Definition label="本机采集时间">
+                                  {formatTime(
+                                    source.collectedAtMs,
+                                    source.collectedTimeZone,
+                                  )}
+                                </Definition>
+                                <Definition label="币种">
+                                  {source.currency ?? "未提供"}
+                                </Definition>
+                                <Definition label="延迟声明">
+                                  {source.delayStatement ??
+                                    "未提供；时效未核验"}
+                                </Definition>
+                              </dl>
+                              {source.limitation ? (
+                                <p className="break-words text-sm">
+                                  {source.limitation}
+                                </p>
+                              ) : null}
+                              <EvidenceIds ids={source.evidenceIds} />
+                              <p className="text-sm">
+                                {sourceUrl ? (
+                                  <a
+                                    className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                    href={sourceUrl}
+                                    rel="noreferrer noopener"
+                                    target="_blank"
+                                  >
+                                    打开来源
+                                  </a>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    没有可打开的 HTTPS 来源链接
+                                  </span>
+                                )}
+                              </p>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        没有已保存的来源覆盖记录。
+                      </p>
+                    )}
+                  </section>
+
+                  <section className="flex flex-col gap-2">
+                    <h4 className="text-sm font-semibold">
+                      未解决限制 ({report.limitations.length})
+                    </h4>
+                    {report.limitations.length ? (
+                      <ul className="list-disc space-y-1 pl-5 text-sm">
+                        {report.limitations.map((limitation, index) => (
+                          <li
+                            className="break-words"
+                            key={`limitation-${index}`}
+                          >
+                            {limitation}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        未提供限制说明。
+                      </p>
+                    )}
+                  </section>
+
+                  <section className="flex flex-col gap-2">
+                    <h4 className="text-sm font-semibold">纸面账本</h4>
+                    <p className="text-sm">
+                      {report.ledgerState === "INITIALIZED"
+                        ? "已初始化"
+                        : report.ledgerState === "NOT_INITIALIZED"
+                          ? "未初始化"
+                          : "不可用"}{" "}
+                      · <code>{report.ledgerState}</code>
+                    </p>
+                    <p className="break-words text-sm text-muted-foreground">
+                      {report.ledgerSummary ??
+                        "未提供账本摘要；不推算权益、持仓、订单或盈亏。"}
+                    </p>
+                  </section>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </section>
+
+          <section className="flex flex-col gap-1 border-t pt-3">
+            <h4 className="text-sm font-semibold">最终研究决策</h4>
+            <p className="break-words text-sm">
+              {report.finalDecision ??
+                "未提供；不能据此认为候选已通过或计划已获批。"}
+            </p>
+          </section>
+        </CardContent>
+      </Card>
     </li>
   );
 }
@@ -724,49 +797,59 @@ export function ReportCenter({
           筛选报告
         </h2>
         <search>
-          <form
-            action="/reports"
-            aria-labelledby="report-filters-heading"
-            className="rounded-xl border bg-card p-4"
-            method="get"
-          >
-            <fieldset className="flex min-w-0 flex-col gap-4 border-0 p-0 sm:flex-row sm:flex-wrap sm:items-end">
-              <legend className="sr-only">报告筛选条件</legend>
-              <div className="flex min-w-0 flex-col gap-2">
-                <label className="text-sm font-medium" htmlFor="report-query">
-                  搜索报告、候选或证据编号
-                </label>
-                <Input
-                  className="min-h-12 min-w-0 rounded-md border bg-background px-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-72 md:text-base"
-                  defaultValue={filters.query}
-                  id="report-query"
-                  name="q"
-                  type="search"
-                />
-              </div>
-              <div className="flex min-w-0 flex-col gap-2">
-                <label className="text-sm font-medium" htmlFor="report-type">
-                  报告类型
-                </label>
-                <select
-                  className="min-h-12 min-w-40 rounded-md border bg-background px-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  defaultValue={filters.type}
-                  id="report-type"
-                  name="type"
-                >
-                  <option value="">全部类型</option>
-                  {Object.entries(reportTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button className="min-h-12" type="submit">
-                应用筛选
-              </Button>
-            </fieldset>
-          </form>
+          <Card>
+            <CardContent>
+              <form
+                action="/reports"
+                aria-labelledby="report-filters-heading"
+                method="get"
+              >
+                <FieldGroup className="min-w-0 sm:flex-row sm:flex-wrap sm:items-end">
+                  <Field className="sm:w-72">
+                    <FieldLabel htmlFor="report-query">
+                      搜索报告、候选或证据编号
+                    </FieldLabel>
+                    <InputGroup className="min-h-12">
+                      <InputGroupInput
+                        className="min-h-12"
+                        defaultValue={filters.query}
+                        id="report-query"
+                        name="q"
+                        type="search"
+                      />
+                      <InputGroupAddon>
+                        <Search aria-hidden="true" />
+                      </InputGroupAddon>
+                    </InputGroup>
+                  </Field>
+                  <Field className="sm:w-48">
+                    <FieldLabel htmlFor="report-type">报告类型</FieldLabel>
+                    <Select defaultValue={filters.type || "ALL"} name="type">
+                      <SelectTrigger
+                        className="min-h-12 w-full"
+                        id="report-type"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">全部类型</SelectItem>
+                        {Object.entries(reportTypeLabels).map(
+                          ([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Button className="min-h-12" size="lg" type="submit">
+                    应用筛选
+                  </Button>
+                </FieldGroup>
+              </form>
+            </CardContent>
+          </Card>
         </search>
       </section>
 
@@ -786,7 +869,7 @@ export function ReportCenter({
         </div>
 
         {reports.length === 0 ? (
-          <Empty className="min-h-56 border bg-card px-4 py-10 sm:px-8">
+          <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <CircleHelp aria-hidden="true" />
@@ -803,7 +886,7 @@ export function ReportCenter({
             </EmptyHeader>
           </Empty>
         ) : matchingReports.length === 0 ? (
-          <Empty className="min-h-40 border bg-card px-4 py-8 sm:px-8">
+          <Empty>
             <EmptyHeader>
               <EmptyTitle>
                 <h3>没有符合条件的报告</h3>

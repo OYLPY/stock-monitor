@@ -26,8 +26,7 @@ describe("PriceHistoryChart", () => {
     expect(html).not.toContain("101.25");
   });
 
-  it("renders an accessible chart with a semantic time-and-price table", () => {
-    const firstMarketTimestamp = Date.parse("2025-01-02T21:00:00.000Z");
+  it("renders an accessible chart with a collapsible semantic time-and-price table", () => {
     const html = renderToStaticMarkup(
       createElement(PriceHistoryChart, {
         collectedAtMs: Date.parse("2025-01-06T00:00:00.000Z"),
@@ -36,7 +35,7 @@ describe("PriceHistoryChart", () => {
         market: "US",
         marketLabel: "美国市场",
         points: [
-          { marketAtMs: firstMarketTimestamp, close: 100 },
+          { marketAtMs: Date.parse("2025-01-02T21:00:00.000Z"), close: 100 },
           { marketAtMs: Date.parse("2025-01-03T21:00:00.000Z"), close: 102.5 },
         ],
         sourceName: "核验后的历史来源",
@@ -45,9 +44,10 @@ describe("PriceHistoryChart", () => {
 
     expect(html).toContain('role="img"');
     expect(html).toContain("aria-labelledby=");
-    expect(html).toContain("<details");
-    expect(html).toContain("<table");
-    expect(html).toContain("收盘价（USD / 股）");
+    expect(html).toContain('data-slot="collapsible"');
+    expect(html).toContain('data-slot="collapsible-trigger"');
+    expect(html).toContain('data-slot="chart"');
+    expect(html).toContain("查看图表数据表（2 条）");
     expect(html).toContain("历史来源");
     expect(html).toContain("America/New_York");
     expect(html).toContain("HISTORICAL");
@@ -56,7 +56,7 @@ describe("PriceHistoryChart", () => {
         dateStyle: "medium",
         timeStyle: "short",
         timeZone: "America/New_York",
-      }).format(new Date(firstMarketTimestamp)),
+      }).format(new Date(Date.parse("2025-01-03T21:00:00.000Z"))),
     );
   });
 
@@ -79,9 +79,8 @@ describe("PriceHistoryChart", () => {
     expect(html).toContain("DEMO_ONLY");
     expect(html).toContain("Asia/Tokyo");
     expect(html).toContain("日本市场收盘价历史");
+    expect(html).toContain('role="img"');
+    expect(html).toContain('data-slot="chart"');
     expect(html).not.toMatch(/NaN|Infinity/);
-    const pointY = Number(/<circle[^>]*cy="([^"]+)"/.exec(html)?.[1]);
-    expect(pointY).toBeGreaterThan(20);
-    expect(pointY).toBeLessThan(232);
   });
 });

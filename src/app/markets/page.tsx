@@ -5,6 +5,15 @@ import {
   MarketDataStatusLegend,
 } from "@/components/market/market-data-status";
 import { PriceHistoryChart } from "@/components/market/price-history-chart";
+import { Alert, AlertDescription } from "@/components/shadcn/alert";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/shadcn/card";
 import { MARKET_TIME_ZONES } from "@/domain/primitives";
 import type { CurrencyCode, MarketCode } from "@/domain/primitives";
 
@@ -48,56 +57,54 @@ export default function MarketsPage() {
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           {markets.map(({ code, currency, label }) => (
-            <article
-              aria-labelledby={`market-${code}-heading`}
-              className="flex min-w-0 flex-col gap-4 rounded-xl border bg-card p-4 sm:p-5"
-              key={code}
-            >
-              <header className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <h3
-                    className="text-base font-semibold"
-                    id={`market-${code}-heading`}
-                  >
-                    {label}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {MARKET_TIME_ZONES[code]}
-                  </p>
+            <Card className="min-w-0" key={code}>
+              <CardHeader>
+                <div>
+                  <CardTitle>
+                    <h3 id={`market-${code}-heading`}>{label}</h3>
+                  </CardTitle>
+                  <CardDescription>{MARKET_TIME_ZONES[code]}</CardDescription>
                 </div>
-                <MarketDataStatusBadge status="NOT_VERIFIED" />
-              </header>
-              <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <dt className="text-muted-foreground">开闭市状态</dt>
-                  <dd className="flex flex-col items-start gap-1">
-                    <span>无法确认</span>
-                    <span className="text-xs text-muted-foreground">
-                      交易日历未接入
-                    </span>
-                  </dd>
-                </div>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <dt className="text-muted-foreground">最新行情 / 市场时间</dt>
-                  <dd>无可核验快照 / 无时间戳</dd>
-                </div>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <dt className="text-muted-foreground">行情来源 / 采集时间</dt>
-                  <dd>未接入 / 无采集记录</dd>
-                </div>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <dt className="text-muted-foreground">市场报价币种</dt>
-                  <dd>{currency}</dd>
-                </div>
-              </dl>
-              <p className="flex items-start gap-2 border-t pt-3 text-xs leading-5 text-muted-foreground">
-                <CircleHelp
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0"
-                />
-                市场时段和价格时间须由来源确认；交易日历未接入时不根据开发机时钟推断开闭市。
-              </p>
-            </article>
+                <CardAction>
+                  <MarketDataStatusBadge status="NOT_VERIFIED" />
+                </CardAction>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <dt className="text-muted-foreground">开闭市状态</dt>
+                    <dd className="flex flex-col items-start gap-1">
+                      <span>无法确认</span>
+                      <span className="text-xs text-muted-foreground">
+                        交易日历未接入
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <dt className="text-muted-foreground">
+                      最新行情 / 市场时间
+                    </dt>
+                    <dd>无可核验快照 / 无时间戳</dd>
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <dt className="text-muted-foreground">
+                      行情来源 / 采集时间
+                    </dt>
+                    <dd>未接入 / 无采集记录</dd>
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <dt className="text-muted-foreground">市场报价币种</dt>
+                    <dd>{currency}</dd>
+                  </div>
+                </dl>
+                <Alert>
+                  <CircleHelp aria-hidden="true" />
+                  <AlertDescription>
+                    市场时段和价格时间须由来源确认；交易日历未接入时不根据开发机时钟推断开闭市。
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </section>

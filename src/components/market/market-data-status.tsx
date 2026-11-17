@@ -1,4 +1,5 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/shadcn/badge";
+import { Card, CardContent } from "@/components/shadcn/card";
 
 const statusDetails = [
   { status: "REAL", description: "来自实际来源，不代表实时、完整或准确。" },
@@ -43,21 +44,22 @@ export function MarketDataStatusLegend() {
           当前没有接入行情源；以下是状态含义，不代表已取得对应数据。
         </p>
       </div>
-      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {statusDetails.map(({ description, status }) => (
-          <div
-            className="flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-3"
-            key={status}
-          >
-            <dt>
-              <MarketDataStatusBadge status={status} />
-            </dt>
-            <dd className="text-sm leading-5 text-muted-foreground">
-              {description}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <Card>
+        <CardContent>
+          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {statusDetails.map(({ description, status }) => (
+              <div className="flex flex-col gap-2" key={status}>
+                <dt>
+                  <MarketDataStatusBadge status={status} />
+                </dt>
+                <dd className="text-sm leading-5 text-muted-foreground">
+                  {description}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </CardContent>
+      </Card>
     </section>
   );
 }

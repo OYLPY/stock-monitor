@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { Toaster } from "@/components/shadcn/sonner";
+import { TooltipProvider } from "@/components/shadcn/tooltip";
 import { AppShell } from "@/components/layout/app-shell";
 
 export const metadata: Metadata = {
@@ -17,7 +19,10 @@ export default function RootLayout({
         <a className="skip-link" href="#main-content">
           跳到主要内容
         </a>
-        <AppShell>{children}</AppShell>
+        <TooltipProvider>
+          <AppShell>{children}</AppShell>
+          <Toaster />
+        </TooltipProvider>
       </body>
     </html>
   );

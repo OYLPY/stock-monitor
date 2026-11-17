@@ -16,6 +16,10 @@
 
 ## UI 与现代 Web 指南
 - UI 视觉与交互约定以 `docs/design/UI_DESIGN.md` 为准。
+- shadcn 组件必须且只能由官方 CLI 安装：使用 `pnpm exec shadcn add <component...> --yes`；禁止手写、复制、脚本生成或以其他方式创建组件源码。不得手动修改 CLI 生成的组件源码。
+- 任务开始前已存在的 `src/components/ui/*` 是只读文件，不得修改；页面组件统一从 `@/components/shadcn/*` 导入。确需新组件时先检查 `components.json` 和已安装文件，再用 shadcn CLI 安装。
+- 页面使用真实的 shadcn 组件，不手写仿制按钮、输入、Select、卡片、空态、披露控件或提示框。组件的 `className` 只用于布局、响应式尺寸和可访问焦点，不覆盖组件的颜色、字体或形状；表单用 `Field`/`FieldGroup`，下拉筛选用 shadcn `Select`。
+- 反馈按严重性选择：短暂成功/状态使用 Sonner toast；重要错误或需用户确认的警告使用 shadcn `AlertDialog`；持久上下文提示使用 shadcn `Alert`。披露使用 `Collapsible`/`Accordion`，侧面板使用 `Sheet`/`Drawer`，导航容器使用 `Sidebar`，数据用 `Table`/`Chart`。
 - 开始 UI、CSS 或客户端 JavaScript 实现前，先阅读 `.agents/skills/modern-web-guidance/SKILL.md`，用 `pnpx modern-web-guidance@latest search "<2–5 个英文词的具体 UI 能力>" --skill-version 2026_11_09-5bcc021b` 检索，再对匹配结果执行 `pnpx modern-web-guidance@latest retrieve "<guide-id>"`；按需拆分多个主题，只应用与当前任务相关的指导。
 - 默认采用 Baseline Widely available 能力；对更新的浏览器能力遵循指南中的回退建议，除非项目另有明确兼容策略。优先考虑原生 HTML/CSS/DOM 能力，但需遵循本项目的安全、可访问性和 TypeScript 规范。
 - 不为单个功能运行全仓库 `legacy-scan`；仅在明确要求广泛现代化审计时使用。UI 变更完成后按任务要求验证桌面/窄屏、键盘与焦点状态，并核对空态、错误、数据来源和时效表达。

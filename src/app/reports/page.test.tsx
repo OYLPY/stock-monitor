@@ -1,7 +1,22 @@
 import { createElement } from "react";
+import type { ReactNode } from "react";
 import type { ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/components/shadcn/collapsible", async () => {
+  const React = await import("react");
+  const Content = ({ children }: { children: ReactNode }) =>
+    React.createElement("div", null, children);
+  const Trigger = ({ children }: { children: ReactNode }) =>
+    React.createElement("button", { type: "button" }, children);
+
+  return {
+    Collapsible: Content,
+    CollapsibleContent: Content,
+    CollapsibleTrigger: Trigger,
+  };
+});
 
 import ReportsPage from "@/app/reports/page";
 import { ReportCenter } from "@/components/reports/report-center";
