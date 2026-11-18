@@ -193,9 +193,9 @@
         {
           "id": "P09-06",
           "title": "五维评分与 18/25 验证候选门禁",
-          "scope": "样本外稳定、扣费收益、最大回撤、成交可行性、跨环境稳健各1–5；缺项不打分；≥18仅标记待风控审批候选。",
-          "deliverables": "src/features/validation/scoring、契约/测试",
-          "acceptance": "缺实证不出现伪分数；分数及数据依据可追溯；分数高也不能绕过风控",
+          "scope": "样本外稳定、扣费收益、最大回撤、成交可行性、跨环境稳健各1–5；使用显式版本化并带历史校准证据的规则；缺项不打分；≥18仅标记待风控审批候选。",
+          "deliverables": "src/features/validation/scoring.ts、契约/测试",
+          "acceptance": "阈值严格递增且来源可追溯；缺实证不出现伪分数；Fixture 为 DEMO_ONLY；分数高也不能绕过风控",
           "depends": [
             "P09-04",
             "P09-05"

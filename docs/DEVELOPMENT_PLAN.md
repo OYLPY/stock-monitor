@@ -177,7 +177,7 @@
 | [`P09-03`](https://github.com/OYLPY/stock-monitor/issues/60) | **三类初始策略与参数边界**：提供财报后漂移、趋势/放量突破、过度反应均值回归的严格参数 Schema 和确定性信号；不自动优化参数。财报事件按发布时间和可用时间参与，趋势窗口按点时拆股重基，RSI 保留完整来源链。 | src/features/strategies、参数 Schema、Fixture 用例 | 三种规则可重复调用；固定股数符合交易单位；完整入场/退出/止损/持有期限；缺少本次决策所需数据时不发信号并返回原因；Fixture 为 DEMO_ONLY；信号交 P09-02 下一开盘撮合；依赖：P09-01, P09-02 |
 | [`P09-04`](https://github.com/OYLPY/stock-monitor/issues/61) | **样本内/样本外与 Walk-forward 实验**：实现 expanding/rolling 时间折、隔离期、训练窗独占参数选择和冻结 hash、逐折交易收益统计及显式区块长度的确定性 circular block bootstrap。 | src/features/validation、测试报告 | 测试窗不参与选参且互不重叠；每折至少 30 笔闭合交易、无遗留仓位且数据可信才可标记 VERIFIED；不足时 NOT_VERIFIED、Fixture 为 DEMO_ONLY；相同输入可重算；依赖：P09-02, P09-03 |
 | [`P09-05`](https://github.com/OYLPY/stock-monitor/issues/62) | **2020/2022 压力与费用/汇率敏感性**：确定性重跑基线与显式费用、跳空滑点准备金、流动性容量及点时 FX 场景；以完整窗口证据门控历史指标，无真实数据时 `NOT_VERIFIED`。 | `src/features/validation/stress-test.ts`、定向测试、设计/需求追踪 | 窗口边界、来源、参数和选参历史可追溯；FX 不前向填充；Fixture 为 `DEMO_ONLY`；同一成交集合下增加成本不得改善净权益，成交变化须显式标出；依赖：P09-04 |
-| [`P09-06`](https://github.com/OYLPY/stock-monitor/issues/63) | **五维评分与 18/25 验证候选门禁**：样本外稳定、扣费收益、最大回撤、成交可行性、跨环境稳健各1–5；缺项不打分；≥18仅标记待风控审批候选。 | src/features/validation/scoring、契约/测试 | 缺实证不出现伪分数；分数及数据依据可追溯；分数高也不能绕过风控；依赖：P09-04, P09-05 |
+| [`P09-06`](https://github.com/OYLPY/stock-monitor/issues/63) | **五维评分与 18/25 验证候选门禁**：样本外稳定、扣费收益、最大回撤、成交可行性、跨环境稳健各1–5；由显式版本化校准规则按可追溯指标确定；缺项不打分；≥18仅标记待风控审批候选。 | `src/features/validation/scoring.ts`、契约/测试 | 阈值须严格递增且具历史校准证据；缺实证不出现伪分数；Fixture 为 `DEMO_ONLY`；≥18不能绕过风控；依赖：P09-04, P09-05 |
 
 ### P10 — 纸面模拟与独立风控
 
