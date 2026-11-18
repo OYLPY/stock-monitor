@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { openDatabase } from "../../db";
+import { openDatabase } from "@/db";
 import {
   auditEvents,
   marketEventEvidence,
@@ -9,8 +9,9 @@ import {
   marketEvents,
   sourceRecords,
   sources,
-} from "../../db/schema";
-import { createTestDatabase } from "../../db/test-database";
+} from "@/db/schema";
+import { createTestDatabase } from "@/db/test-database";
+import { instrumentCompositeKey } from "@/domain/primitives";
 import {
   appendMarketEventRevision,
   appendSourceRecord,
@@ -20,7 +21,7 @@ import {
   listMarketEvents,
   registerSource,
   verifyAuditTrail,
-} from "./repository";
+} from "@/features/evidence/repository";
 
 function fixtureSourceInput() {
   return {
@@ -176,6 +177,70 @@ describe("evidence repository", () => {
         expect(verifyAuditTrail(restarted)).toBe(true);
       } finally {
         restarted.client.close();
+      }
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("fingerprints event identity deterministically and changes for identity fields", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      const source = registerSource(fixture.database, fixtureSourceInput());
+      const record = appendSourceRecord(
+        fixture.database,
+        sourceRecordInput(source.id),
+      );
+      const base = eventInput(record.id);
+      const first = createMarketEvent(fixture.database, base).revisions[0];
+      const expectedFingerprint = createHash("sha256")
+        .update(
+          JSON.stringify([
+            "sha256-canonical-v1",
+            base.category,
+            base.marketCode,
+            instrumentCompositeKey(base.instrument),
+            base.occurredAtMs,
+            base.summary,
+          ]),
+        )
+        .digest("hex");
+
+      expect(first).toMatchObject({
+        fingerprintAlgorithmVersion: "sha256-canonical-v1",
+        fingerprintSha256: expectedFingerprint,
+      });
+      expect(
+        createMarketEvent(fixture.database, base).revisions[0]
+          ?.fingerprintSha256,
+      ).toBe(expectedFingerprint);
+      expect(
+        createMarketEvent(fixture.database, {
+          ...base,
+          importanceReason: "Metadata changed without changing event identity.",
+          publishedAtMs: base.occurredAtMs + 1_000,
+        }).revisions[0]?.fingerprintSha256,
+      ).toBe(expectedFingerprint);
+
+      for (const changed of [
+        { ...base, category: "CORPORATE_ACTION" },
+        { ...base, summary: "A materially different event." },
+        { ...base, occurredAtMs: base.occurredAtMs + 1 },
+        { ...base, instrument: { ...base.instrument, symbol: "6758" } },
+        {
+          ...base,
+          marketCode: "US" as const,
+          instrument: {
+            market: "US" as const,
+            exchangeCode: "XNYS",
+            symbol: "AAPL",
+          },
+        },
+      ]) {
+        expect(
+          createMarketEvent(fixture.database, changed).revisions[0]
+            ?.fingerprintSha256,
+        ).not.toBe(expectedFingerprint);
       }
     } finally {
       await fixture.cleanup();

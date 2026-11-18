@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeOhlcv } from "./indicators";
-import type { OhlcvBarInput, OhlcvInput } from "./indicators";
+import {
+  normalizeOhlcv,
+  type OhlcvBarInput,
+  type OhlcvInput,
+} from "@/features/quant/indicators";
 
 function businessDates(count: number): string[] {
   const dates: string[] = [];
@@ -74,39 +77,42 @@ function input(overrides: Partial<OhlcvInput> = {}): OhlcvInput {
 }
 
 describe("normalizeOhlcv", () => {
-  it("maps gaps, resets indicator windows, and does not bridge returns", () => {
-    const dates = businessDates(26);
-    const bars = dates.flatMap((date, index) =>
-      index === 15 ? [] : [bar(date, index < 15 ? "100" : "110")],
-    );
-    const result = normalizeOhlcv(
-      input({
-        expectedSessions: calendar(dates),
-        bars,
-      }),
-    );
+  it.each([15, 17, 19])(
+    "maps a missing session at index %i, resets windows, and does not bridge returns",
+    (gapIndex) => {
+      const dates = businessDates(26);
+      const bars = dates.flatMap((date, index) =>
+        index === gapIndex ? [] : [bar(date, index < gapIndex ? "100" : "110")],
+      );
+      const result = normalizeOhlcv(
+        input({
+          expectedSessions: calendar(dates),
+          bars,
+        }),
+      );
 
-    expect(result.sessions[15]).toMatchObject({
-      sessionIndex: 15,
-      status: "GAP",
-      verificationStatus: "NOT_VERIFIED",
-      bar: null,
-    });
-    expect(result.sessions[16].indicators.dailyReturn).toEqual({
-      value: null,
-      status: "GAP",
-    });
-    expect(result.sessions.at(-1)?.indicators).toMatchObject({
-      simpleMovingAverage: { value: null, status: "INSUFFICIENT_HISTORY" },
-      averageTrueRange14: { value: null, status: "INSUFFICIENT_HISTORY" },
-      realizedVolatility: { value: null, status: "INSUFFICIENT_HISTORY" },
-      relativeStrengthIndex14: {
+      expect(result.sessions[gapIndex]).toMatchObject({
+        sessionIndex: gapIndex,
+        status: "GAP",
+        verificationStatus: "NOT_VERIFIED",
+        bar: null,
+      });
+      expect(result.sessions[gapIndex + 1].indicators.dailyReturn).toEqual({
         value: null,
-        status: "INSUFFICIENT_HISTORY",
-      },
-    });
-    expect(result.verificationStatus).toBe("NOT_VERIFIED");
-  });
+        status: "GAP",
+      });
+      expect(result.sessions.at(-1)?.indicators).toMatchObject({
+        simpleMovingAverage: { value: null, status: "INSUFFICIENT_HISTORY" },
+        averageTrueRange14: { value: null, status: "INSUFFICIENT_HISTORY" },
+        realizedVolatility: { value: null, status: "INSUFFICIENT_HISTORY" },
+        relativeStrengthIndex14: {
+          value: null,
+          status: "INSUFFICIENT_HISTORY",
+        },
+      });
+      expect(result.verificationStatus).toBe("NOT_VERIFIED");
+    },
+  );
 
   it("applies a sourced split to indicator history only on or after its effective date", () => {
     const dates = businessDates(2);
@@ -259,6 +265,28 @@ describe("normalizeOhlcv", () => {
         status: "AVAILABLE",
       },
       relativeStrengthIndex14: { value: "50.00000000", status: "AVAILABLE" },
+    });
+  });
+
+  it("seeds ATR with true ranges and applies Wilder smoothing after a close gap", () => {
+    const dates = businessDates(16);
+    const bars = dates.map((date, index) => {
+      if (index === 0) return { ...bar(date, "100"), high: "101", low: "99" };
+      if (index === 1) return { ...bar(date, "104"), high: "105", low: "104" };
+      if (index < 15) return { ...bar(date, "104"), high: "105", low: "103" };
+      return { ...bar(date, "107"), high: "108", low: "107" };
+    });
+    const result = normalizeOhlcv(
+      input({ expectedSessions: calendar(dates), bars }),
+    );
+
+    expect(result.sessions[14].indicators.averageTrueRange14).toEqual({
+      value: "2.21428571",
+      status: "AVAILABLE",
+    });
+    expect(result.sessions[15].indicators.averageTrueRange14).toEqual({
+      value: "2.34183673",
+      status: "AVAILABLE",
     });
   });
 

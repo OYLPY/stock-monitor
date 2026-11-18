@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { createTestDatabase } from "@/db/test-database";
 import { initializeDefaultPaperAccount } from "@/db/paper-account-repository";
 import { appendPaperLedgerEvent } from "@/features/paper/ledger";
-import { createPaperEquitySnapshot } from "./drawdown";
+import { createPaperEquitySnapshot } from "@/features/risk/drawdown";
 import {
   appendSourceRecord,
   registerSource,
@@ -21,7 +21,7 @@ import {
   approvePaperPlan,
   createPaperPlan,
   createPaperPlanVersion,
-} from "./checker";
+} from "@/features/risk/checker";
 
 type RecordOptions = {
   content: string;

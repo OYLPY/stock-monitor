@@ -3,7 +3,7 @@ import { marketDateAt } from "@/domain/primitives";
 import {
   marketCalendarStateAt,
   type MarketCalendarOverride,
-} from "./market-calendar";
+} from "@/features/market-calendar/market-calendar";
 
 function instant(value: string): number {
   return Date.parse(value);
@@ -26,6 +26,22 @@ describe("marketCalendarStateAt", () => {
       "https://www.nyse.com/trade/hours-calendars",
     );
   });
+
+  it.each([
+    ["2026-03-06T14:29:59.999Z", "CLOSED"],
+    ["2026-03-06T14:30:00.000Z", "OPEN"],
+    ["2026-03-06T20:59:59.999Z", "OPEN"],
+    ["2026-03-06T21:00:00.000Z", "CLOSED"],
+    ["2026-03-09T13:29:59.999Z", "CLOSED"],
+    ["2026-03-09T13:30:00.000Z", "OPEN"],
+    ["2026-03-09T19:59:59.999Z", "OPEN"],
+    ["2026-03-09T20:00:00.000Z", "CLOSED"],
+  ] as const)(
+    "keeps NYSE session boundaries half-open at %s",
+    (value, status) => {
+      expect(marketCalendarStateAt("NYSE", instant(value)).status).toBe(status);
+    },
+  );
 
   it.each([
     [
@@ -85,6 +101,9 @@ describe("marketCalendarStateAt", () => {
       marketCalendarStateAt("TSE", instant("2026-11-16T00:00:00Z")),
     ).toMatchObject({ status: "OPEN" });
     expect(
+      marketCalendarStateAt("TSE", instant("2026-11-16T02:29:00Z")),
+    ).toMatchObject({ status: "OPEN" });
+    expect(
       marketCalendarStateAt("TSE", instant("2026-11-16T02:30:00Z")),
     ).toMatchObject({ status: "CLOSED", reason: "OUTSIDE_SESSION" });
     expect(
@@ -102,6 +121,16 @@ describe("marketCalendarStateAt", () => {
     expect(
       marketCalendarStateAt("TSE", instant("2026-11-14T01:00:00Z")),
     ).toMatchObject({ status: "CLOSED", reason: "WEEKEND" });
+  });
+
+  it("keeps every minute of the TSE lunch interval closed", () => {
+    const lunchStart = instant("2026-11-16T02:30:00Z");
+
+    for (let minute = 0; minute < 60; minute += 1) {
+      expect(
+        marketCalendarStateAt("TSE", lunchStart + minute * 60_000),
+      ).toMatchObject({ status: "CLOSED", reason: "OUTSIDE_SESSION" });
+    }
   });
 
   it("fails closed outside each verified calendar coverage", () => {

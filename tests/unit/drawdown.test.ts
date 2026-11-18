@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { calculatePaperEquity, isDrawdownLimitReached } from "./drawdown";
+import {
+  calculatePaperEquity,
+  isDrawdownLimitReached,
+} from "@/features/risk/drawdown";
 
 const asOfMs = BigInt(1_000);
 const jpInstrumentId = "00000000-0000-4000-8000-000000000001";
@@ -151,5 +154,20 @@ describe("paper equity and drawdown", () => {
     expect(isDrawdownLimitReached(BigInt(800_001), BigInt(1_000_000))).toBe(
       false,
     );
+  });
+
+  it("keeps the 20% boundary exact across equity scales", () => {
+    for (const peak of [
+      BigInt(5),
+      BigInt(100),
+      BigInt(10_000),
+      BigInt(1_000_000),
+    ]) {
+      const boundary = (peak * BigInt(4)) / BigInt(5);
+
+      expect(isDrawdownLimitReached(boundary, peak)).toBe(true);
+      expect(isDrawdownLimitReached(boundary + BigInt(1), peak)).toBe(false);
+      expect(isDrawdownLimitReached(boundary - BigInt(1), peak)).toBe(true);
+    }
   });
 });

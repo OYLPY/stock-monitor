@@ -7,7 +7,7 @@ import {
   moneyFromDecimal,
   parseFixedDecimal,
   parseFxRate,
-} from "./primitives";
+} from "@/domain/primitives";
 
 describe("domain primitives", () => {
   it("maps UTC instants through New York daylight-saving changes", () => {
@@ -67,6 +67,20 @@ describe("domain primitives", () => {
     expect(
       moneyFromDecimal("-12.345", "USD", "HALF_AWAY_FROM_ZERO").amountMinor,
     ).toBe(BigInt(-1235));
+  });
+
+  it("preserves integral yen exactly across rounding modes", () => {
+    for (let amount = -100; amount <= 100; amount += 1) {
+      for (const rounding of [
+        "CEIL",
+        "FLOOR",
+        "HALF_AWAY_FROM_ZERO",
+      ] as const) {
+        expect(
+          moneyFromDecimal(String(amount), "JPY", rounding).amountMinor,
+        ).toBe(BigInt(amount));
+      }
+    }
   });
 
   it("converts money using explicit base and quote currency units", () => {
