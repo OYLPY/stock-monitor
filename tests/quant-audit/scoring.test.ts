@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { SCORING_DIMENSIONS, scoreValidation } from "./scoring";
-import type { ScoringInput, ScoringRule } from "./scoring";
+import {
+  SCORING_DIMENSIONS,
+  scoreValidation,
+} from "@/features/validation/scoring";
+import type { ScoringInput, ScoringRule } from "@/features/validation/scoring";
 
 const HASH = "a".repeat(64);
 type TestEvidence = NonNullable<

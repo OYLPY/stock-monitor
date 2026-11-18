@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { runWalkForwardValidation } from "./walk-forward";
-import type { WalkForwardPlan } from "./walk-forward";
+import { runWalkForwardValidation } from "@/features/validation/walk-forward";
+import type { WalkForwardPlan } from "@/features/validation/walk-forward";
 
 function businessSessions(count: number) {
   const sessions: { date: string; value: number }[] = [];

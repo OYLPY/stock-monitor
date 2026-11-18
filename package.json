@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run tests/unit --coverage.enabled",
+    "test:quant-audit": "vitest run tests/quant-audit",
     "test:e2e": "playwright test",
     "backup": "node --experimental-strip-types scripts/backup.ts",
     "restore": "node --experimental-strip-types scripts/restore.ts",

@@ -7,6 +7,7 @@ export default defineConfig({
       "src/**/*.test.{ts,tsx}",
       "scripts/**/*.test.ts",
       "tests/unit/**/*.test.ts",
+      "tests/quant-audit/**/*.test.ts",
     ],
     coverage: {
       provider: "v8",

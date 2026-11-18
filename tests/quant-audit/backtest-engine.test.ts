@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { runBacktest } from "@/features/backtest/engine";
 import { runStressSensitivity } from "@/features/validation/stress-test";
-import { runBacktest } from "./engine";
-import type { BacktestRunInput, BacktestSession } from "./engine";
+import type {
+  BacktestRunInput,
+  BacktestSession,
+} from "@/features/backtest/engine";
 import type { StressScenario } from "@/features/validation/stress-test";
 
 function businessDates(count: number, firstDate = "2026-01-05"): string[] {
@@ -655,6 +658,23 @@ describe("runBacktest", () => {
         }),
       ),
     ).toThrow("signal_precedes_source_bar_close");
+  });
+
+  it("rejects a signal that uses a source bar before it became available", () => {
+    const dates = businessDates(3);
+
+    expect(() =>
+      runBacktest(
+        backtestInput({
+          signals: [
+            {
+              ...signal("early-available-buy", dates[0], "BUY"),
+              signalAtMs: closeAt(dates[0]) + 30_000,
+            },
+          ],
+        }),
+      ),
+    ).toThrow("signal_precedes_source_bar_availability");
   });
 });
 
