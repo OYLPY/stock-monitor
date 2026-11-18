@@ -71,6 +71,7 @@ pnpm restore -- "D:\backups\stock-monitor-2026-11-16" "D:\data\stock-monitor-res
 - 设置页备份使用 `getLocalDatabasePath()` 的应用路径，并将快照放入其旁边的 `backups` 子目录；命令行仍可为独立环境显式指定路径。
 - 恢复目标必须是新文件，不提供覆盖恢复或自动切换当前应用数据库的开关。
 - 备份会保存 SQLite 内现有数据和来源标记；数据是否为 REAL、DELAYED、HISTORICAL 或 DEMO_ONLY 由其原有记录决定。
+- P10-05 的恢复验证会在子进程留下未提交 WAL 写入后重新打开数据库，并确认账本审计与已提交状态一致；该测试验证 SQLite 的进程中断恢复，不模拟设备断电或硬件故障。
 - 100,000 条账本记录在 60 秒内完成备份校验和恢复的基准由 P12 性能验收负责；本任务的文件型测试不代表该基准已通过。
 
 ## 需求与实现追踪
@@ -78,5 +79,5 @@ pnpm restore -- "D:\backups\stock-monitor-2026-11-16" "D:\data\stock-monitor-res
 - 需求：[NFR-007](../requirements/NFR.md)、[RQ-026 / AC-NFR-011](../requirements/TRACEABILITY.md)
 - 设计：[SQLite Schema 与恢复规则](../design/DB_SCHEMA.md)
 - 实现：`src/db/backup.ts`、`src/app/api/v1/backup/route.ts`、`scripts/backup.ts`、`scripts/restore.ts`
-- 验证：`src/db/backup.test.ts`（真实临时 SQLite 文件、WAL 快照、已知纸面账本、损坏与路径保护）、`src/app/api/v1/backup/route.test.ts` 与 P06-06 Playwright 冒烟
-- Issue：[P05-05 / #41](https://github.com/OYLPY/stock-monitor/issues/41)、[P06-06 / #47](https://github.com/OYLPY/stock-monitor/issues/47)
+- 验证：`src/db/backup.test.ts`（真实临时 SQLite 文件、WAL 快照、已知纸面账本、进程中断恢复、审计摘要一致、损坏与路径保护）、`src/app/api/v1/backup/route.test.ts` 与 P06-06 Playwright 冒烟
+- Issue：[P05-05 / #41](https://github.com/OYLPY/stock-monitor/issues/41)、[P06-06 / #47](https://github.com/OYLPY/stock-monitor/issues/47)、[P10-05 / #68](https://github.com/OYLPY/stock-monitor/issues/68)

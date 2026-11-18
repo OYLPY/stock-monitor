@@ -14,7 +14,12 @@ import {
   parseFixedDecimal,
   parseFxRate,
 } from "@/domain/primitives";
-import { paperLedgerInputHash, readPaperLedger } from "@/features/paper/ledger";
+import {
+  paperLedgerInputHash,
+  readPaperLedger,
+  replayPaperLedger,
+  type PaperLedgerEvent,
+} from "@/features/paper/ledger";
 import { getSourceEvidence, sourceEvidenceInputSchema } from "./evidence";
 
 const timestampSchema = z.number().int().nonnegative().safe();
@@ -238,6 +243,180 @@ export function calculatePaperEquity(input: PaperEquityInput) {
     equityMinor,
     unresolvedReason: null,
   };
+}
+
+export function verifyPaperEquitySnapshot(
+  database: AppDatabase,
+  valuation: typeof equityValuations.$inferSelect,
+  ledgerEvents: PaperLedgerEvent[],
+) {
+  if (
+    valuation.ruleVersion !== equityRuleVersion ||
+    valuation.status !== "VERIFIED" ||
+    valuation.equityMinor === null ||
+    valuation.ledgerSequenceNo < BigInt(1) ||
+    valuation.ledgerSequenceNo > BigInt(ledgerEvents.length)
+  ) {
+    return false;
+  }
+
+  const prefix = ledgerEvents.slice(0, Number(valuation.ledgerSequenceNo));
+  if (valuation.asOfMs < prefix.at(-1)!.effectiveAtMs) return false;
+
+  const referencedEvents = database.orm
+    .select({
+      ledgerEventId: equityValuationEvidence.ledgerEventId,
+      sourceRecordId: equityValuationEvidence.sourceRecordId,
+    })
+    .from(equityValuationEvidence)
+    .where(eq(equityValuationEvidence.valuationId, valuation.id))
+    .all()
+    .sort((a, b) => a.ledgerEventId.localeCompare(b.ledgerEventId));
+  const expectedEvents = prefix
+    .map((event) => ({
+      ledgerEventId: event.id,
+      sourceRecordId: event.sourceRecordId,
+    }))
+    .sort((a, b) => a.ledgerEventId.localeCompare(b.ledgerEventId));
+  if (
+    referencedEvents.length !== expectedEvents.length ||
+    referencedEvents.some(
+      (event, index) =>
+        event.ledgerEventId !== expectedEvents[index]!.ledgerEventId ||
+        event.sourceRecordId !== expectedEvents[index]!.sourceRecordId,
+    )
+  ) {
+    return false;
+  }
+
+  const evidenceRows = database.orm
+    .select()
+    .from(equityValuationMarketEvidence)
+    .where(eq(equityValuationMarketEvidence.valuationId, valuation.id))
+    .all();
+  const suppliedEvidence: EquityMarketEvidenceInput[] = [];
+  const marketEvidence: MarketEvidence[] = [];
+  for (const row of evidenceRows) {
+    if (evidenceHash(row.content) !== row.contentHashSha256) return false;
+    const source = getSourceEvidence(
+      database,
+      { sourceRecordId: row.sourceRecordId, content: row.content },
+      ["MARKET_QUOTE"],
+      valuation.asOfMs,
+      true,
+    );
+    if (
+      "reasonCode" in source ||
+      source.record.contentHashSha256 !== row.contentHashSha256 ||
+      source.record.occurredAtMs === null ||
+      (source.record.authorityRole !== "EXCHANGE_PRIMARY" &&
+        source.record.authorityRole !== "AUTHORIZED_VENDOR")
+    ) {
+      return false;
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(row.content) as unknown;
+    } catch {
+      return false;
+    }
+    if (row.role === "POSITION_QUOTE" && row.instrumentId !== null) {
+      const result = positionQuotePayloadSchema.safeParse(payload);
+      if (
+        !result.success ||
+        result.data.instrumentId !== row.instrumentId ||
+        BigInt(result.data.marketAtMs) !== source.record.occurredAtMs
+      ) {
+        return false;
+      }
+      suppliedEvidence.push({
+        role: row.role,
+        instrumentId: row.instrumentId,
+        sourceRecordId: row.sourceRecordId,
+        content: row.content,
+      });
+      marketEvidence.push({
+        role: row.role,
+        instrumentId: row.instrumentId,
+        sourceRecordId: row.sourceRecordId,
+        contentHashSha256: row.contentHashSha256,
+        payload: result.data,
+      });
+    } else if (row.role === "FX_RATE" && row.instrumentId === null) {
+      const result = fxPayloadSchema.safeParse(payload);
+      if (
+        !result.success ||
+        BigInt(result.data.marketAtMs) !== source.record.occurredAtMs
+      ) {
+        return false;
+      }
+      suppliedEvidence.push({
+        role: row.role,
+        sourceRecordId: row.sourceRecordId,
+        content: row.content,
+      });
+      marketEvidence.push({
+        role: row.role,
+        sourceRecordId: row.sourceRecordId,
+        contentHashSha256: row.contentHashSha256,
+        payload: result.data,
+      });
+    } else {
+      return false;
+    }
+  }
+
+  const inputHash = createHash("sha256")
+    .update(
+      JSON.stringify({
+        ledger: paperLedgerInputHash(prefix),
+        market: marketInputHash(suppliedEvidence),
+      }),
+    )
+    .digest("hex");
+  if (inputHash !== valuation.inputHashSha256) return false;
+
+  const projection = replayPaperLedger(prefix);
+  const instrumentIds = [...projection.positions.keys()];
+  const instrumentRows = instrumentIds.length
+    ? database.orm
+        .select()
+        .from(instruments)
+        .where(inArray(instruments.id, instrumentIds))
+        .all()
+    : [];
+  const instrumentById = new Map(
+    instrumentRows.map((instrument) => [instrument.id, instrument]),
+  );
+  const result = calculatePaperEquity({
+    asOfMs: valuation.asOfMs,
+    cashBalances: [...projection.cashBalances].map(
+      ([currencyCode, balance]) => ({ currencyCode, ...balance }),
+    ),
+    positions: [...projection.positions].map(
+      ([instrumentId, quantityShares]) => {
+        const instrument = instrumentById.get(instrumentId);
+        return {
+          instrumentId,
+          quantityShares,
+          quoteCurrencyCode:
+            instrument?.quoteCurrencyCode === "USD" ? "USD" : "JPY",
+          classificationStatus:
+            instrument?.classificationStatus === "VERIFIED"
+              ? "VERIFIED"
+              : "NOT_VERIFIED",
+        };
+      },
+    ),
+    marketEvidence,
+  });
+
+  return (
+    result.status === "VERIFIED" &&
+    valuation.equityMinor === result.equityMinor &&
+    valuation.unresolvedReason === null
+  );
 }
 
 export function isDrawdownLimitReached(equityMinor: bigint, peakMinor: bigint) {

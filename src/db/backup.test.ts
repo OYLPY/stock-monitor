@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import Database from "better-sqlite3";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -6,8 +7,11 @@ import { describe, expect, it } from "vitest";
 import { backupDatabase, preflightBackup, restoreDatabase } from "./backup";
 import { openDatabase } from "./index";
 import { initializeDefaultPaperAccount } from "./paper-account-repository";
-import { cashLedgerEntries, ledgerEvents } from "./schema";
+import { cashLedgerEntries, ledgerEvents, paperAccounts } from "./schema";
 import { createTestDatabase } from "./test-database";
+import { auditPaperLedger } from "@/features/paper/audit";
+import { appendPaperLedgerEvent } from "@/features/paper/ledger";
+import { createPaperEquitySnapshot } from "@/features/risk/drawdown";
 
 describe("SQLite backup and restore", () => {
   it("backs up a live WAL database and restores its known paper ledger", async () => {
@@ -17,6 +21,21 @@ describe("SQLite backup and restore", () => {
 
     try {
       initializeDefaultPaperAccount(fixture.database);
+      appendPaperLedgerEvent(fixture.database, {
+        eventType: "FEE",
+        idempotencyKey: "backup-test-fee",
+        effectiveAtMs: BigInt(Date.now()),
+        ruleVersion: "paper-fee-v1",
+        cashPosting: {
+          bucket: "SETTLED",
+          currencyCode: "JPY",
+          currencyScale: 0,
+          amountMinor: BigInt(-100_000),
+        },
+      });
+      createPaperEquitySnapshot(fixture.database, BigInt(Date.now()));
+      const originalAudit = auditPaperLedger(fixture.database);
+      expect(originalAudit?.equity.status).toBe("VERIFIED");
       const originalEvents = fixture.database.orm
         .select()
         .from(ledgerEvents)
@@ -37,6 +56,7 @@ describe("SQLite backup and restore", () => {
       await restoreDatabase(backupDirectory, restoredFile);
       const restored = await openDatabase(restoredFile);
       try {
+        expect(auditPaperLedger(restored)).toEqual(originalAudit);
         expect(restored.orm.select().from(ledgerEvents).all()).toEqual(
           originalEvents,
         );
@@ -45,6 +65,45 @@ describe("SQLite backup and restore", () => {
         );
       } finally {
         restored.client.close();
+      }
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("recovers the committed ledger after an interrupted SQLite write", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      initializeDefaultPaperAccount(fixture.database);
+      const accountId = fixture.database.orm
+        .select({ id: paperAccounts.id })
+        .from(paperAccounts)
+        .get()!.id;
+      const auditBefore = auditPaperLedger(fixture.database);
+      fixture.database.client.close();
+
+      const childScript = [
+        'const Database = require("better-sqlite3");',
+        "const db = new Database(process.argv[1]);",
+        'db.pragma("foreign_keys = ON");',
+        'db.exec("PRAGMA journal_mode = WAL; BEGIN IMMEDIATE;");',
+        "const now = Date.now();",
+        'db.prepare("INSERT INTO ledger_events (id, account_id, sequence_no, event_type, idempotency_key, effective_at_ms, recorded_at_ms, rule_version) VALUES (?, ?, 2, \'FEE\', ?, ?, ?, \'paper-fee-v1\')").run("interrupted", process.argv[2], "interrupted-write", now, now);',
+        "process.exit(0);",
+      ].join("\n");
+      const child = spawnSync(
+        process.execPath,
+        ["-e", childScript, fixture.filePath, accountId],
+        { encoding: "utf8" },
+      );
+      expect(child.status).toBe(0);
+
+      const reopened = await openDatabase(fixture.filePath);
+      try {
+        expect(auditPaperLedger(reopened)).toEqual(auditBefore);
+        expect(reopened.orm.select().from(ledgerEvents).all()).toHaveLength(1);
+      } finally {
+        reopened.client.close();
       }
     } finally {
       await fixture.cleanup();

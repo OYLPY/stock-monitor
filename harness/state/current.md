@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **当前工作项 P10-04 / #67**：实现提交 [`8cfde52`](https://github.com/OYLPY/stock-monitor/commit/8cfde5256d834d88b3a1820c7ee265bb8e8e72fe) 与免费 [Quality CI 44255658762](https://github.com/OYLPY/stock-monitor/actions/runs/44255658762) 已通过；本地 format、lint、typecheck、build 和 34 files / 220 tests 均通过。六字段交接见 [P10-04](../handoffs/P10-04.md)。当前在推送验收交接/索引记录；该记录 CI 通过后关闭 #67，再开始 P10-05 / #68。无已核验实时行情 Provider；此实现不产生真实行情或真实交易。
+- **当前工作项 P10-05 / #68**：Issue 已记录开始状态；基线 `7d8e80037767725cf393dce446e0c841b3db3b5f`，开始时本地 `main` 与 `origin/main` 同步、工作树干净。依赖 #67 和 #41 均已关闭；直接在 `main` 实施，不创建 PR。已完成账本/订单/费用审计、权益估值重算、恢复一致性检查及回测页面审计摘要；定向 18/18、全量 35 文件/224 测试、format、lint、typecheck 和 build 均通过。构建最初因服务端直接加载 Recharts 失败，现将图表放入客户端组合组件后通过。下一步核对文档索引与最终 diff，提交/push 并等待免费 Quality CI；CI 成功后补验收交接并关闭 Issue。无可信行情时保持 `NOT_VERIFIED`。
 
 - **P09-01 / #58 已完成并关闭**：修正提交 [`f547b42`](https://github.com/OYLPY/stock-monitor/commit/f547b42dde131dc06f22f017524bdbd807b08c08) 已推送；本地 format、lint、typecheck、unit（29 files / 162 tests）、build 和 [Quality CI 44212087898](https://github.com/OYLPY/stock-monitor/actions/runs/44212087898)（含 Playwright E2E）均成功。每根 bar 记录实际可用时间与信号时点；拆股仅在生效且不晚于有效 bar 数据可用时点时重基指标历史；未知可用时间/迟到行动标记 `NOT_VERIFIED`。#49 美股和 #50 日股供应商 Issue 仍 `BLOCKED_EXTERNAL`，不阻塞无供应商计算内核。
 
@@ -91,7 +91,7 @@
 - **P08-01 / #53 完成**：实现 `6f98e81585dca6aa37997739d18541d36e947a68` 与交接/索引 `189b88ec1c5afaeec772f119aadcd194d3d1b186` 均通过匹配 Quality CI `43873045326`、`43873766300`；#53 已关闭。账户认证刷新、额度与远端取消语义仍 `NOT_VERIFIED`。详见 [P08-01 六字段交接](../handoffs/P08-01.md)。
 - **P09-05 / #62 已完成并关闭**：实现提交 `a8211c0f0d22f99d41a3d380094f02faec3b887c` 的免费 Quality CI `44240857019` 与交接提交 `c72af324322d859aacc79a571d36bb9eb5f352e4` 的免费 Quality CI `44241513945` 均成功；本地 format、lint、typecheck、unit（32 files / 208 tests）、build 与 PMO 自检均通过。详见 [P09-05 六字段交接](../handoffs/P09-05.md)。仓库没有可核验的 2020/2022 OHLCV/FX，仍不得报告真实历史绩效；未调用外部行情、付费或云端数据服务。
 - **P09-06 / #63 已完成并关闭**：实现提交 `d04d7fcb39882a357839518b29d5201cd23d41b5` 与验收记录提交 `89a1e2f1afbc8c5a5fd5b3243e965386d8f8eecc` 的免费 Quality CI `44246049844`、`44246938333` 均成功；GitHub #63 已关闭。真实历史和校准证据仍缺失，因此生产评分保持 `NOT_VERIFIED`。
-- **当前下一步具体操作**：推送 P10-04 的交接/索引记录并核对免费 Quality CI；成功后关闭 #67，再开始依赖已满足的 P10-05 / #68。
+- **P10-05 下一步具体操作**：运行 Doc ID/tag/本地链接自检与 `git diff --check`，确认没有 shadcn 生成文件或 `src/components/ui/*` 变更，再提交并 push `main`；等待免费 Quality CI 包含 Playwright E2E 全绿后，补六字段交接和 Issue/阶段索引证据。
 
 - **P06-06 开始记录**：2026-11-16；#47 的旧 PR 要求已按用户授权修正为 main 直推/no-PR；开始评论记录依赖、基线和运行时边界。
 - **P07-01 开始记录**：2026-11-16；开始前 main 与 origin/main 同步至 `2eb947da6d95d71ee9b8686ec83e7e4d66a3a86a`，工作树干净，无开放 PR；依赖 #38/#35 和前序 #47 均已关闭。#48 的旧分支/PR 文字已按授权修正为直接 main/no-PR，并记录官方日历核验计划。

@@ -1,11 +1,16 @@
 import { getLocalDatabasePath, openDatabase } from "../../db";
 import { listPaperAccountLedger } from "../../db/paper-account-repository";
+import {
+  auditPaperLedger,
+  type PaperLedgerAudit,
+} from "@/features/paper/audit";
 
 export type PaperLedgerSnapshot =
   | { state: "NOT_INITIALIZED" }
   | { state: "UNAVAILABLE" }
   | {
       state: "INITIALIZED";
+      audit: PaperLedgerAudit;
       baseCurrency: string;
       initializedAtMs: string;
       entries: Array<{
@@ -30,9 +35,12 @@ export async function loadPaperAccountLedger(
     database = await openDatabase(databasePath);
     const ledger = listPaperAccountLedger(database);
     if (!ledger) return { state: "NOT_INITIALIZED" };
+    const audit = auditPaperLedger(database);
+    if (!audit) throw new Error("paper_account_audit_account_missing");
 
     return {
       state: "INITIALIZED",
+      audit,
       baseCurrency: ledger.account.baseCurrency,
       initializedAtMs: String(ledger.account.initializedAtMs),
       entries: ledger.entries.map((entry) => ({

@@ -17,6 +17,7 @@ import { marketDateAt, parseFixedDecimal } from "@/domain/primitives";
 import { marketCalendarStateAt } from "@/features/market-calendar/market-calendar";
 import {
   feeMinor,
+  notionalMinor,
   paperCostModelSchema,
   priceAtoms,
 } from "@/features/paper/cost-model";
@@ -126,11 +127,6 @@ function convertedRiskJpyMinor(
   return (
     converted + ceilDivide(converted * BigInt(model.fxConversionFeeBps), BPS)
   );
-}
-
-function notionalMinor(price: bigint, shares: bigint, currency: "JPY" | "USD") {
-  const currencyScale = currency === "JPY" ? BigInt(0) : BigInt(2);
-  return ceilDivide(price * shares * BigInt(10) ** currencyScale, SCALE);
 }
 
 function maxLotQuantity(

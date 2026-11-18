@@ -76,6 +76,16 @@ describe("BacktestsPage", () => {
   it("does not mix persisted account events into the default research tab", async () => {
     loadLedger.mockResolvedValue({
       state: "INITIALIZED",
+      audit: {
+        ledger: { status: "VERIFIED", issueCodes: [] },
+        trades: [],
+        equity: {
+          status: "NOT_VERIFIED",
+          issueCodes: ["EQUITY_HISTORY_NOT_ESTABLISHED"],
+          curve: [],
+          maximumDrawdown: null,
+        },
+      },
       baseCurrency: "JPY",
       initializedAtMs: "1794816000000",
       entries: [
@@ -102,5 +112,49 @@ describe("BacktestsPage", () => {
     expect(html).not.toContain("账户开户");
     expect(html).not.toContain("JPY 1,000,000");
     expect(html).not.toContain('aria-labelledby="account-heading"');
+  });
+
+  it("renders only an audited equity curve and its maximum drawdown", async () => {
+    loadLedger.mockResolvedValue({
+      state: "INITIALIZED",
+      audit: {
+        ledger: { status: "VERIFIED", issueCodes: [] },
+        trades: [],
+        equity: {
+          status: "VERIFIED",
+          issueCodes: [],
+          curve: [
+            {
+              asOfMs: "1794816000000",
+              equityMinor: "1000000",
+              source: "ACCOUNT_OPENED",
+            },
+            {
+              asOfMs: "1794816060000",
+              equityMinor: "800000",
+              source: "VALUATION",
+            },
+          ],
+          maximumDrawdown: {
+            basisPoints: "2000",
+            peakAtMs: "1794816000000",
+            peakMinor: "1000000",
+            troughAtMs: "1794816060000",
+            troughMinor: "800000",
+          },
+        },
+      },
+      baseCurrency: "JPY",
+      initializedAtMs: "1794816000000",
+      entries: [],
+    });
+
+    const html = renderToStaticMarkup(
+      await BacktestsPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(html).toContain("20.00%");
+    expect(html).toContain("JPY 800,000");
+    expect(html).toContain("可核验权益点");
   });
 });

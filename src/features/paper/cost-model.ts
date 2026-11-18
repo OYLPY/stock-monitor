@@ -2,6 +2,8 @@ import { parseFixedDecimal } from "@/domain/primitives";
 import { z } from "zod";
 
 const decimalSchema = z.string().regex(/^\d+(?:\.\d{1,8})?$/);
+const priceScale = 8;
+const priceScaleFactor = BigInt(10) ** BigInt(priceScale);
 const integerStringSchema = z
   .string()
   .regex(/^(0|[1-9]\d{0,18})$/)
@@ -35,7 +37,17 @@ export type PaperCostModel = z.infer<typeof paperCostModelSchema>;
 
 export function priceAtoms(value: string) {
   const decimal = parseFixedDecimal(value);
-  return decimal.mantissa * BigInt(10) ** BigInt(8 - decimal.scale);
+  return decimal.mantissa * BigInt(10) ** BigInt(priceScale - decimal.scale);
+}
+
+export function notionalMinor(
+  priceAtoms: bigint,
+  shares: bigint,
+  currency: "JPY" | "USD",
+) {
+  const currencyScale = currency === "JPY" ? 0 : 2;
+  const numerator = priceAtoms * shares * BigInt(10) ** BigInt(currencyScale);
+  return (numerator + priceScaleFactor - BigInt(1)) / priceScaleFactor;
 }
 
 export function feeMinor(schedule: PaperCostModel["entryFee"], shares: bigint) {

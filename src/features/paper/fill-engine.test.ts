@@ -16,6 +16,7 @@ import {
 } from "@/features/evidence/repository";
 import { createPaperEquitySnapshot } from "@/features/risk/drawdown";
 import { approvePaperPlan, createPaperPlan } from "@/features/risk/checker";
+import { auditPaperLedger } from "./audit";
 import {
   cancelPaperOrder,
   createPaperOrder,
@@ -273,6 +274,23 @@ describe("paper fill engine", () => {
       expect(
         fixture.database.orm.select().from(ledgerEvents).all(),
       ).toHaveLength(4);
+      const audit = auditPaperLedger(fixture.database);
+      expect(audit?.ledger).toEqual({ status: "VERIFIED", issueCodes: [] });
+      expect(audit?.trades.map(({ tradeId }) => tradeId)).toEqual([
+        first.fill?.id,
+        second.fill?.id,
+      ]);
+
+      fixture.database.client
+        .prepare(
+          "UPDATE paper_orders SET filled_quantity_shares = ? WHERE id = ?",
+        )
+        .run(199, fixture.order.id);
+      const mismatch = auditPaperLedger(fixture.database);
+      expect(mismatch?.ledger.status).toBe("NOT_VERIFIED");
+      expect(mismatch?.ledger.issueCodes).toContain(
+        "ORDER_FILL_QUANTITY_MISMATCH",
+      );
     } finally {
       vi.useRealTimers();
       await fixture.cleanup();

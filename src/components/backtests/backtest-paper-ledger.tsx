@@ -1,13 +1,14 @@
 import {
   Database,
   FlaskConical,
-  LineChart,
+  LineChart as LineChartIcon,
   ListOrdered,
   ShieldCheck,
   Wallet,
 } from "lucide-react";
 
 import { BacktestDatePicker } from "@/components/backtests/backtest-date-picker";
+import { EquityChart } from "@/components/backtests/equity-chart";
 import { Badge } from "@/components/shadcn/badge";
 import { Button } from "@/components/shadcn/button";
 import { Alert, AlertDescription } from "@/components/shadcn/alert";
@@ -51,6 +52,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/shadcn/tabs";
+import type { PaperLedgerAudit } from "@/features/paper/audit";
 import type { PaperLedgerSnapshot } from "@/features/paper-account/paper-account-center";
 
 export type BacktestDraft = {
@@ -86,6 +88,78 @@ function formatUtc(value: string) {
     timeStyle: "short",
     timeZone: "UTC",
   }).format(new Date(Number(value)))} UTC`;
+}
+
+function formatBasisPoints(value: string) {
+  const basisPoints = BigInt(value);
+  return `${basisPoints / BigInt(100)}.${(basisPoints % BigInt(100))
+    .toString()
+    .padStart(2, "0")}%`;
+}
+
+function EquityCurve({ audit }: { audit: PaperLedgerAudit }) {
+  const points = audit.equity.curve.map((point) => ({
+    asOfMs: Number(point.asOfMs),
+    equity: Number(BigInt(point.equityMinor)),
+  }));
+  const maximumDrawdown = audit.equity.maximumDrawdown!;
+
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">最大回撤</dt>
+          <dd className="mt-1">
+            {formatBasisPoints(maximumDrawdown.basisPoints)}
+          </dd>
+          <dd className="text-xs text-muted-foreground">
+            {formatUtc(maximumDrawdown.peakAtMs)} →{" "}
+            {formatUtc(maximumDrawdown.troughAtMs)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">已核验权益点</dt>
+          <dd className="mt-1">{audit.equity.curve.length} 个</dd>
+        </div>
+      </dl>
+      <figure
+        aria-describedby="equity-chart-caption"
+        aria-labelledby="equity-heading"
+        className="min-w-0"
+      >
+        <EquityChart points={points} />
+        <figcaption
+          className="mt-2 text-xs text-muted-foreground"
+          id="equity-chart-caption"
+        >
+          只绘制开户本金和完整可核验的权益快照；金额明细见下表。
+        </figcaption>
+      </figure>
+      <Table>
+        <TableCaption>可核验权益点，金额以日元计。</TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">时间（UTC）</TableHead>
+            <TableHead scope="col">来源</TableHead>
+            <TableHead scope="col">权益</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {audit.equity.curve.map((point) => (
+            <TableRow key={`${point.asOfMs}:${point.source}`}>
+              <TableCell>{formatUtc(point.asOfMs)}</TableCell>
+              <TableCell>
+                {point.source === "ACCOUNT_OPENED" ? "开户本金" : "估值快照"}
+              </TableCell>
+              <TableCell>
+                {formatCashEntry(point.equityMinor, "JPY", 0)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
 }
 
 function formatCashEntry(
@@ -170,6 +244,12 @@ export function BacktestPaperLedger({
   draft: BacktestDraft;
   ledger: PaperLedgerSnapshot;
 }) {
+  const equityAudit = ledger.state === "INITIALIZED" ? ledger.audit : null;
+  const equityVerified =
+    equityAudit?.ledger.status === "VERIFIED" &&
+    equityAudit.equity.status === "VERIFIED" &&
+    equityAudit.equity.maximumDrawdown !== null;
+
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-2">
@@ -361,26 +441,37 @@ export function BacktestPaperLedger({
                   <h2 id="equity-heading">权益曲线</h2>
                 </CardTitle>
                 <CardAction>
-                  <Badge variant="outline">NOT_VERIFIED</Badge>
+                  <Badge variant="outline">
+                    {equityVerified ? "VERIFIED" : "NOT_VERIFIED"}
+                  </Badge>
                 </CardAction>
               </CardHeader>
               <CardContent>
-                <Empty>
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <LineChart aria-hidden="true" />
-                    </EmptyMedia>
-                    <EmptyTitle>
-                      <h3>没有可绘制的权益快照</h3>
-                    </EmptyTitle>
-                    <EmptyDescription>
-                      <p>
-                        缺少可复核的账本投影、持仓估值、FX
-                        和时点数据，因此不绘制曲线或推算峰值回撤。
-                      </p>
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
+                {equityVerified && equityAudit ? (
+                  <EquityCurve audit={equityAudit} />
+                ) : (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <LineChartIcon aria-hidden="true" />
+                      </EmptyMedia>
+                      <EmptyTitle>
+                        <h3>没有可核验的权益曲线</h3>
+                      </EmptyTitle>
+                      <EmptyDescription>
+                        <p>
+                          {ledger.state === "NOT_INITIALIZED"
+                            ? "纸面账本尚未建立；不显示本金、权益或最大回撤。"
+                            : ledger.state === "UNAVAILABLE"
+                              ? "本机数据库无法读取，权益和回撤均为 NOT_VERIFIED。"
+                              : ledger.audit.ledger.status !== "VERIFIED"
+                                ? `账本审计未通过：${ledger.audit.ledger.issueCodes.join("、")}。不绘制权益曲线或计算回撤。`
+                                : `缺少完整可核验的权益快照：${ledger.audit.equity.issueCodes.join("、")}。不计算最大回撤。`}
+                        </p>
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -468,10 +559,59 @@ export function BacktestPaperLedger({
                       </EmptyHeader>
                     </Empty>
                   )}
+                  {ledger.audit.ledger.status === "NOT_VERIFIED" && (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        账本审计未通过；错误码：
+                        {ledger.audit.ledger.issueCodes.join("、")}
+                        。相关成交与权益指标均为 NOT_VERIFIED。
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </>
               )}
             </CardContent>
           </Card>
+
+          {ledger.state === "INITIALIZED" &&
+            ledger.audit.ledger.status === "VERIFIED" &&
+            ledger.audit.trades.length > 0 && (
+              <Card aria-labelledby="trade-ids-heading">
+                <CardHeader>
+                  <CardTitle>
+                    <h2 id="trade-ids-heading">模拟成交编号</h2>
+                  </CardTitle>
+                  <CardDescription>
+                    每个编号对应一笔不可变成交记录。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableCaption>
+                      模拟成交及其订单、执行时间和数量。
+                    </TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead scope="col">成交编号</TableHead>
+                        <TableHead scope="col">订单编号</TableHead>
+                        <TableHead scope="col">执行时间（UTC）</TableHead>
+                        <TableHead scope="col">数量</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ledger.audit.trades.map((trade) => (
+                        <TableRow key={trade.tradeId}>
+                          <TableCell>{trade.tradeId}</TableCell>
+                          <TableCell>{trade.orderId}</TableCell>
+                          <TableCell>{formatUtc(trade.executedAtMs)}</TableCell>
+                          <TableCell>{trade.quantityShares}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
 
           <Card aria-labelledby="orders-heading">
             <CardHeader>
