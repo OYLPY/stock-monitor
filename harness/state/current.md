@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **P07-02 / #49 本机行情可见性补充已推送**：提交 [`2317c9c`](https://github.com/OYLPY/stock-monitor/commit/2317c9ca079bd5c13682dafe87face8fe2969ead) 与 [Quality CI 44293436859](https://github.com/OYLPY/stock-monitor/actions/runs/44293436859) success；用户 CSV 日线可在本机表格查看，不请求外部服务、不保存原始 CSV，数据与许可保持 `NOT_VERIFIED`，不进入图表/回测/策略评分/纸面账本。Issue 已更新但保持 open / `BLOCKED_EXTERNAL`，外部 Provider 验收未完成。详见 [P07-02 六字段交接](../handoffs/P07-02.md)。
+- **P07-02 / #49 本机迁移错误已修复**：提交 [`cb93d99`](https://github.com/OYLPY/stock-monitor/commit/cb93d99aeb12c7ab3a7fd198c8eba6a4e446720f) 与 [Quality CI 44298535454](https://github.com/OYLPY/stock-monitor/actions/runs/44298535454) success（含 E2E）。仅兼容实测的 v10 旧 checksum，v11 迁移将行情表安全重建为 STRICT；本机数据库现为 schema 11，自动 pre-v11 备份存在，`/markets` 返回 HTTP 200。CSV 日线仍只在本机展示且数据/许可为 `NOT_VERIFIED`，不接入策略功能。[Issue 评论](https://github.com/OYLPY/stock-monitor/issues/49#issuecomment-6977801446)已记录；外部 Provider 许可与覆盖仍未解决，#49 保持 open / `BLOCKED_EXTERNAL`。详见 [P07-02 六字段交接](../handoffs/P07-02.md)。
 
 - **P10-05 / #68 已完成并关闭**：实现提交 [`9fedda8`](https://github.com/OYLPY/stock-monitor/commit/9fedda8f53fc2aa14f3e7717ed5684a982500078) / [Quality CI 44263245240](https://github.com/OYLPY/stock-monitor/actions/runs/44263245240) success；六字段交接提交 [`8b4f674`](https://github.com/OYLPY/stock-monitor/commit/8b4f67441894e63875ac1fe2e21be39d6916a75d) / [Quality CI 44263902351](https://github.com/OYLPY/stock-monitor/actions/runs/44263902351) success；GitHub #68 已关闭。审计覆盖不可变账本/订单/成交/费用、权益快照和恢复一致性；无可信行情仍为 `NOT_VERIFIED`。详见 [P10-05 六字段交接](../handoffs/P10-05.md)。
 
