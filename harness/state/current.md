@@ -1,6 +1,7 @@
 # 当前执行状态
 
-- **P08 报告链路授权调整 / 2026-11-18**：用户同意调整 #54/#55/#56/#72 的依赖与验收；行情来源 Issue #49/#50 和事件归一化 #52 不再阻塞报告归档。来源或行情缺失时只归档 `NOT_VERIFIED`，候选为空；不声称数据已获取。当前执行 P08-02 / #54，后续顺序 #55 → #56 → #72；盘中异常扫描仍由 #71 负责。
+- **P08-02 / #54 已完成并关闭**：提交 [`f1a88bb`](https://github.com/OYLPY/stock-monitor/commit/f1a88bb6510ced148919b06b17428fcf945aed04)，Quality CI [44328957448](https://github.com/OYLPY/stock-monitor/actions/runs/44328957448) success，Issue 已关闭。40 个测试文件 / 254 tests、format、lint、typecheck、build、Playwright E2E 均通过。六字段交接见 [P08-02 handoff](../handoffs/P08-02.md)；没有实际调用 Codex 或生成市场结论。
+- **P08 报告链路授权调整 / 2026-11-18**：用户同意调整 #54/#55/#56/#72 的依赖与验收；行情来源 Issue #49/#50 和事件归一化 #52 不再阻塞报告归档。来源或行情缺失时只归档 `NOT_VERIFIED`，候选为空；不声称数据已获取。当前执行 P08-03 / #55，后续顺序 #56 → #72；盘中异常扫描仍由 #71 负责。
 
 - **P07-02 / #49 本机迁移错误已修复**：提交 [`cb93d99`](https://github.com/OYLPY/stock-monitor/commit/cb93d99aeb12c7ab3a7fd198c8eba6a4e446720f) 与 [Quality CI 44298535454](https://github.com/OYLPY/stock-monitor/actions/runs/44298535454) success（含 E2E）。仅兼容实测的 v10 旧 checksum，v11 迁移将行情表安全重建为 STRICT；本机数据库现为 schema 11，自动 pre-v11 备份存在，`/markets` 返回 HTTP 200。CSV 日线仍只在本机展示且数据/许可为 `NOT_VERIFIED`，不接入策略功能。[Issue 评论](https://github.com/OYLPY/stock-monitor/issues/49#issuecomment-6977801446)已记录；外部 Provider 许可与覆盖仍未解决，#49 保持 open / `BLOCKED_EXTERNAL`。详见 [P07-02 六字段交接](../handoffs/P07-02.md)。
 
