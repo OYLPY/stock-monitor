@@ -170,7 +170,7 @@
 - [x] [P09-02 — 无未来函数的回测撮合引擎](https://github.com/OYLPY/stock-monitor/issues/59) · 依赖：P09-01, P03-04
 - [x] [P09-03 — 三类初始策略与参数边界](https://github.com/OYLPY/stock-monitor/issues/60) · 依赖：P09-01, P09-02 · 提交 e994228 / Quality CI 44228498133 成功
 - [x] [P09-04 — 样本内/样本外与 Walk-forward 实验](https://github.com/OYLPY/stock-monitor/issues/61) · 依赖：P09-02, P09-03 · 实现提交 e222ccb / CI 44233159341、验收提交 d121993 / CI 44234313457 均成功；#61 已关闭
-- [ ] [P09-05 — 2020/2022 压力与费用/汇率敏感性](https://github.com/OYLPY/stock-monitor/issues/62) · 依赖：P09-04
+- [x] [P09-05 — 2020/2022 压力与费用/汇率敏感性](https://github.com/OYLPY/stock-monitor/issues/62) · 依赖：P09-04 · 实现 `a8211c0` / [Quality CI 44240857019](https://github.com/OYLPY/stock-monitor/actions/runs/44240857019) 成功；[六字段交接](../harness/handoffs/P09-05.md)
 - [ ] [P09-06 — 五维评分与 18/25 验证候选门禁](https://github.com/OYLPY/stock-monitor/issues/63) · 依赖：P09-04, P09-05
 
 ### [P10 纸面模拟与独立风控](https://github.com/OYLPY/stock-monitor/issues/11)
