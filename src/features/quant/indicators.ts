@@ -1,19 +1,18 @@
-import { parseFixedDecimal } from "@/domain/primitives";
+import { marketDateAt, parseFixedDecimal } from "@/domain/primitives";
 import type { MarketCode } from "@/domain/primitives";
 
 const OUTPUT_SCALE = 8;
 const SCALE = BigInt(10) ** BigInt(OUTPUT_SCALE);
-const RSI_WINDOW = 14;
-const ATR_WINDOW = 14;
-const PRICE_WINDOW = 20;
-const RETURN_WINDOW = 20;
-const SQRT_252_SCALED = BigInt(Math.round(Math.sqrt(252) * Number(SCALE)));
+const LOG_RATIO_SCALE = BigInt(10) ** BigInt(16);
+const ATR_PERIOD = 14;
+const RSI_PERIOD = 14;
 
 export type OhlcvDataClass =
   "REAL" | "DELAYED" | "HISTORICAL" | "FIXTURE" | "NOT_VERIFIED";
 export type VerificationStatus = "VERIFIED" | "NOT_VERIFIED";
 export type OhlcvBarInput = Readonly<{
   date: string;
+  availableAtMs: number | null;
   open: string;
   high: string;
   low: string;
@@ -23,6 +22,7 @@ export type OhlcvBarInput = Readonly<{
 }>;
 export type CorporateActionAdjustment = Readonly<{
   effectiveDate: string;
+  knownAtMs: number;
   kind: "SPLIT" | "CASH_DIVIDEND";
   priceFactor: string;
   volumeFactor: string;
@@ -36,47 +36,70 @@ export type OhlcvInput = Readonly<{
     verificationStatus: VerificationStatus;
   }>;
   expectedSessions: Readonly<{
-    dates: readonly string[];
+    sessions: readonly Readonly<{ date: string; closeAtMs: number }>[];
     sourceId: string;
+    calendarVersion: string;
     verificationStatus: VerificationStatus;
   }>;
   adjustment: Readonly<{
     basis: "RAW" | "SPLIT_ADJUSTED" | "TOTAL_RETURN_ADJUSTED" | "UNKNOWN";
     coverage: "COMPLETE" | "INCOMPLETE" | "UNKNOWN";
     sourceId: string;
+    dataClass: OhlcvDataClass;
+    verificationStatus: VerificationStatus;
     sourceRecordId: string;
     actions: readonly CorporateActionAdjustment[];
+  }>;
+  indicatorWindows: Readonly<{
+    movingAverage: number;
+    returns: number;
   }>;
   bars: readonly OhlcvBarInput[];
 }>;
 
 type MetricStatus = "AVAILABLE" | "INSUFFICIENT_HISTORY" | "GAP";
 type MetricValue<T> = Readonly<{ value: T | null; status: MetricStatus }>;
+type ParsedBar = Omit<OhlcvBarInput, "volume"> & {
+  openScaled: bigint;
+  highScaled: bigint;
+  lowScaled: bigint;
+  closeScaled: bigint;
+  volumeScaled: bigint;
+};
+type ParsedAction = CorporateActionAdjustment & {
+  priceFactorScaled: bigint;
+  volumeFactorScaled: bigint;
+};
+type Indicators = Readonly<{
+  simpleMovingAverage: MetricValue<string>;
+  averageTrueRange14: MetricValue<string>;
+  dailyReturn: MetricValue<string>;
+  dailyLogReturn: MetricValue<string>;
+  realizedVolatility: MetricValue<string>;
+  logReturnQuantiles: MetricValue<
+    Readonly<{ p05: string; p50: string; p95: string }>
+  >;
+  relativeStrengthIndex14: MetricValue<string>;
+}>;
+
 type NormalizedBar = Readonly<{
   date: string;
+  availableAtMs: number | null;
   sourceRecordId: string;
   open: string;
   high: string;
   low: string;
   close: string;
   volume: string;
-  appliedAdjustmentRecordIds: readonly string[];
-}>;
-type Indicators = Readonly<{
-  simpleMovingAverage20: MetricValue<string>;
-  averageTrueRange14: MetricValue<string>;
-  dailyReturn: MetricValue<string>;
-  annualizedRealizedVolatility20: MetricValue<string>;
-  dailyReturnQuantiles20: MetricValue<
-    Readonly<{ p05: string; p50: string; p95: string }>
-  >;
-  relativeStrengthIndex14: MetricValue<string>;
 }>;
 
 export type NormalizedOhlcvSession = Readonly<{
   date: string;
   sessionIndex: number;
+  signalAtMs: number | null;
   status: "PRESENT" | "GAP";
+  verificationStatus: VerificationStatus;
+  adjustmentRecordIdsAppliedToIndicators: readonly string[];
   bar: NormalizedBar | null;
   indicators: Indicators;
 }>;
@@ -85,6 +108,8 @@ export type NormalizedOhlcvSeries = Readonly<{
   source: OhlcvInput["source"];
   expectedSessions: OhlcvInput["expectedSessions"];
   adjustment: OhlcvInput["adjustment"];
+  indicatorWindows: OhlcvInput["indicatorWindows"];
+  indicatorPriceBasis: "SPLIT_ADJUSTED_AS_OF_SESSION";
   adjustmentStatus: VerificationStatus;
   verificationStatus: VerificationStatus;
   decimalScale: typeof OUTPUT_SCALE;
@@ -138,6 +163,17 @@ function requireText(value: string): void {
   if (!value.trim()) throw new RangeError("missing_ohlcv_provenance");
 }
 
+function isVerifiableSource(source: {
+  dataClass: OhlcvDataClass;
+  verificationStatus: VerificationStatus;
+}): boolean {
+  return (
+    source.verificationStatus === "VERIFIED" &&
+    source.dataClass !== "FIXTURE" &&
+    source.dataClass !== "NOT_VERIFIED"
+  );
+}
+
 function metric<T>(value: T): MetricValue<T> {
   return { value, status: "AVAILABLE" };
 }
@@ -150,17 +186,36 @@ function unavailableMetric<T>(
 
 function gapIndicators(): Indicators {
   return {
-    simpleMovingAverage20: unavailableMetric("GAP"),
+    simpleMovingAverage: unavailableMetric("GAP"),
     averageTrueRange14: unavailableMetric("GAP"),
     dailyReturn: unavailableMetric("GAP"),
-    annualizedRealizedVolatility20: unavailableMetric("GAP"),
-    dailyReturnQuantiles20: unavailableMetric("GAP"),
+    dailyLogReturn: unavailableMetric("GAP"),
+    realizedVolatility: unavailableMetric("GAP"),
+    logReturnQuantiles: unavailableMetric("GAP"),
     relativeStrengthIndex14: unavailableMetric("GAP"),
   };
 }
 
 function absolute(value: bigint): bigint {
   return value < BigInt(0) ? -value : value;
+}
+
+function multiplyScaled(left: bigint, right: bigint): bigint {
+  return divideRounded(left * right, SCALE);
+}
+
+function logReturnScaled(current: bigint, previous: bigint): bigint {
+  const difference = current - previous;
+  const ratioDeltaScaled = divideRounded(
+    absolute(difference) * LOG_RATIO_SCALE,
+    previous,
+  );
+  const ratioDelta = Number(ratioDeltaScaled) / Number(LOG_RATIO_SCALE);
+  const logReturn = Math.log1p((difference < BigInt(0) ? -1 : 1) * ratioDelta);
+  if (!Number.isFinite(logReturn)) throw new RangeError("invalid_log_return");
+  return BigInt(
+    Math.sign(logReturn) * Math.round(Math.abs(logReturn) * Number(SCALE)),
+  );
 }
 
 function integerSquareRoot(value: bigint): bigint {
@@ -182,28 +237,24 @@ function roundedSquareRoot(value: bigint): bigint {
   return value - lower * lower < upper * upper - value ? lower : upper;
 }
 
-function returnQuantile(values: readonly bigint[], percentile: bigint): bigint {
+function quantiles(values: readonly bigint[]) {
   const sorted = [...values].sort((left, right) =>
     left < right ? -1 : left > right ? 1 : 0,
   );
-  const position = BigInt(sorted.length - 1) * percentile;
-  const lowerIndex = Number(position / BigInt(100));
-  const remainder = position % BigInt(100);
-  const lower = sorted[lowerIndex];
-  const upper = sorted[Math.min(lowerIndex + 1, sorted.length - 1)];
-  return lower + divideRounded((upper - lower) * remainder, BigInt(100));
+  const at = (percentile: bigint) => {
+    const position = BigInt(sorted.length - 1) * percentile;
+    const lowerIndex = Number(position / BigInt(100));
+    const remainder = position % BigInt(100);
+    const lower = sorted[lowerIndex];
+    const upper = sorted[Math.min(lowerIndex + 1, sorted.length - 1)];
+    return formatScaled(
+      lower + divideRounded((upper - lower) * remainder, BigInt(100)),
+    );
+  };
+  return { p05: at(BigInt(5)), p50: at(BigInt(50)), p95: at(BigInt(95)) };
 }
 
-function parseBar(bar: OhlcvBarInput): Omit<
-  NormalizedBar,
-  "appliedAdjustmentRecordIds"
-> & {
-  openScaled: bigint;
-  highScaled: bigint;
-  lowScaled: bigint;
-  closeScaled: bigint;
-  volumeScaled: bigint;
-} {
+function parseBar(bar: OhlcvBarInput): ParsedBar {
   parseDate(bar.date);
   requireText(bar.sourceRecordId);
   if (!/^\d+$/.test(bar.volume)) throw new RangeError("invalid_ohlcv_volume");
@@ -220,15 +271,8 @@ function parseBar(bar: OhlcvBarInput): Omit<
   ) {
     throw new RangeError("invalid_ohlcv_range");
   }
-
   return {
-    date: bar.date,
-    sourceRecordId: bar.sourceRecordId,
-    open: bar.open,
-    high: bar.high,
-    low: bar.low,
-    close: bar.close,
-    volume: bar.volume,
+    ...bar,
     openScaled,
     highScaled,
     lowScaled,
@@ -237,66 +281,61 @@ function parseBar(bar: OhlcvBarInput): Omit<
   };
 }
 
-function normalizedBar(
-  bar: ReturnType<typeof parseBar>,
-  adjustment: OhlcvInput["adjustment"],
-): NormalizedBar {
-  const actions = adjustment.actions
-    .filter(
-      (action) => adjustment.basis === "RAW" && bar.date < action.effectiveDate,
-    )
-    .map((action) => ({
-      ...action,
-      priceFactorScaled: parsePositiveDecimal(action.priceFactor),
-      volumeFactorScaled: parsePositiveDecimal(action.volumeFactor),
-    }));
-  let price = SCALE;
-  let volume = SCALE;
-  for (const action of actions) {
-    price = divideRounded(price * action.priceFactorScaled, SCALE);
-    volume = divideRounded(volume * action.volumeFactorScaled, SCALE);
-  }
-
-  return {
-    date: bar.date,
-    sourceRecordId: bar.sourceRecordId,
-    open: formatScaled(divideRounded(bar.openScaled * price, SCALE)),
-    high: formatScaled(divideRounded(bar.highScaled * price, SCALE)),
-    low: formatScaled(divideRounded(bar.lowScaled * price, SCALE)),
-    close: formatScaled(divideRounded(bar.closeScaled * price, SCALE)),
-    volume: formatScaled(divideRounded(bar.volumeScaled * volume, SCALE)),
-    appliedAdjustmentRecordIds: actions.map(
-      ({ sourceRecordId }) => sourceRecordId,
-    ),
-  };
-}
-
 export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
   requireText(input.source.sourceId);
   requireText(input.expectedSessions.sourceId);
+  requireText(input.expectedSessions.calendarVersion);
   requireText(input.adjustment.sourceId);
   requireText(input.adjustment.sourceRecordId);
   if (
-    (input.source.dataClass === "FIXTURE" ||
-      input.source.dataClass === "NOT_VERIFIED") &&
+    !isVerifiableSource(input.source) &&
     input.source.verificationStatus === "VERIFIED"
   ) {
     throw new RangeError("unverified_data_class_cannot_be_verified");
   }
-  if (input.expectedSessions.dates.length === 0 || input.bars.length === 0) {
+  if (
+    !isVerifiableSource(input.adjustment) &&
+    input.adjustment.verificationStatus === "VERIFIED"
+  ) {
+    throw new RangeError("unverified_adjustment_cannot_be_verified");
+  }
+  if (
+    !Number.isSafeInteger(input.indicatorWindows.movingAverage) ||
+    input.indicatorWindows.movingAverage < 1 ||
+    !Number.isSafeInteger(input.indicatorWindows.returns) ||
+    input.indicatorWindows.returns < 2
+  ) {
+    throw new RangeError("invalid_indicator_window");
+  }
+  if (input.expectedSessions.sessions.length === 0 || input.bars.length === 0) {
     throw new RangeError("empty_ohlcv_series");
   }
 
-  const sessionDates = input.expectedSessions.dates.map(parseDate);
+  const sessionDates = input.expectedSessions.sessions.map(
+    ({ date, closeAtMs }) => {
+      parseDate(date);
+      if (
+        !Number.isSafeInteger(closeAtMs) ||
+        marketDateAt(closeAtMs, input.market) !== date
+      ) {
+        throw new RangeError("invalid_expected_session_close");
+      }
+      return date;
+    },
+  );
   for (let index = 1; index < sessionDates.length; index += 1) {
     if (sessionDates[index - 1] >= sessionDates[index]) {
       throw new RangeError("expected_sessions_not_ascending");
     }
   }
-  const sessionIndexes = new Map(
-    sessionDates.map((date, index) => [date, index]),
+  const sessionDateSet = new Set(sessionDates);
+  const sessionCloseAtMs = new Map(
+    input.expectedSessions.sessions.map(({ date, closeAtMs }) => [
+      date,
+      closeAtMs,
+    ]),
   );
-  const parsedBars = new Map<string, ReturnType<typeof parseBar>>();
+  const parsedBars = new Map<string, ParsedBar>();
   const sourceRecordIds = new Set<string>();
   for (const bar of input.bars) {
     const parsed = parseBar(bar);
@@ -305,48 +344,95 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
     if (sourceRecordIds.has(parsed.sourceRecordId)) {
       throw new RangeError("duplicate_ohlcv_record");
     }
-    if (!sessionIndexes.has(parsed.date))
+    if (!sessionDateSet.has(parsed.date))
       throw new RangeError("bar_outside_expected_sessions");
+    const closeAtMs = sessionCloseAtMs.get(parsed.date)!;
+    if (
+      parsed.availableAtMs !== null &&
+      (!Number.isSafeInteger(parsed.availableAtMs) ||
+        parsed.availableAtMs < closeAtMs)
+    ) {
+      throw new RangeError("invalid_bar_availability_time");
+    }
     sourceRecordIds.add(parsed.sourceRecordId);
     parsedBars.set(parsed.date, parsed);
   }
 
   const actionRecordIds = new Set<string>();
-  for (const action of input.adjustment.actions) {
-    parseDate(action.effectiveDate);
-    requireText(action.sourceRecordId);
-    if (actionRecordIds.has(action.sourceRecordId)) {
-      throw new RangeError("duplicate_adjustment_record");
-    }
-    actionRecordIds.add(action.sourceRecordId);
-    parsePositiveDecimal(action.priceFactor);
-    parsePositiveDecimal(action.volumeFactor);
-    if (
-      action.kind === "CASH_DIVIDEND" &&
-      parsePositiveDecimal(action.volumeFactor) !== SCALE
-    ) {
-      throw new RangeError("dividend_volume_factor_must_be_one");
+  const actions = input.adjustment.actions
+    .map((action): ParsedAction => {
+      parseDate(action.effectiveDate);
+      if (!Number.isSafeInteger(action.knownAtMs)) {
+        throw new RangeError("invalid_action_availability_time");
+      }
+      requireText(action.sourceRecordId);
+      if (actionRecordIds.has(action.sourceRecordId)) {
+        throw new RangeError("duplicate_adjustment_record");
+      }
+      actionRecordIds.add(action.sourceRecordId);
+      const priceFactorScaled = parsePositiveDecimal(action.priceFactor);
+      const volumeFactorScaled = parsePositiveDecimal(action.volumeFactor);
+      if (action.kind === "CASH_DIVIDEND" && volumeFactorScaled !== SCALE) {
+        throw new RangeError("dividend_volume_factor_must_be_one");
+      }
+      return { ...action, priceFactorScaled, volumeFactorScaled };
+    })
+    .sort(
+      (left, right) =>
+        left.effectiveDate.localeCompare(right.effectiveDate) ||
+        left.sourceRecordId.localeCompare(right.sourceRecordId),
+    );
+
+  const actionIndexes = new Map<number, ParsedAction[]>();
+  const lateActions: ParsedAction[] = [];
+  if (input.adjustment.basis === "RAW") {
+    for (const action of actions) {
+      if (
+        action.kind !== "SPLIT" ||
+        action.effectiveDate <= sessionDates[0] ||
+        action.effectiveDate > sessionDates.at(-1)!
+      ) {
+        continue;
+      }
+      const index = sessionDates.findIndex(
+        (date) => date >= action.effectiveDate,
+      );
+      if (index <= 0) continue;
+      const effectiveBar = parsedBars.get(sessionDates[index]);
+      if (
+        !effectiveBar ||
+        effectiveBar.availableAtMs === null ||
+        action.knownAtMs > effectiveBar.availableAtMs
+      ) {
+        lateActions.push(action);
+        continue;
+      }
+      const atIndex = actionIndexes.get(index) ?? [];
+      atIndex.push(action);
+      actionIndexes.set(index, atIndex);
     }
   }
 
+  const adjustmentSourceVerified = isVerifiableSource(input.adjustment);
   const adjustmentStatus: VerificationStatus =
-    input.adjustment.basis !== "UNKNOWN" &&
-    input.adjustment.coverage === "COMPLETE"
+    input.adjustment.basis === "RAW" &&
+    input.adjustment.coverage === "COMPLETE" &&
+    adjustmentSourceVerified &&
+    lateActions.length === 0
       ? "VERIFIED"
       : "NOT_VERIFIED";
-  const verificationStatus: VerificationStatus =
-    input.source.verificationStatus === "VERIFIED" &&
-    input.source.dataClass !== "FIXTURE" &&
-    input.source.dataClass !== "NOT_VERIFIED" &&
-    input.expectedSessions.verificationStatus === "VERIFIED" &&
-    adjustmentStatus === "VERIFIED"
-      ? "VERIFIED"
-      : "NOT_VERIFIED";
+  const sourceVerified = isVerifiableSource(input.source);
+  const calendarVerified =
+    input.expectedSessions.verificationStatus === "VERIFIED";
+  const coverageVerified =
+    input.adjustment.basis === "RAW" &&
+    input.adjustment.coverage === "COMPLETE" &&
+    adjustmentSourceVerified;
 
   let previousClose: bigint | null = null;
   let wasGap = false;
   let closeWindow: bigint[] = [];
-  let returnWindow: bigint[] = [];
+  let logReturnWindow: bigint[] = [];
   let trueRangeSeed = BigInt(0);
   let trueRangeCount = 0;
   let atr: bigint | null = null;
@@ -355,15 +441,53 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
   let rsiChangeCount = 0;
   let averageGain: bigint | null = null;
   let averageLoss: bigint | null = null;
+  let appliedAdjustmentRecordIds = new Set<string>();
 
   const sessions = sessionDates.map(
     (date, sessionIndex): NormalizedOhlcvSession => {
+      for (const action of actionIndexes.get(sessionIndex) ?? []) {
+        if (previousClose !== null) {
+          previousClose = multiplyScaled(
+            previousClose,
+            action.priceFactorScaled,
+          );
+          closeWindow = closeWindow.map((value) =>
+            multiplyScaled(value, action.priceFactorScaled),
+          );
+          trueRangeSeed = multiplyScaled(
+            trueRangeSeed,
+            action.priceFactorScaled,
+          );
+          if (atr !== null) atr = multiplyScaled(atr, action.priceFactorScaled);
+          gainSeed = multiplyScaled(gainSeed, action.priceFactorScaled);
+          lossSeed = multiplyScaled(lossSeed, action.priceFactorScaled);
+          if (averageGain !== null)
+            averageGain = multiplyScaled(averageGain, action.priceFactorScaled);
+          if (averageLoss !== null)
+            averageLoss = multiplyScaled(averageLoss, action.priceFactorScaled);
+          appliedAdjustmentRecordIds.add(action.sourceRecordId);
+        }
+      }
+
       const parsed = parsedBars.get(date);
+      const pointInTimeAdjustmentVerified = !lateActions.some(
+        (action) => action.effectiveDate <= date,
+      );
+      const verificationStatus: VerificationStatus =
+        sourceVerified &&
+        calendarVerified &&
+        coverageVerified &&
+        pointInTimeAdjustmentVerified &&
+        parsed !== undefined &&
+        parsed.availableAtMs !== null
+          ? "VERIFIED"
+          : "NOT_VERIFIED";
+
       if (!parsed) {
         previousClose = null;
         wasGap = true;
         closeWindow = [];
-        returnWindow = [];
+        logReturnWindow = [];
         trueRangeSeed = BigInt(0);
         trueRangeCount = 0;
         atr = null;
@@ -372,29 +496,32 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
         rsiChangeCount = 0;
         averageGain = null;
         averageLoss = null;
+        appliedAdjustmentRecordIds = new Set();
         return {
           date,
           sessionIndex,
+          signalAtMs: null,
           status: "GAP",
+          verificationStatus: "NOT_VERIFIED",
+          adjustmentRecordIdsAppliedToIndicators: [],
           bar: null,
           indicators: gapIndicators(),
         };
       }
 
-      const bar = normalizedBar(parsed, input.adjustment);
-      const open = parsePositiveDecimal(bar.open);
-      const high = parsePositiveDecimal(bar.high);
-      const low = parsePositiveDecimal(bar.low);
-      const close = parsePositiveDecimal(bar.close);
-      const volume = parseScaledDecimal(bar.volume, true);
+      const open = parsed.openScaled;
+      const high = parsed.highScaled;
+      const low = parsed.lowScaled;
+      const close = parsed.closeScaled;
       const dailyReturn =
         previousClose === null
           ? null
           : divideRounded((close - previousClose) * SCALE, previousClose);
-
+      const dailyLogReturn =
+        previousClose === null ? null : logReturnScaled(close, previousClose);
       const trueRange =
         previousClose === null
-          ? high - low
+          ? null
           : [
               high - low,
               absolute(high - previousClose),
@@ -402,17 +529,20 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
             ].reduce((largest, candidate) =>
               candidate > largest ? candidate : largest,
             );
-      if (atr === null) {
-        trueRangeSeed += trueRange;
-        trueRangeCount += 1;
-        if (trueRangeCount === ATR_WINDOW) {
-          atr = divideRounded(trueRangeSeed, BigInt(ATR_WINDOW));
+
+      if (trueRange !== null) {
+        if (atr === null) {
+          trueRangeSeed += trueRange;
+          trueRangeCount += 1;
+          if (trueRangeCount === ATR_PERIOD) {
+            atr = divideRounded(trueRangeSeed, BigInt(ATR_PERIOD));
+          }
+        } else {
+          atr = divideRounded(
+            atr * BigInt(ATR_PERIOD - 1) + trueRange,
+            BigInt(ATR_PERIOD),
+          );
         }
-      } else {
-        atr = divideRounded(
-          atr * BigInt(ATR_WINDOW - 1) + trueRange,
-          BigInt(ATR_WINDOW),
-        );
       }
 
       if (previousClose !== null) {
@@ -423,67 +553,69 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
           gainSeed += gain;
           lossSeed += loss;
           rsiChangeCount += 1;
-          if (rsiChangeCount === RSI_WINDOW) {
-            averageGain = divideRounded(gainSeed, BigInt(RSI_WINDOW));
-            averageLoss = divideRounded(lossSeed, BigInt(RSI_WINDOW));
+          if (rsiChangeCount === RSI_PERIOD) {
+            averageGain = divideRounded(gainSeed, BigInt(RSI_PERIOD));
+            averageLoss = divideRounded(lossSeed, BigInt(RSI_PERIOD));
           }
         } else {
           averageGain = divideRounded(
-            averageGain * BigInt(RSI_WINDOW - 1) + gain,
-            BigInt(RSI_WINDOW),
+            averageGain * BigInt(RSI_PERIOD - 1) + gain,
+            BigInt(RSI_PERIOD),
           );
           averageLoss = divideRounded(
-            averageLoss * BigInt(RSI_WINDOW - 1) + loss,
-            BigInt(RSI_WINDOW),
+            averageLoss * BigInt(RSI_PERIOD - 1) + loss,
+            BigInt(RSI_PERIOD),
           );
         }
-        if (dailyReturn !== null) {
-          returnWindow.push(dailyReturn);
-          if (returnWindow.length > RETURN_WINDOW) returnWindow.shift();
+        if (dailyLogReturn !== null) {
+          logReturnWindow.push(dailyLogReturn);
+          if (logReturnWindow.length > input.indicatorWindows.returns)
+            logReturnWindow.shift();
         }
       }
 
       closeWindow.push(close);
-      if (closeWindow.length > PRICE_WINDOW) closeWindow.shift();
+      if (closeWindow.length > input.indicatorWindows.movingAverage)
+        closeWindow.shift();
+      const insufficient = unavailableMetric<string>("INSUFFICIENT_HISTORY");
       const dailyReturnMetric =
         dailyReturn === null
           ? unavailableMetric<string>(wasGap ? "GAP" : "INSUFFICIENT_HISTORY")
           : metric(formatScaled(dailyReturn));
-      const volatilityMetric: MetricValue<string> =
-        returnWindow.length < RETURN_WINDOW
-          ? unavailableMetric("INSUFFICIENT_HISTORY")
+      const dailyLogReturnMetric =
+        dailyLogReturn === null
+          ? unavailableMetric<string>(wasGap ? "GAP" : "INSUFFICIENT_HISTORY")
+          : metric(formatScaled(dailyLogReturn));
+      const realizedVolatility: MetricValue<string> =
+        logReturnWindow.length < input.indicatorWindows.returns
+          ? insufficient
           : (() => {
-              const sum = returnWindow.reduce(
+              const sum = logReturnWindow.reduce(
                 (total, value) => total + value,
                 BigInt(0),
               );
-              const sumSquares = returnWindow.reduce(
+              const sumSquares = logReturnWindow.reduce(
                 (total, value) => total + value * value,
                 BigInt(0),
               );
-              const count = BigInt(returnWindow.length);
+              const count = BigInt(logReturnWindow.length);
               const varianceNumerator = sumSquares * count - sum * sum;
               const varianceDenominator =
-                count * BigInt(returnWindow.length - 1);
-              const standardDeviation = roundedSquareRoot(
-                divideRounded(varianceNumerator, varianceDenominator),
-              );
+                count * BigInt(logReturnWindow.length - 1);
               return metric(
                 formatScaled(
-                  divideRounded(standardDeviation * SQRT_252_SCALED, SCALE),
+                  roundedSquareRoot(
+                    divideRounded(varianceNumerator, varianceDenominator),
+                  ),
                 ),
               );
             })();
-      const quantilesMetric: MetricValue<
+      const logReturnQuantiles: MetricValue<
         Readonly<{ p05: string; p50: string; p95: string }>
       > =
-        returnWindow.length < RETURN_WINDOW
+        logReturnWindow.length < input.indicatorWindows.returns
           ? unavailableMetric("INSUFFICIENT_HISTORY")
-          : metric({
-              p05: formatScaled(returnQuantile(returnWindow, BigInt(5))),
-              p50: formatScaled(returnQuantile(returnWindow, BigInt(50))),
-              p95: formatScaled(returnQuantile(returnWindow, BigInt(95))),
-            });
+          : metric(quantiles(logReturnWindow));
       const rsiValue =
         averageGain === null || averageLoss === null
           ? null
@@ -499,19 +631,24 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
       return {
         date,
         sessionIndex,
+        signalAtMs: parsed.availableAtMs,
         status: "PRESENT",
+        verificationStatus,
+        adjustmentRecordIdsAppliedToIndicators: [...appliedAdjustmentRecordIds],
         bar: {
-          ...bar,
+          date,
+          availableAtMs: parsed.availableAtMs,
+          sourceRecordId: parsed.sourceRecordId,
           open: formatScaled(open),
           high: formatScaled(high),
           low: formatScaled(low),
           close: formatScaled(close),
-          volume: formatScaled(volume),
+          volume: formatScaled(parsed.volumeScaled),
         },
         indicators: {
-          simpleMovingAverage20:
-            closeWindow.length < PRICE_WINDOW
-              ? unavailableMetric("INSUFFICIENT_HISTORY")
+          simpleMovingAverage:
+            closeWindow.length < input.indicatorWindows.movingAverage
+              ? insufficient
               : metric(
                   formatScaled(
                     divideRounded(
@@ -519,7 +656,7 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
                         (total, value) => total + value,
                         BigInt(0),
                       ),
-                      BigInt(PRICE_WINDOW),
+                      BigInt(input.indicatorWindows.movingAverage),
                     ),
                   ),
                 ),
@@ -528,8 +665,9 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
               ? unavailableMetric("INSUFFICIENT_HISTORY")
               : metric(formatScaled(atr)),
           dailyReturn: dailyReturnMetric,
-          annualizedRealizedVolatility20: volatilityMetric,
-          dailyReturnQuantiles20: quantilesMetric,
+          dailyLogReturn: dailyLogReturnMetric,
+          realizedVolatility,
+          logReturnQuantiles,
           relativeStrengthIndex14:
             rsiValue === null
               ? unavailableMetric("INSUFFICIENT_HISTORY")
@@ -544,8 +682,16 @@ export function normalizeOhlcv(input: OhlcvInput): NormalizedOhlcvSeries {
     source: input.source,
     expectedSessions: input.expectedSessions,
     adjustment: input.adjustment,
+    indicatorWindows: input.indicatorWindows,
+    indicatorPriceBasis: "SPLIT_ADJUSTED_AS_OF_SESSION",
     adjustmentStatus,
-    verificationStatus,
+    verificationStatus: sessions.every(
+      (session) =>
+        session.verificationStatus === "VERIFIED" &&
+        session.status === "PRESENT",
+    )
+      ? "VERIFIED"
+      : "NOT_VERIFIED",
     decimalScale: OUTPUT_SCALE,
     sessions,
   };

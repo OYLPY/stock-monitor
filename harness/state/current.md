@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **当前执行：P09-01 / #58 实现与本地验证完成，待提交/远端 CI**：用户要求先实现可用功能，历史行情获取后续处理。基线 `5161bcad76bf2f93c08775861f680f1c3ce9d062`。纯 OHLCV/指标计算依赖已完成的 P05-02；P07-02/#49 与 P07-03/#50 仍独立处于 `BLOCKED_EXTERNAL`，Fixture 不是真实行情。实现位于 `src/features/quant/indicators.ts`，8 项手算 Fixture 位于对应 `.test.ts`。format、lint、typecheck、unit（29 files / 159 tests）、build 均 exit 0；build 仅构建应用，实际行情仍未接入。下一步：核对远端 main、提交推送并确认 Quality CI，然后写六字段交接、更新索引并关闭 #58，再开始 #59。
+- **P09-01 / #58 修正中，Issue 保持打开**：已推送实现提交 `c4bc52dea4d909dea4078935d59d9c5dc1856a9e` 与 Quality CI `44130653232` success；后续复核 DOC-0011 发现其波动率公式、TR 首根和公司行动时点处理不符合权威设计，故不据旧 CI 关闭 Issue。当前修正为 n 根对数收益样本标准差（不默认年化）、首根无 TR；每根 bar 增加实际可用时间和信号时点，拆股仅在已生效且不晚于有效 bar 数据可用时点时重基指标历史，未知可用时间或迟到行动均标记 `NOT_VERIFIED`；现金分红不用于信号价格。定向测试 11 项和 typecheck 已通过；下一步运行全套检查、提交 push 并确认新 Quality CI，再关闭 #58 并开始 #59。
 
 - **UI-COMP-01 / #89 已完成并关闭**：首页导航改为原生 Next `Link` 并使用 `buttonVariants()` 样式，修复 Base UI Button 的 `nativeButton` 语义告警；修复随提交 [`5bb5141d441c6f256250375f5daf4a25282b40c8`](https://github.com/OYLPY/stock-monitor/commit/5bb5141d441c6f256250375f5daf4a25282b40c8) 推送。匹配 [Quality CI 44025841254](https://github.com/OYLPY/stock-monitor/actions/runs/44025841254) success，含 5 项 Playwright E2E；现有 E2E 没有专门断言浏览器 console warning。未修改 shadcn 生成组件和原有 `src/components/ui/*`。详见 [六字段交接](../handoffs/UI-COMP-01.md)。
 
