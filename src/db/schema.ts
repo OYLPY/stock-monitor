@@ -121,6 +121,56 @@ export const sourceRecords = sqliteTable(
   ],
 );
 
+export const marketPriceBars = sqliteTable(
+  "market_price_bars",
+  {
+    id: text("id").primaryKey(),
+    marketCode: text("market_code").notNull(),
+    symbol: text("symbol").notNull(),
+    tradingDate: text("trading_date").notNull(),
+    openMantissa: sqliteInt64("open_mantissa").notNull(),
+    highMantissa: sqliteInt64("high_mantissa").notNull(),
+    lowMantissa: sqliteInt64("low_mantissa").notNull(),
+    closeMantissa: sqliteInt64("close_mantissa").notNull(),
+    priceScale: sqliteSmallInteger("price_scale").notNull(),
+    volumeShares: sqliteInt64("volume_shares").notNull(),
+    sourceRecordId: text("source_record_id")
+      .notNull()
+      .references(() => sourceRecords.id, { onDelete: "restrict" }),
+    collectedAtMs: sqliteInt64("collected_at_ms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("market_price_bars_source_date").on(
+      table.sourceRecordId,
+      table.tradingDate,
+    ),
+    index("market_price_bars_market_symbol_date").on(
+      table.marketCode,
+      table.symbol,
+      table.tradingDate,
+      table.collectedAtMs,
+    ),
+    check("market_price_bars_market", sql`${table.marketCode} IN ('JP', 'US')`),
+    check(
+      "market_price_bars_symbol",
+      sql`length(${table.symbol}) BETWEEN 1 AND 32`,
+    ),
+    check(
+      "market_price_bars_date",
+      sql`length(${table.tradingDate}) = 10 AND date(${table.tradingDate}) = ${table.tradingDate}`,
+    ),
+    check(
+      "market_price_bars_prices",
+      sql`${table.openMantissa} > 0 AND ${table.highMantissa} > 0 AND ${table.lowMantissa} > 0 AND ${table.closeMantissa} > 0 AND ${table.priceScale} BETWEEN 0 AND 8`,
+    ),
+    check(
+      "market_price_bars_ohlc",
+      sql`${table.highMantissa} >= ${table.openMantissa} AND ${table.highMantissa} >= ${table.closeMantissa} AND ${table.highMantissa} >= ${table.lowMantissa} AND ${table.lowMantissa} <= ${table.openMantissa} AND ${table.lowMantissa} <= ${table.closeMantissa}`,
+    ),
+    check("market_price_bars_volume", sql`${table.volumeShares} >= 0`),
+  ],
+);
+
 export const instruments = sqliteTable(
   "instruments",
   {

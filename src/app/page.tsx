@@ -25,8 +25,9 @@ const researchAreas = [
     icon: Activity,
     label: "市场监测",
     title: "尚无可核验行情",
-    description: "行情来源尚未接入；不显示价格、涨跌幅或趋势图。",
-    action: "查看市场监测",
+    description:
+      "可导入本机 CSV 查看日线记录；未核验数据不会生成趋势或回测结果。",
+    action: "导入本机行情",
   },
   {
     href: "/events",

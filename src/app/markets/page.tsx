@@ -4,6 +4,8 @@ import {
   MarketDataStatusBadge,
   MarketDataStatusLegend,
 } from "@/components/market/market-data-status";
+import { LocalCsvImport } from "@/components/market/local-csv-import";
+import { LocalPriceHistory } from "@/components/market/local-price-history";
 import { PriceHistoryChart } from "@/components/market/price-history-chart";
 import { Alert, AlertDescription } from "@/components/shadcn/alert";
 import {
@@ -15,7 +17,12 @@ import {
   CardTitle,
 } from "@/components/shadcn/card";
 import { MARKET_TIME_ZONES } from "@/domain/primitives";
-import type { CurrencyCode, MarketCode } from "@/domain/primitives";
+import type { CurrencyCode } from "@/domain/primitives";
+import type { MarketCode } from "@/domain/primitives";
+import { loadLocalMarketBars } from "@/features/market-data/local-import";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const markets = [
   { code: "US", label: "美国市场", currency: "USD" },
@@ -26,16 +33,58 @@ const markets = [
   label: string;
 }>;
 
-export default function MarketsPage() {
+export default async function MarketsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ import?: string }>;
+}) {
+  const [localBars, params] = await Promise.all([
+    loadLocalMarketBars(),
+    searchParams,
+  ]);
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
         <p className="text-sm font-medium text-muted-foreground">美日市场</p>
         <h1 className="sr-only">市场监测</h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          当前未接入经过核验的交易日历或行情来源。页面不会推断开市状态，也不会用示例价格填充图表。
+          当前未接入经过核验的行情来源。页面不会推断开市状态或绘制未核验行情；导入的本机文件会单独列出。
         </p>
       </header>
+
+      {params.import === "success" && (
+        <Alert>
+          <AlertDescription>
+            行情已保存在本机记录中，来源与许可仍为 NOT_VERIFIED。
+          </AlertDescription>
+        </Alert>
+      )}
+      {params.import === "error" && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            行情文件未导入，请检查文件、字段和本机保存权限。
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <LocalCsvImport />
+
+      <section
+        aria-labelledby="local-market-history-heading"
+        className="flex flex-col gap-4"
+      >
+        <h2
+          className="text-base font-semibold"
+          id="local-market-history-heading"
+        >
+          本机导入记录
+        </h2>
+        <div className="grid gap-4">
+          <LocalPriceHistory bars={localBars.US} market="US" />
+          <LocalPriceHistory bars={localBars.JP} market="JP" />
+        </div>
+      </section>
 
       <section
         aria-labelledby="market-sessions-heading"

@@ -64,6 +64,13 @@
       "when": 1794983450172,
       "tag": "0008_p10_04_paper_fill_engine",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794997403620,
+      "tag": "0009_p07_02_market_price_bars",
+      "breakpoints": true
     }
   ]
 }
