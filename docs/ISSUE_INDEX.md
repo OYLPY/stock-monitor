@@ -160,7 +160,7 @@
 
 - [x] [P08-01 — Codex SDK 服务封装与任务隔离](https://github.com/OYLPY/stock-monitor/issues/53) · 交付：`src/features/ai/codex-adapter`、[六字段交接](../harness/handoffs/P08-01.md) · 实现提交：[6f98e815](https://github.com/OYLPY/stock-monitor/commit/6f98e81585dca6aa37997739d18541d36e947a68) · Quality CI：[43873045326](https://github.com/OYLPY/stock-monitor/actions/runs/43873045326) success · 依赖：P04-01, P05-03
 - [x] [P08-02 — 六角色结构化研究工作流](https://github.com/OYLPY/stock-monitor/issues/54) · 交付：[六角色工作流](../src/features/research/workflows/report.ts)、[六字段交接](../harness/handoffs/P08-02.md) · 提交：[f1a88bb](https://github.com/OYLPY/stock-monitor/commit/f1a88bb6510ced148919b06b17428fcf945aed04) · Quality CI：[44328957448](https://github.com/OYLPY/stock-monitor/actions/runs/44328957448) success · 依赖：P08-01, P07-04；行情缺失仍归档 NOT_VERIFIED，候选为空
-- [ ] [P08-03 — 研究证据引用与反幻觉校验](https://github.com/OYLPY/stock-monitor/issues/55) · 依赖：P08-02, P07-04
+- [x] [P08-03 — 研究证据引用与反幻觉校验](https://github.com/OYLPY/stock-monitor/issues/55) · 交付：[证据 checker](../src/features/research/evidence-checker.ts)、[六字段交接](../harness/handoffs/P08-03.md) · 提交：[4517152](https://github.com/OYLPY/stock-monitor/commit/4517152030fb99b49a9e05e0c63c0963cdec9683) · Quality CI：[44334936714](https://github.com/OYLPY/stock-monitor/actions/runs/44334936714) success · 依赖：P08-02, P07-04 · 不完整/缺行情报告仍为 NOT_VERIFIED 且候选为空
 - [ ] [P08-04 — 晨报/异常报告/每日与每周审计生成](https://github.com/OYLPY/stock-monitor/issues/56) · 依赖：P08-02, P08-03；不完整报告可归档
 - [ ] [P08-05 — AI研究回归评估和上下文交接](https://github.com/OYLPY/stock-monitor/issues/57) · 依赖：P08-03, P00-04
 
