@@ -28,5 +28,6 @@ The same vector replays byte-for-byte to the same report. Raising costs for the 
 - `corepack pnpm build` — exit 0.
 - `git diff --check` — exit 0.
 - Free [Quality CI 44271335408](https://github.com/OYLPY/stock-monitor/actions/runs/44271335408) — success for frozen install, format, lint, typecheck, unit tests, build, Chromium installation, and Playwright E2E.
+- Free [Quality CI 44271796800](https://github.com/OYLPY/stock-monitor/actions/runs/44271796800) — same required checks succeeded for the acceptance-record commit.
 
 No paid service, market-data API, coverage upload, or other cloud data service was used.
