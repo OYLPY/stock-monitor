@@ -2,7 +2,7 @@
 
 - **P10-05 / #68 已完成并关闭**：实现提交 [`9fedda8`](https://github.com/OYLPY/stock-monitor/commit/9fedda8f53fc2aa14f3e7717ed5684a982500078) / [Quality CI 44263245240](https://github.com/OYLPY/stock-monitor/actions/runs/44263245240) success；六字段交接提交 [`8b4f674`](https://github.com/OYLPY/stock-monitor/commit/8b4f67441894e63875ac1fe2e21be39d6916a75d) / [Quality CI 44263902351](https://github.com/OYLPY/stock-monitor/actions/runs/44263902351) success；GitHub #68 已关闭。审计覆盖不可变账本/订单/成交/费用、权益快照和恢复一致性；无可信行情仍为 `NOT_VERIFIED`。详见 [P10-05 六字段交接](../handoffs/P10-05.md)。
 
-- **当前工作项 P12-01 / #74**：前置 #48、#58、#66 已在 GitHub 核实关闭。2026-11-18 从 `main` 基线 `61f7d8e58e78726697f7a2a6c76a98a814d78777` 开始，`git fetch origin main` 后本地与远端一致，工作树干净；Issue 已更正为直接 main/no PR 和本地 V8 覆盖报告，并已评论记录开始状态。6 个目标单测移至 `tests/unit`，覆盖 TSE/NYSE 时间边界、JPY 精度、2%/20% 风控、ATR、缺口和事件指纹；本地 `test:coverage` 为 6 文件/57 项、行 85.30%、分支 70.64%，全量 `test` 为 35 文件/239 项。format、lint、typecheck 和 build 均 exit 0。覆盖报告见 [P12-01 本地覆盖报告](../evidence/P12-01-coverage.md)；没有使用云端覆盖服务或行情数据。下一步创建六字段交接，提交/push main 并等待 Quality CI。
+- **P12-01 / #74 验收已通过，Issue 关闭待证据同步**：实现提交 [`73df418`](https://github.com/OYLPY/stock-monitor/commit/73df41897b6df574c443be92c3ea1e41588e053f) 已推送；本地覆盖为 6 文件/57 项、语句 82.40%、分支 70.64%、行 85.30%，全量单测 35 文件/239 项；format、lint、typecheck、build 均 exit 0。匹配的免费 [Quality CI 44267744162](https://github.com/OYLPY/stock-monitor/actions/runs/44267744162) 全绿，含 Playwright E2E。覆盖报告及六字段交接见 `harness/evidence/P12-01-coverage.md` 和 `harness/handoffs/P12-01.md`；没有使用云端覆盖服务或行情数据。
 
 - **P09-01 / #58 已完成并关闭**：修正提交 [`f547b42`](https://github.com/OYLPY/stock-monitor/commit/f547b42dde131dc06f22f017524bdbd807b08c08) 已推送；本地 format、lint、typecheck、unit（29 files / 162 tests）、build 和 [Quality CI 44212087898](https://github.com/OYLPY/stock-monitor/actions/runs/44212087898)（含 Playwright E2E）均成功。每根 bar 记录实际可用时间与信号时点；拆股仅在生效且不晚于有效 bar 数据可用时点时重基指标历史；未知可用时间/迟到行动标记 `NOT_VERIFIED`。#49 美股和 #50 日股供应商 Issue 仍 `BLOCKED_EXTERNAL`，不阻塞无供应商计算内核。
 
@@ -93,7 +93,7 @@
 - **P08-01 / #53 完成**：实现 `6f98e81585dca6aa37997739d18541d36e947a68` 与交接/索引 `189b88ec1c5afaeec772f119aadcd194d3d1b186` 均通过匹配 Quality CI `43873045326`、`43873766300`；#53 已关闭。账户认证刷新、额度与远端取消语义仍 `NOT_VERIFIED`。详见 [P08-01 六字段交接](../handoffs/P08-01.md)。
 - **P09-05 / #62 已完成并关闭**：实现提交 `a8211c0f0d22f99d41a3d380094f02faec3b887c` 的免费 Quality CI `44240857019` 与交接提交 `c72af324322d859aacc79a571d36bb9eb5f352e4` 的免费 Quality CI `44241513945` 均成功；本地 format、lint、typecheck、unit（32 files / 208 tests）、build 与 PMO 自检均通过。详见 [P09-05 六字段交接](../handoffs/P09-05.md)。仓库没有可核验的 2020/2022 OHLCV/FX，仍不得报告真实历史绩效；未调用外部行情、付费或云端数据服务。
 - **P09-06 / #63 已完成并关闭**：实现提交 `d04d7fcb39882a357839518b29d5201cd23d41b5` 与验收记录提交 `89a1e2f1afbc8c5a5fd5b3243e965386d8f8eecc` 的免费 Quality CI `44246049844`、`44246938333` 均成功；GitHub #63 已关闭。真实历史和校准证据仍缺失，因此生产评分保持 `NOT_VERIFIED`。
-- **P12-01 下一步具体操作**：创建 [六字段交接](../handoffs/P12-01.md)，核对覆盖报告及最终 diff，提交/push `main`；确认免费 Quality CI（含完整 unit、build 与 Playwright E2E）通过后，在 #74 记录证据并关闭。
+- **P12-01 下一步具体操作**：提交并 push 当前交接/索引更新，等对应 Quality CI 通过后在 #74 记录证据并关闭；然后开始 P12-04 / #77（依赖 P09-06 / #63 已关闭），先更正 Issue 的 PR 要求为 direct-main/no-PR。
 
 - **P06-06 开始记录**：2026-11-16；#47 的旧 PR 要求已按用户授权修正为 main 直推/no-PR；开始评论记录依赖、基线和运行时边界。
 - **P07-01 开始记录**：2026-11-16；开始前 main 与 origin/main 同步至 `2eb947da6d95d71ee9b8686ec83e7e4d66a3a86a`，工作树干净，无开放 PR；依赖 #38/#35 和前序 #47 均已关闭。#48 的旧分支/PR 文字已按授权修正为直接 main/no-PR，并记录官方日历核验计划。
