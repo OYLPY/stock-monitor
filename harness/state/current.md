@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **当前执行：P09-06 / #63**。依赖 #61/#62 已关闭；本地 `main` 与 `origin/main` 同步于 `c72af324322d859aacc79a571d36bb9eb5f352e4`，无打开 PR。已更新 Issue 验收为直接 main/no-PR/免费 Quality CI，并开始实现要求显式历史校准规则的五维评分器；当前没有可核验历史行情，因此不添加默认阈值。
+- **P09-06 / #63 验收完成，等待关闭**。实现提交 [`d04d7fc`](https://github.com/OYLPY/stock-monitor/commit/d04d7fcb39882a357839518b29d5201cd23d41b5) 与免费 [Quality CI 44246049844](https://github.com/OYLPY/stock-monitor/actions/runs/44246049844) 已通过；本地 33 files / 215 tests、format、lint、typecheck、build 均通过。评分规则须由调用方提供版本化校准证据；仓库缺少真实历史证据时输出 `NOT_VERIFIED`。六字段交接见 [P09-06](../handoffs/P09-06.md)。当前验收记录提交及其 CI 通过后关闭 #63，再开始 P10-04 / #67。
 
 - **P09-01 / #58 已完成并关闭**：修正提交 [`f547b42`](https://github.com/OYLPY/stock-monitor/commit/f547b42dde131dc06f22f017524bdbd807b08c08) 已推送；本地 format、lint、typecheck、unit（29 files / 162 tests）、build 和 [Quality CI 44212087898](https://github.com/OYLPY/stock-monitor/actions/runs/44212087898)（含 Playwright E2E）均成功。每根 bar 记录实际可用时间与信号时点；拆股仅在生效且不晚于有效 bar 数据可用时点时重基指标历史；未知可用时间/迟到行动标记 `NOT_VERIFIED`。#49 美股和 #50 日股供应商 Issue 仍 `BLOCKED_EXTERNAL`，不阻塞无供应商计算内核。
 
@@ -90,7 +90,8 @@
 - **P07-04 / #51 最终验收**：实现与设计提交 `2d3b769687285b663b6265f199b88ddf1cef8c7c` / [Quality CI 43885925362](https://github.com/OYLPY/stock-monitor/actions/runs/43885925362) 与验收交接提交 `cb11b4748ddeb239d784d3c18dff218f4ba18664` / [Quality CI 43887584327](https://github.com/OYLPY/stock-monitor/actions/runs/43887584327) 均成功；#51 已关闭。线上来源可用性仍为 `NOT_VERIFIED`。详见[六字段交接](../handoffs/P07-04.md)。
 - **P08-01 / #53 完成**：实现 `6f98e81585dca6aa37997739d18541d36e947a68` 与交接/索引 `189b88ec1c5afaeec772f119aadcd194d3d1b186` 均通过匹配 Quality CI `43873045326`、`43873766300`；#53 已关闭。账户认证刷新、额度与远端取消语义仍 `NOT_VERIFIED`。详见 [P08-01 六字段交接](../handoffs/P08-01.md)。
 - **P09-05 / #62 已完成并关闭**：实现提交 `a8211c0f0d22f99d41a3d380094f02faec3b887c` 的免费 Quality CI `44240857019` 与交接提交 `c72af324322d859aacc79a571d36bb9eb5f352e4` 的免费 Quality CI `44241513945` 均成功；本地 format、lint、typecheck、unit（32 files / 208 tests）、build 与 PMO 自检均通过。详见 [P09-05 六字段交接](../handoffs/P09-05.md)。仓库没有可核验的 2020/2022 OHLCV/FX，仍不得报告真实历史绩效；未调用外部行情、付费或云端数据服务。
-- **当前下一步具体操作**：完成 P09-06/#63 的全量 format、lint、typecheck、unit 和 build 验收，记录六字段交接并同步 Issue/索引；通过后提交并 push `main`，核对该提交的免费 Quality CI，再关闭 #63。
+- **P09-06 / #63 本地与实现 CI 验收**：本地 `corepack pnpm format:check`、`lint`、`typecheck`、`test`（33 files / 215 tests）、`build`、定向评分测试（7/7）、PMO 自检和 `git diff --check` 均 exit 0；实现提交 `d04d7fcb39882a357839518b29d5201cd23d41b5` 的免费 [Quality CI 44246049844](https://github.com/OYLPY/stock-monitor/actions/runs/44246049844) 成功，含 Playwright E2E。验收记录与交接已写入，等待记录提交的 CI 后关闭 #63。真实历史和校准证据仍缺失，因此生产评分保持 `NOT_VERIFIED`。
+- **当前下一步具体操作**：提交并 push P09-06 的交接/索引记录，核对该提交的免费 Quality CI；成功后关闭 #63，再开始 P10-04 / #67。
 
 - **P06-06 开始记录**：2026-11-16；#47 的旧 PR 要求已按用户授权修正为 main 直推/no-PR；开始评论记录依赖、基线和运行时边界。
 - **P07-01 开始记录**：2026-11-16；开始前 main 与 origin/main 同步至 `2eb947da6d95d71ee9b8686ec83e7e4d66a3a86a`，工作树干净，无开放 PR；依赖 #38/#35 和前序 #47 均已关闭。#48 的旧分支/PR 文字已按授权修正为直接 main/no-PR，并记录官方日历核验计划。
