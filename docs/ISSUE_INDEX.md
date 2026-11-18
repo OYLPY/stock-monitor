@@ -194,7 +194,7 @@
 - [x] [P12-01 — 单元测试覆盖风险、时间、价量与计算](https://github.com/OYLPY/stock-monitor/issues/74) · 依赖：P07-01, P09-01, P10-03
 - [ ] [P12-02 — 集成测试覆盖数据库与各数据源故障](https://github.com/OYLPY/stock-monitor/issues/75) · 依赖：P07-05, P10-05, P11-03
 - [ ] [P12-03 — Playwright 完整 E2E 研究与模拟计划](https://github.com/OYLPY/stock-monitor/issues/76) · 依赖：P06-06, P10-05, P11-04
-- [ ] [P12-04 — 回测与研究结果可重复性审计](https://github.com/OYLPY/stock-monitor/issues/77) · 依赖：P09-06
+- [x] [P12-04 — 回测与研究结果可重复性审计](https://github.com/OYLPY/stock-monitor/issues/77) · 依赖：P09-06
 - [ ] [P12-05 — 安全与故障恢复演练](https://github.com/OYLPY/stock-monitor/issues/78) · 依赖：P00-05, P05-05, P08-05, P11-05
 - [ ] [P12-06 — 最终系统质量门禁与缺陷清零](https://github.com/OYLPY/stock-monitor/issues/79) · 依赖：P12-01, P12-02, P12-03, P12-04, P12-05
 
