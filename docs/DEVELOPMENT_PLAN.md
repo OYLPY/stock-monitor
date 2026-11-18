@@ -173,7 +173,7 @@
 | ID | 任务与实施重点 | 交付物 | 验收/依赖 |
 |---|---|---|---|
 | [`P09-01`](https://github.com/OYLPY/stock-monitor/issues/58) | **OHLCV 归一化与指标库**：按有来源、收盘时点和 bar 可用时点的预期交易日映射日线 OHLCV；仅对当时已生效且不晚于有效 bar 数据可用时点可知的拆股重基指标历史，分红不用于信号价格，缺口重置窗口。实现 Wilder ATR(14)、SMA(n)、简单/对数日收益、n 日对数收益样本标准差、线性 P05/P50/P95 和 RSI(14)，统一 8 位定点精度，不默认年化。 | src/features/quant/indicators、单测数据 | 手算 Fixture 与代码一致；首 bar 不伪造 TR；未知可用时间、迟到公司行动、缺日历/行情和缺口有明确状态；依赖：P05-02。行情源接入 P07-02/P07-03 独立推进；Fixture 不得宣称真实行情。 |
-| [`P09-02`](https://github.com/OYLPY/stock-monitor/issues/59) | **无未来函数的回测撮合引擎**：定义信号时点、下一可交易价、订单成交规则、价差/滑点、手续费、资金与持仓、公司行为及缺口条件；可重播。 | src/features/backtest/engine、Fixture | 同K线先知交易被禁止；相同输入输出相同；现金/仓位不为负；依赖：P09-01, P03-04 |
+| [`P09-02`](https://github.com/OYLPY/stock-monitor/issues/59) | **无未来函数的回测撮合引擎**：信号数据可用后只尝试下一时段开盘；使用未复权开盘价、开盘点时、按有效期版本化的费用和累计成交量上限；按来源规则结算卖出应收，处理拆股、分红、缺口及资金持仓；可确定性重播。 | src/features/backtest/engine、Fixture | 禁止同 bar/同开盘先知成交；开盘价迟到/缺失不成交、不顺延；费用或结算规则缺失时不撮合/不伪称可信；成交现金/持仓非负；Fixture 为 DEMO_ONLY；相同输入输出一致；依赖：P09-01, P03-04 |
 | [`P09-03`](https://github.com/OYLPY/stock-monitor/issues/60) | **三类初始策略与参数边界**：实现财报后漂移、趋势/放量突破、过度反应均值回归或板块轮动的最小策略接口；参数是研究假设，不自动优化。 | src/features/strategies、参数 Schema | 至少三种不同逻辑可调用；规则有明确入场/退出/止损与缺数据路径；依赖：P09-01, P09-02 |
 | [`P09-04`](https://github.com/OYLPY/stock-monitor/issues/61) | **样本内/样本外与 Walk-forward 实验**：实现时间序列划分、参数冻结、滚动窗口、重采样、避免数据窥探；记录交易次数、胜率、收益分布。 | src/features/validation、测试报告 | 测试集不参与参数选择；小样本不通过；同一配置可重算结果；依赖：P09-02, P09-03 |
 | [`P09-05`](https://github.com/OYLPY/stock-monitor/issues/62) | **2020/2022 压力与费用/汇率敏感性**：可取得真实历史数据时检验2020与2022环境、不同手续费/滑点/FX冲击、流动性容量；不可取得则 NOT_VERIFIED。 | stress-test 脚本、真实证据与Fixture区分 | 不得虚构历史结果；费用/跳空增大时策略净值和风险按规则变化；依赖：P09-04 |

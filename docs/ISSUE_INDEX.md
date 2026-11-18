@@ -166,7 +166,7 @@
 
 ### [P09 指标、回测与量化验证](https://github.com/OYLPY/stock-monitor/issues/10)
 
-- [ ] [P09-01 — OHLCV 归一化与指标库](https://github.com/OYLPY/stock-monitor/issues/58) · 依赖：P05-02（供应商接入 P07-02/P07-03 不阻塞；按 DOC-0011 点时调整契约）。
+- [x] [P09-01 — OHLCV 归一化与指标库](https://github.com/OYLPY/stock-monitor/issues/58) · 依赖：P05-02（供应商接入 P07-02/P07-03 不阻塞；按 DOC-0011 点时调整契约）。
 - [ ] [P09-02 — 无未来函数的回测撮合引擎](https://github.com/OYLPY/stock-monitor/issues/59) · 依赖：P09-01, P03-04
 - [ ] [P09-03 — 三类初始策略与参数边界](https://github.com/OYLPY/stock-monitor/issues/60) · 依赖：P09-01, P09-02
 - [ ] [P09-04 — 样本内/样本外与 Walk-forward 实验](https://github.com/OYLPY/stock-monitor/issues/61) · 依赖：P09-02, P09-03
