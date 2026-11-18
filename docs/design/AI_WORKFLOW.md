@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0008 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P02-03 设计基线，P08-01 增补 SDK 调用边界。本文定义六个串行职责步骤、输入输出、应用层验证与确定性风控边界；适配器和验证结果见下文。P04-01 裸 SDK 在 loopback 断连中请求 37 次；P08-01 为固定 Codex 0.169.0 CLI 使用独立 OpenAI-auth provider 配置，设置 `request_max_retries=0`、`stream_max_retries=0` 并关闭 WebSocket transport；断连、HTTP 429、flat SSE error 与 HTTP 401 四种 loopback 失败各实测 1 次 `/v1/responses` 请求，429 fixture 被分类为 `RATE_LIMITED`。SDK 没有请求计数/拦截接口，以上是固定版本和配置的回归证据，不推断其他认证恢复或后台调用路径；真实账户额度、认证恢复语义和远端取消效果仍为 `NOT_VERIFIED`。持久步骤状态与恢复契约见 [WORKFLOW_STATE.md](WORKFLOW_STATE.md)，DTO 见 P03-02。
+> 状态：P02-03 设计基线，P08-01 增补 SDK 边界，P08-02 定义六角色结构化报告工作流。本文定义六个职责、输入输出、应用层验证与确定性风控边界；适配器和验证结果见下文。P04-01 裸 SDK 在 loopback 断连中请求 37 次；P08-01 为固定 Codex 0.169.0 CLI 使用独立 OpenAI-auth provider 配置，设置 `request_max_retries=0`、`stream_max_retries=0` 并关闭 WebSocket transport；断连、HTTP 429、flat SSE error 与 HTTP 401 四种 loopback 失败各实测 1 次 `/v1/responses` 请求，429 fixture 被分类为 `RATE_LIMITED`。SDK 没有请求计数/拦截接口，以上是固定版本和配置的回归证据，不推断其他认证恢复或后台调用路径；真实账户额度、认证恢复语义和远端取消效果仍为 `NOT_VERIFIED`。持久步骤状态与恢复契约见 [WORKFLOW_STATE.md](WORKFLOW_STATE.md)，DTO 见 P03-02。
 >
 > 六个角色是同一模型工作流中的职责划分，不是六个独立 Agent。来源时间、质量和 `DEMO_ONLY` 规则沿用[数据溯源设计](DATA_PROVENANCE.md)；系统信任边界见[系统架构](ARCHITECTURE.md)。
 
@@ -14,10 +14,18 @@
 
 适配器为单个 Node 进程限制一个活动调用。它在首次 SDK 错误事件上取消当前 turn，并将 prompt/source IDs、输出摘要和 usage 或稳定错误码写入追加式审计链，不保存原始 prompt、模型输出或错误文本。Codex 0.169.0 禁止覆盖内置 `openai` provider 的配置，因此适配器使用临时 `stock_monitor_openai` provider，启用 Codex 本机 OpenAI 认证，设置 request/stream retry 为 0，并关闭 WebSocket fallback；它不改写用户的 `CODEX_HOME/config.toml`。这些配置字段与重试路径见 [Codex 0.169.0 provider definition](https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/model-provider-info/src/lib.rs) 和 [Responses retry handler](https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/src/responses_retry.rs)。断连、HTTP 429、flat SSE `error` 和 HTTP 401 的 loopback PoC 各记录 1 次 `/v1/responses` 请求，429 fixture 被分类为 `RATE_LIMITED`。SDK 未提供网络请求计数/拦截 API；该结果只验证固定 CLI 版本、provider 配置和四种本地错误样例。认证刷新、副作用请求和远端取消仍为 `NOT_VERIFIED`。`CODEX_HOME` 线程存储仍由 Codex CLI 管理；并发限制仅覆盖同一 Node 进程，跨 Next.js 与独立 Worker 的全局锁需由后续运行时集成验证。
 
+## P08-02 结构化研究工作流
+
+报告工作流通过一次本机 Codex 调用，按统筹、情报侦察、市场结构、策略研究、独立风控、模拟员的顺序生成结构化角色记录。六个角色是同一模型响应中的职责分段，不是独立 Agent，也没有独立模型或独立检查点。响应先通过 Zod Schema；应用代码再强制执行行情覆盖与风控否决门禁。模型只能看到本机已保存的行情条目和事件归一化摘要、来源元数据；来源原文没有存入 `source_records` 时，不会被当作已读取。
+
+生成候选的前提是美股和日股各至少有一只证券具备 30 个不同交易日的近期日线记录；该证券记录须来自 `REAL` 或 `DELAYED` 来源，来源角色为 `AUTHORIZED_VENDOR` 或 `EXCHANGE_PRIMARY`，许可状态为 `VERIFIED`，采集时间和最新交易日均在报告前 7 天内。该门槛只表示输入覆盖足以提出未验证假设，不是策略验证、回测或盈利证据；最终候选还必须绑定到其自身证券的可用记录。任何一项不满足时，工作流报告 `NOT_VERIFIED` 并清空候选列表。模型风控 `VETO` 也会清空候选；`NO_VETO` 不等于通过，当前模拟员步骤恒为 `SKIPPED`，不生成计划或写入账本。
+
+没有任何本机来源记录时不调用模型，工作流仍返回完整形状的 `NOT_VERIFIED` 输出，并把六个角色标为 `SKIPPED`。Codex 调用失败或结构错误保留失败状态；P08-04 负责将这些结果归档。该工作流不做外部行情/新闻抓取，不推断“无新事件”，也不声称已核实交易日、宏观日历、汇率或利率。
+
 ## 设计决策
 
-1. 一个研究任务只使用当前配置的同一模型，按统筹 → 情报侦察 → 市场结构 → 策略研发 → 独立风控复核 → 模拟计划的顺序串行执行；不并行运行角色 Agent，也不假设角色间有独立身份或独立模型保障。
-2. 每个角色只产出结构化提案。应用服务在接受每一步输出前检查 Schema、引用的 `evidenceId`、输入范围与允许的数据状态；检查通过后才保存并交给下一步。格式错误、引用不存在或试图越权的输出停止该步骤，不让模型自行修补校验结果。
+1. 一个研究任务只使用当前配置的同一模型，并在一个结构化响应中按统筹 → 情报侦察 → 市场结构 → 策略研发 → 独立风控复核 → 模拟员顺序返回职责记录；不并行运行角色 Agent，也不假设角色间有独立身份或独立模型保障。
+2. 应用服务先校验整个响应的 Schema，再按角色检查引用的 `evidenceId`、时间戳、输入范围与允许的数据状态；无效角色输出被标为未完成并且不会进入后续候选或纸面计划，不让模型自行修补校验结果。
 3. 模型只能读取应用服务整理的任务上下文和已取得证据。来源获取由应用层受限的只读适配器负责；角色步骤没有任意网络、文件系统、数据库、任务配置、账户或账本写入能力。P08 再确定运行时工具清单和调用审计。
 4. 事实、推论、策略假设和证据缺口分别表达，均回链来源；验证等级、来源状态、时效和任务状态由确定性应用代码根据证据与质量规则赋值，不能由模型自评或提升。
 5. “独立风控”是独立的工作流复核步骤，并非独立模型或安全执行边界。研究裁决沿用 FR-Research 状态；具体纸面计划沿用 FR-Trade 的 `PASS`、`REJECT`、`UNRESOLVED`。模型风控可否决候选或指出风险缺口，但无论是否否决都不能创建放行、改动门槛或覆盖代码结果。
@@ -105,3 +113,4 @@ flowchart TD
 ## 修订记录
 
 - 2026-11-16（P08-01 / #53）：补充 Codex SDK 适配器运行边界与 0.169.0 provider 重试预算的 loopback 验证；真实认证、额度和远端取消仍未验证。
+- 2026-11-18（P08-02 / #54）：明确单次结构化 Codex 响应的六角色记录、已保存证据边界、双市场最低行情覆盖、失败关闭及无行情时零候选契约。

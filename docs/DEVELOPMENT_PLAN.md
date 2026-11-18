@@ -160,9 +160,9 @@
 | ID | 任务与实施重点 | 交付物 | 验收/依赖 |
 |---|---|---|---|
 | [`P08-01`](https://github.com/OYLPY/stock-monitor/issues/53) | **Codex SDK 服务封装与任务隔离**：实现服务端 Codex 连接、会话/流式事件、重试/取消/调用审计、速率限制、权限边界；避免无界模型调用。 | src/features/ai/codex-adapter、测试桩 | 成功输出有来源与调用追踪；失败/限额/超时可恢复，不泄露认证信息；依赖：P04-01, P05-03 |
-| [`P08-02`](https://github.com/OYLPY/stock-monitor/issues/54) | **六角色结构化研究工作流**：实现统筹→情报→市场结构→策略研究→独立风控→模拟员的单进程可分步骤执行；定义角色输入/输出、独立否决点。 | src/features/research/workflows、Zod 契约 | AI角色不能写账本；角色未完成时报告显式不完整；否决阻止后续提案；依赖：P08-01, P07-05 |
-| [`P08-03`](https://github.com/OYLPY/stock-monitor/issues/55) | **研究证据引用与反幻觉校验**：实现引文映射到实际采集证据、时间戳验证、事实/推论/假设区分、数字单位交叉检查与无来源降级；拒绝伪造 TradingView 实时读取。 | src/features/research/evidence-checker、测试 | 伪造URL、错误时间、过期数字、缺失资料不会通过 VERIFIED；依赖：P08-02, P07-05 |
-| [`P08-04`](https://github.com/OYLPY/stock-monitor/issues/56) | **晨报/异常报告/每日与每周审计生成**：按需求输出美日最新完成交易日、五行摘要、未来24小时事件、≤3策略及五维验证状态、风控裁决、账本状态；支持报告归档与再次生成。 | src/features/reports、报告模板、测试 | 休市正确说明；未完成的美股交易日不可写成已完成；资料不足允许无候选；依赖：P08-02, P08-03 |
+| [`P08-02`](https://github.com/OYLPY/stock-monitor/issues/54) | **六角色结构化研究工作流**：实现统筹→情报→市场结构→策略研究→独立风控→模拟员的单进程可分步骤执行；定义角色输入/输出、独立否决点。 | src/features/research/workflows、Zod 契约 | AI角色不能写账本；角色未完成时报告显式不完整；否决阻止后续提案；行情证据缺失时归档未核验输出且候选为空；依赖：P08-01, P07-04 |
+| [`P08-03`](https://github.com/OYLPY/stock-monitor/issues/55) | **研究证据引用与反幻觉校验**：实现引文映射到实际采集证据、时间戳验证、事实/推论/假设区分、数字单位交叉检查与无来源降级；拒绝伪造 TradingView 实时读取。 | src/features/research/evidence-checker、测试 | 伪造URL、错误时间、过期数字、缺失资料不会通过 VERIFIED；依赖：P08-02, P07-04 |
+| [`P08-04`](https://github.com/OYLPY/stock-monitor/issues/56) | **晨报/异常报告/每日与每周审计生成**：按需求输出美日最新完成交易日、五行摘要、未来24小时事件、≤3策略及五维验证状态、风控裁决、账本状态；支持报告归档与再次生成。 | src/features/reports、报告模板、测试 | 休市正确说明；未完成的美股交易日不可写成已完成；资料不足只归档 NOT_VERIFIED 且无候选；依赖：P08-02, P08-03 |
 | [`P08-05`](https://github.com/OYLPY/stock-monitor/issues/57) | **AI研究回归评估和上下文交接**：建立固定证据集、语义状态压缩实验、重复运行评估、事实引用准确率及预算统计；验证 EoCC 优先、SAC 作为可选对照。 | tests/ai-evals、harness/handoffs、评估报告 | 跨新会话不丢 Issue 验收/风控；短上下文和长上下文任务结果可核查比较；依赖：P08-03, P00-04 |
 
 ### P09 — 指标、回测与量化验证
@@ -202,7 +202,7 @@
 | [`P11-01`](https://github.com/OYLPY/stock-monitor/issues/69) | **Worker 任务队列与调度器**：实现独立本地进程、计划任务时区、任务锁、运行日志、恢复/取消、非重入及超时保护；保留本机运行边界。 | worker/scheduler、持久化队列 | 浏览器关闭不影响运行中的 Worker；重启补偿，不重复任务副作用；依赖：P04-04, P05-01 |
 | [`P11-02`](https://github.com/OYLPY/stock-monitor/issues/70) | **美日市场时段扫描与假日异常**：基于 P07 市场日历只在至少一个常规交易时段扫描；日本午休、DST、节假日、特别收市正确处理；快照陈旧不得触发信号。 | worker/market-watch、日历测试 | 周末/双休无扫描；美东9:30–16:00/JST转换正确；午休不监控；依赖：P11-01, P07-01 |
 | [`P11-03`](https://github.com/OYLPY/stock-monitor/issues/71) | **重大新事件规则、去重与告警**：多来源确认与置信级、先后比较、事件指纹、最多三项、只有独立新重大事项才通知；数据不可用不得推断无异常。 | src/features/alerts、通知历史 | 同事件多源仅一次提醒；旧信息不会反复告警；无变化不通知；依赖：P07-05, P08-03, P11-02 |
-| [`P11-04`](https://github.com/OYLPY/stock-monitor/issues/72) | **晨报、日审计和周审计任务编排**：调度四类固定任务：晨报、盘中扫描、每日策略研究/纸面审计、周度审计；运行结果持久化并附数据限制。 | worker/jobs、任务参数与失败报告 | 仅在取得数据时报告结果；休市可做研究但不冒充盘中；失败状态可审查；依赖：P08-04, P11-01, P11-03 |
+| [`P11-04`](https://github.com/OYLPY/stock-monitor/issues/72) | **晨报、日审计和周审计任务编排**：在本机 Worker 调度晨报、每日策略研究/纸面审计与周度审计；结果持久化并附数据限制。盘中扫描和异常提醒仍由 P11-03 单独负责。 | worker/jobs、任务参数与失败报告 | 行情缺失时仍归档 NOT_VERIFIED 且无候选；休市可做研究但不冒充盘中；失败状态可审查；依赖：P08-04, P11-01 |
 | [`P11-05`](https://github.com/OYLPY/stock-monitor/issues/73) | **本地通知渠道与持续运行指南**：实现系统支持的本地通知/页面通知及可控静默，明确电脑关闭和系统睡眠限制；生成 macOS launchd/Windows Task Scheduler 文档或脚本。 | 通知适配器、运维说明 | 仅重大新信息触达；无授权时不启用系统通知；不声称设备关机后继续运行；依赖：P11-03, P11-04 |
 
 ### P12 — 完整测试与安全质量审计

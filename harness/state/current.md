@@ -1,5 +1,7 @@
 # 当前执行状态
 
+- **P08 报告链路授权调整 / 2026-11-18**：用户同意调整 #54/#55/#56/#72 的依赖与验收；行情来源 Issue #49/#50 和事件归一化 #52 不再阻塞报告归档。来源或行情缺失时只归档 `NOT_VERIFIED`，候选为空；不声称数据已获取。当前执行 P08-02 / #54，后续顺序 #55 → #56 → #72；盘中异常扫描仍由 #71 负责。
+
 - **P07-02 / #49 本机迁移错误已修复**：提交 [`cb93d99`](https://github.com/OYLPY/stock-monitor/commit/cb93d99aeb12c7ab3a7fd198c8eba6a4e446720f) 与 [Quality CI 44298535454](https://github.com/OYLPY/stock-monitor/actions/runs/44298535454) success（含 E2E）。仅兼容实测的 v10 旧 checksum，v11 迁移将行情表安全重建为 STRICT；本机数据库现为 schema 11，自动 pre-v11 备份存在，`/markets` 返回 HTTP 200。CSV 日线仍只在本机展示且数据/许可为 `NOT_VERIFIED`，不接入策略功能。[Issue 评论](https://github.com/OYLPY/stock-monitor/issues/49#issuecomment-6977801446)已记录；外部 Provider 许可与覆盖仍未解决，#49 保持 open / `BLOCKED_EXTERNAL`。详见 [P07-02 六字段交接](../handoffs/P07-02.md)。
 
 - **P10-05 / #68 已完成并关闭**：实现提交 [`9fedda8`](https://github.com/OYLPY/stock-monitor/commit/9fedda8f53fc2aa14f3e7717ed5684a982500078) / [Quality CI 44263245240](https://github.com/OYLPY/stock-monitor/actions/runs/44263245240) success；六字段交接提交 [`8b4f674`](https://github.com/OYLPY/stock-monitor/commit/8b4f67441894e63875ac1fe2e21be39d6916a75d) / [Quality CI 44263902351](https://github.com/OYLPY/stock-monitor/actions/runs/44263902351) success；GitHub #68 已关闭。审计覆盖不可变账本/订单/成交/费用、权益快照和恢复一致性；无可信行情仍为 `NOT_VERIFIED`。详见 [P10-05 六字段交接](../handoffs/P10-05.md)。
@@ -97,7 +99,7 @@
 - **P08-01 / #53 完成**：实现 `6f98e81585dca6aa37997739d18541d36e947a68` 与交接/索引 `189b88ec1c5afaeec772f119aadcd194d3d1b186` 均通过匹配 Quality CI `43873045326`、`43873766300`；#53 已关闭。账户认证刷新、额度与远端取消语义仍 `NOT_VERIFIED`。详见 [P08-01 六字段交接](../handoffs/P08-01.md)。
 - **P09-05 / #62 已完成并关闭**：实现提交 `a8211c0f0d22f99d41a3d380094f02faec3b887c` 的免费 Quality CI `44240857019` 与交接提交 `c72af324322d859aacc79a571d36bb9eb5f352e4` 的免费 Quality CI `44241513945` 均成功；本地 format、lint、typecheck、unit（32 files / 208 tests）、build 与 PMO 自检均通过。详见 [P09-05 六字段交接](../handoffs/P09-05.md)。仓库没有可核验的 2020/2022 OHLCV/FX，仍不得报告真实历史绩效；未调用外部行情、付费或云端数据服务。
 - **P09-06 / #63 已完成并关闭**：实现提交 `d04d7fcb39882a357839518b29d5201cd23d41b5` 与验收记录提交 `89a1e2f1afbc8c5a5fd5b3243e965386d8f8eecc` 的免费 Quality CI `44246049844`、`44246938333` 均成功；GitHub #63 已关闭。真实历史和校准证据仍缺失，因此生产评分保持 `NOT_VERIFIED`。
-- **下一步阻塞**：当前没有依赖已满足的 P12/P13 工作项。P07-05 / #52 仍依赖开放的 P07-02 / #49、P07-03 / #50；下游 P08/P11/P12/P13 均受其阻塞。#49/#50 缺少已授权的长周期行情来源或本地合规数据。下一步需提供具备保存/回测权的本地历史 OHLCV/FX 数据，或明确授权一个免费 Provider 并完成官方许可核验；免费 GitHub Actions 的授权不包含行情/API 服务。未获数据授权前不发送外部市场数据请求。
+- **后续数据工作**：#49/#50 仍未接入行情 Provider，不能据此声称有实时/完整历史行情或生成可核验候选；报告链路按用户授权继续以本机存档为准，缺数据时 `NOT_VERIFIED` 且候选为空。P07-05 / #52 仍需在事件监测链路实施前完成。
 
 - **P06-06 开始记录**：2026-11-16；#47 的旧 PR 要求已按用户授权修正为 main 直推/no-PR；开始评论记录依赖、基线和运行时边界。
 - **P07-01 开始记录**：2026-11-16；开始前 main 与 origin/main 同步至 `2eb947da6d95d71ee9b8686ec83e7e4d66a3a86a`，工作树干净，无开放 PR；依赖 #38/#35 和前序 #47 均已关闭。#48 的旧分支/PR 文字已按授权修正为直接 main/no-PR，并记录官方日历核验计划。
