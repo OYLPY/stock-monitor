@@ -189,7 +189,7 @@
 | [`P10-01`](https://github.com/OYLPY/stock-monitor/issues/64) | **模拟账户及不可变资金流水**：创建账户初始化明确标记 1,000,000 JPY；账本事件只追加；实现持仓、现金、费用、权益快照与来源。 | src/features/paper/ledger、迁移/测试 | 初始账户不含虚构成交；重放账本一致；拒绝负现金与无依据流水；依赖：P05-01, P03-01 |
 | [`P10-02`](https://github.com/OYLPY/stock-monitor/issues/65) | **纸面计划审批与确定性风险官**：建立研究候选→计划→已审批/否决状态；计算当前可核验权益、单笔最差计划损失、可买股数、资金与最小交易单位；拒绝失效数据。 | src/features/risk/checker、风控记录 | 超过权益2%立即拒绝；权益不可核验时拒绝；AI不能覆盖否决；依赖：P10-01, P03-03 |
 | [`P10-03`](https://github.com/OYLPY/stock-monitor/issues/66) | **20%峰值回撤阻断及跨币种权益**：按历史峰值计算回撤，权益按可核查 FX 折算 JPY；净值无法估值时禁止新头寸；支持单日缺失数据场景。 | src/features/risk/drawdown、测试 | 恰好20%及以上阻断；历史峰值不会丢失；FX过期不生成可用权益；依赖：P10-01, P10-02 |
-| [`P10-04`](https://github.com/OYLPY/stock-monitor/issues/67) | **模拟成交引擎、手续费与滑点**：只根据可核验行情、预定义撮合规则、订单状态与时间戳创建模拟成交；处理部分成交、跳空、拒绝成交、重复回放。 | src/features/paper/fill-engine、回归集 | 无可核查价格不成交；幂等不双扣费；模拟而非真实broker API；依赖：P10-02, P10-03, P09-02 |
+| [`P10-04`](https://github.com/OYLPY/stock-monitor/issues/67) | **模拟成交引擎、手续费与滑点**：只根据可核验行情、预定义撮合规则、订单状态与时间戳创建模拟成交；处理部分成交、跳空、拒绝成交、重复回放。 | src/features/paper/fill-engine、SQLite 迁移、回归集 | 无可核查价格不成交；止损已触及时拒绝新入场；幂等不双扣费；模拟而非真实broker API；依赖：P10-02, P10-03, P09-02 |
 | [`P10-05`](https://github.com/OYLPY/stock-monitor/issues/68) | **账本审计、指标及恢复**：账本重放权益曲线、最大回撤和交易编号；完成断电恢复、备份恢复、错误记录及和 UI 的审计契约。 | src/features/paper/audit、恢复测试 | 订单/成交/现金守恒；恢复前后同结果；无账本时显示未建立；依赖：P10-04, P05-05 |
 
 ### P11 — 自动任务、监测与通知

@@ -822,3 +822,193 @@ export const planApprovals = sqliteTable(
     ),
   ],
 );
+
+export const paperOrders = sqliteTable(
+  "paper_orders",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => paperAccounts.id, { onDelete: "restrict" }),
+    planVersionId: text("plan_version_id")
+      .notNull()
+      .unique()
+      .references(() => paperPlanVersions.id, { onDelete: "restrict" }),
+    planApprovalId: text("plan_approval_id")
+      .notNull()
+      .unique()
+      .references(() => planApprovals.id, { onDelete: "restrict" }),
+    planHashSha256: text("plan_hash_sha256").notNull(),
+    instrumentId: text("instrument_id")
+      .notNull()
+      .references(() => instruments.id, { onDelete: "restrict" }),
+    requestedQuantityShares: sqliteInt64("requested_quantity_shares").notNull(),
+    filledQuantityShares: sqliteInt64("filled_quantity_shares")
+      .notNull()
+      .default(sql`0`),
+    currencyCode: text("currency_code").notNull(),
+    reservedAmountMinor: sqliteInt64("reserved_amount_minor")
+      .notNull()
+      .default(sql`0`),
+    feesChargedMinor: sqliteInt64("fees_charged_minor")
+      .notNull()
+      .default(sql`0`),
+    status: text("status").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    reasonCode: text("reason_code"),
+    createdAtMs: sqliteInt64("created_at_ms").notNull(),
+    updatedAtMs: sqliteInt64("updated_at_ms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("paper_orders_account_idempotency").on(
+      table.accountId,
+      table.idempotencyKey,
+    ),
+    index("paper_orders_account_status").on(table.accountId, table.status),
+    check(
+      "paper_orders_plan_hash",
+      sql`length(${table.planHashSha256}) = 64 AND ${table.planHashSha256} NOT GLOB '*[^0-9a-f]*'`,
+    ),
+    check(
+      "paper_orders_quantity",
+      sql`${table.requestedQuantityShares} > 0 AND ${table.filledQuantityShares} >= 0 AND ${table.filledQuantityShares} <= ${table.requestedQuantityShares}`,
+    ),
+    check(
+      "paper_orders_currency",
+      sql`${table.currencyCode} IN ('JPY', 'USD')`,
+    ),
+    check(
+      "paper_orders_reserve",
+      sql`${table.reservedAmountMinor} >= 0 AND ${table.feesChargedMinor} >= 0`,
+    ),
+    check(
+      "paper_orders_status",
+      sql`${table.status} IN ('PENDING', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'EXPIRED', 'REJECTED')`,
+    ),
+    check(
+      "paper_orders_idempotency_key",
+      sql`length(trim(${table.idempotencyKey})) BETWEEN 1 AND 200`,
+    ),
+  ],
+);
+
+export const paperOrderEvents = sqliteTable(
+  "paper_order_events",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => paperOrders.id, { onDelete: "restrict" }),
+    sequenceNo: sqliteInt64("sequence_no").notNull(),
+    eventType: text("event_type").notNull(),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    effectiveAtMs: sqliteInt64("effective_at_ms").notNull(),
+    recordedAtMs: sqliteInt64("recorded_at_ms").notNull(),
+    reservedBeforeMinor: sqliteInt64("reserved_before_minor").notNull(),
+    reservedAfterMinor: sqliteInt64("reserved_after_minor").notNull(),
+    filledQuantityShares: sqliteInt64("filled_quantity_shares").notNull(),
+    reasonCode: text("reason_code"),
+    ledgerEventId: text("ledger_event_id").references(() => ledgerEvents.id, {
+      onDelete: "restrict",
+    }),
+  },
+  (table) => [
+    uniqueIndex("paper_order_events_order_sequence").on(
+      table.orderId,
+      table.sequenceNo,
+    ),
+    uniqueIndex("paper_order_events_order_idempotency").on(
+      table.orderId,
+      table.idempotencyKey,
+    ),
+    check("paper_order_events_sequence", sql`${table.sequenceNo} > 0`),
+    check(
+      "paper_order_events_type",
+      sql`${table.eventType} IN ('SUBMITTED', 'PARTIAL_FILL', 'FILL', 'EXECUTION_REJECTED', 'CANCELED', 'EXPIRED', 'REJECTED')`,
+    ),
+    check(
+      "paper_order_events_status",
+      sql`${table.toStatus} IN ('PENDING', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'EXPIRED', 'REJECTED') AND (${table.fromStatus} IS NULL OR ${table.fromStatus} IN ('PENDING', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'EXPIRED', 'REJECTED'))`,
+    ),
+    check(
+      "paper_order_events_time",
+      sql`${table.effectiveAtMs} >= 0 AND ${table.recordedAtMs} >= ${table.effectiveAtMs}`,
+    ),
+    check(
+      "paper_order_events_reserve",
+      sql`${table.reservedBeforeMinor} >= 0 AND ${table.reservedAfterMinor} >= 0 AND ${table.filledQuantityShares} >= 0`,
+    ),
+    check(
+      "paper_order_events_ledger",
+      sql`(${table.eventType} IN ('PARTIAL_FILL', 'FILL') AND ${table.ledgerEventId} IS NOT NULL) OR (${table.eventType} NOT IN ('PARTIAL_FILL', 'FILL') AND ${table.ledgerEventId} IS NULL)`,
+    ),
+  ],
+);
+
+export const paperFills = sqliteTable(
+  "paper_fills",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => paperOrders.id, { onDelete: "restrict" }),
+    fillKey: text("fill_key").notNull(),
+    ledgerEventId: text("ledger_event_id")
+      .notNull()
+      .unique()
+      .references(() => ledgerEvents.id, { onDelete: "restrict" }),
+    feeLedgerEventId: text("fee_ledger_event_id")
+      .unique()
+      .references(() => ledgerEvents.id, { onDelete: "restrict" }),
+    quantityShares: sqliteInt64("quantity_shares").notNull(),
+    priceMantissa: sqliteInt64("price_mantissa").notNull(),
+    priceScale: sqliteSmallInteger("price_scale").notNull(),
+    currencyCode: text("currency_code").notNull(),
+    feeMinor: sqliteInt64("fee_minor").notNull(),
+    executionDataClass: text("execution_data_class").notNull(),
+    quoteRecordId: text("quote_record_id")
+      .notNull()
+      .references(() => sourceRecords.id, { onDelete: "restrict" }),
+    fxSourceRecordId: text("fx_source_record_id").references(
+      () => sourceRecords.id,
+      { onDelete: "restrict" },
+    ),
+    fxRate: text("fx_rate"),
+    marketAtMs: sqliteInt64("market_at_ms").notNull(),
+    executedAtMs: sqliteInt64("executed_at_ms").notNull(),
+    settlementDate: text("settlement_date").notNull(),
+    settlementRuleVersion: text("settlement_rule_version").notNull(),
+    costModelVersion: text("cost_model_version").notNull(),
+    matchingRuleVersion: text("matching_rule_version").notNull(),
+  },
+  (table) => [
+    uniqueIndex("paper_fills_order_key").on(table.orderId, table.fillKey),
+    index("paper_fills_quote_record").on(table.quoteRecordId),
+    check("paper_fills_quantity", sql`${table.quantityShares} > 0`),
+    check(
+      "paper_fills_price",
+      sql`${table.priceMantissa} > 0 AND ${table.priceScale} BETWEEN 0 AND 8`,
+    ),
+    check("paper_fills_currency", sql`${table.currencyCode} IN ('JPY', 'USD')`),
+    check("paper_fills_fee", sql`${table.feeMinor} >= 0`),
+    check(
+      "paper_fills_fee_ledger",
+      sql`(${table.feeMinor} = 0 AND ${table.feeLedgerEventId} IS NULL) OR (${table.feeMinor} > 0 AND ${table.feeLedgerEventId} IS NOT NULL)`,
+    ),
+    check("paper_fills_data_class", sql`${table.executionDataClass} = 'REAL'`),
+    check(
+      "paper_fills_time",
+      sql`${table.marketAtMs} >= 0 AND ${table.executedAtMs} >= ${table.marketAtMs} AND length(${table.settlementDate}) = 10`,
+    ),
+    check(
+      "paper_fills_fx",
+      sql`(${table.fxSourceRecordId} IS NULL AND ${table.fxRate} IS NULL) OR (${table.fxSourceRecordId} IS NOT NULL AND ${table.fxRate} IS NOT NULL)`,
+    ),
+    check(
+      "paper_fills_rule_versions",
+      sql`length(${table.costModelVersion}) BETWEEN 1 AND 64 AND length(${table.matchingRuleVersion}) BETWEEN 1 AND 64 AND length(${table.settlementRuleVersion}) BETWEEN 1 AND 64`,
+    ),
+  ],
+);

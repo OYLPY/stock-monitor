@@ -92,7 +92,7 @@ drawdown(t) = max(0, (peakEquityJPY(t) - verifiedEquityJPY(t)) / peakEquityJPY(t
 - V1 数量必须是证券交易单位的整数倍；美国股票按整股处理，日本国内普通股票按 100 股处理，日本 ETF 按对应证券的实际单位处理。未知单位阻断下单，不得统一假定 ETF 为 100 股。
 - 账户现金分币种记录。买入非 JPY 证券前，必须已有足额该币种已结算现金，或由显式、可审计的模拟 FX 转换产生；不得隐式借入、透支或在计划里假定自动换汇。
 - 未成交订单需保留资金，不能被其他订单重复使用；撤单释放未成交部分预留。未结算卖出款不能资助后续买单。
-- 结算日按可版本化的市场营业日历计算，不硬编码单一 T+ 偏移。本文于 2026-11-15 核对的规则来源为：美国适用交易的 T+1 标准结算（SEC 合规日 2024-05-28）和 TSE 普通股票/债券普通交易 T+2；实现前须重新核验对应市场、产品和有效日期，模拟规则不代表任何券商账户的实际结算。
+- 结算日按可版本化的市场营业日历计算，不硬编码单一 T+ 偏移。SEC 对美国适用交易的 T+1 FAQ 和 JPX 对日本股票等证券的 T+2 规则于 2026-11-18 复核；模拟规则不代表任何券商账户的实际结算。实现必须拒绝超出本地日历覆盖范围或无法确定结算日的成交。
 
 ## FR-Trade-009–010 — 模拟订单、成交与账本
 
@@ -122,6 +122,10 @@ stateDiagram-v2
 - Each simulated fill requires an eligible, timestamped quote, valid market/session and FX/cost inputs, and a deterministic matching rule defined in P10. Missing/stale/conflicting data cannot trigger a fill. Historical/Fixture data cannot create a non-demo paper fill; delayed data can do so only under a separately documented execution policy and with its delay visible.
 - Every fill records plan version, order ID, fill ID, quantity, price, quote/source timestamp, market timestamp, currency, cost model version and settlement date. Duplicate fill IDs are idempotent.
 - The ledger records initialization, FX conversions, order reservations/releases, fills, transaction costs, settlements, and supported corporate actions as append-only events. Current balance/holdings are projections of those events; corrections use linked reversal/correction events, never an edit of prior history.
+
+P10-04 的入场买单撮合规则：订单只可绑定当前最新的同版本 `PASS` 裁决和本地批准；报价来源须为许可/信任已核验的 `REAL` `MARKET_QUOTE`，市场时间须匹配来源记录并落在报价有效期及开市时段内。按 `floor(volume × maxParticipationBps / 10,000)` 求成交容量，再按证券交易单位向下取整。买入成交价为参考价加版本化不利滑点，并向上取整至 tick。成交后按实际成交价重算订单已成交部分相对计划止损价的风险；只有不超过原批准风险预算的交易单位才可成交，跳空后无合法数量时只记录拒绝尝试、不写账本。订单佣金按累计成交数量计算，本次费用为累计佣金减已记费用；每次成交、费用、成交记录、订单事件及投影在同一 SQLite 事务提交。重复报价来源记录对同一订单不重复成交。
+
+P10-04 支持的结算规则版本为美国 `us-t1-2024-v1` 与日本 `jp-t2-2019-v1`，并以本地交易日历跳过周末及已知休市日。当前没有已核验的实时行情 Provider，因此该引擎只有在本地已有合格 `REAL` 行情和必要 FX 来源记录时才可成交；本地测试 Fixture 始终只验证拒绝/撮合路径，不构成真实行情或成交证据。
 
 ## FR-Trade-011–013 — 回测、评分与缺数据状态
 
@@ -180,15 +184,19 @@ stateDiagram-v2
 | AC-TRD-019 | 离线、无 Codex 凭据且无当前外部行情；分别提供合法缓存历史数据和无可用数据的场景 | 合法缓存数据可复现历史回测并标记 `HISTORICAL`；缺数据时为 `NOT_VERIFIED`。不得伪造 AI/当前行情/风险通过/成交；Fixture 标记 `DEMO_ONLY`。 |
 | AC-TRD-020 | 对 2020/2022 分别提供完整历史窗口证据、点时 FX 与成本/容量压力参数，或缺少其中任一证据 | 完整证据时确定性重算并披露窗口边界、参数选取与订单结果；缺证时指标为 `null` / `NOT_VERIFIED`，Fixture 为 `DEMO_ONLY`。同一成交集合下成本增加不得改善净权益；若订单结果因资金/容量改变，必须标明成交变化，不得将改善误称为成本单调效应。 |
 | AC-TRD-021 | 同一版本化五维规则和指标证据重复评分、在分档边界评分、提供非递增阈值或与规则不匹配的固定 hash | 相同输入得到相同分数/hash；边界按方向确定性映射；无效阈值拒绝；无校准来源或固定 hash 不匹配不得形成实证分数或候选。 |
+| AC-TRD-022 | 有批准订单但报价来源是 Fixture/历史/延迟、已过期、时间与来源记录不匹配或交易时段关闭 | 不追加 fill、现金、持仓或费用事件；Fixture 结果仅为 `DEMO_ONLY`，其他缺失/不合格输入为 `NOT_VERIFIED`，订单预留保持不变。 |
+| AC-TRD-023 | 合格报价容量低于订单量、报价价格包含入场滑点、同一报价来源记录重放 | 按参与率和交易单位确定部分/全部成交；价格按不利方向 tick 取整，累计费用可复算；重放不增加第二笔成交、现金扣款或费用。 |
+| AC-TRD-024 | 执行报价跳空导致超过批准风险预算或已到达计划止损价、撮合报价不满足容量，或取消有未成交数量的订单 | 风险超限、报价已触及止损或无可成交单位时拒绝本次撮合并保留订单与预留；取消只释放未成交预留、不冲掉已有成交；事件/账本投影原子且可重放。 |
 
 ## 官方市场规则来源
 
-以下来源于 2026-11-15 核对；P03/P09/P10 实现时须再次核对有效日期并保存规则版本：
+以下来源按各条记录的日期核对；实现时仍须核验适用产品、有效日期并保存规则版本：
 
 - [JPX 国内股票交易单位](https://www.jpx.co.jp/english/equities/trading/domestic/03.html)：日本国内普通股票交易单位为 100 股。
 - [JPX ETF 交易规则](https://www.jpx.co.jp/english/equities/products/etfs/trading/index.html)：ETF 的交易单位依产品而异，必须读取具体证券单位。
 - [JPX 滚动结算说明](https://www.jpx.co.jp/glossary/ra/474.html)：TSE 普通股票及债券普通交易通常在交易日后第二个营业日（T+2）结算。
 - [SEC T+1 FAQ](https://www.sec.gov/exams/educationhelpguidesfaqs/t1-faq)：美国受适用规则覆盖交易的 T+1 合规日为 2024-05-28；细分适用性仍须按规则日历核验。
+- [JPX T+2 结算规则](https://www.jpx.co.jp/english/equities/clearing-settlement/tplus2-settlement-cycle/index.html)：日本股票及其他证券 T+2 规则，自 2019-07-16 的成交起实施（2026-11-18 复核）。
 - [SEC Investor.gov 止损订单说明](https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-15)：止损价是触发价，不保证成交价；流动性与快速价格变化可能造成显著偏差。该说明于 2026-08-18 更新。
 
 ## P01-03 交接

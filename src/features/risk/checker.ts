@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { withTransaction, type AppDatabase } from "@/db";
@@ -7,6 +7,7 @@ import {
   initialCapitalConfigs,
   instruments,
   paperAccounts,
+  paperOrders,
   paperPlanVersions,
   paperPlans,
   planApprovals,
@@ -16,7 +17,13 @@ import {
   sources,
 } from "@/db/schema";
 import { parseFixedDecimal } from "@/domain/primitives";
+import {
+  feeMinor,
+  paperCostModelSchema,
+  priceAtoms,
+} from "@/features/paper/cost-model";
 import { readPaperLedger } from "@/features/paper/ledger";
+import type { PaperCostModel } from "@/features/paper/cost-model";
 import {
   createPaperEquitySnapshot,
   equityMarketEvidenceInputSchema,
@@ -76,11 +83,6 @@ const planInputSchema = z
 
 type PlanInput = z.infer<typeof planInputSchema>;
 type Verdict = "PASS" | "REJECT" | "UNRESOLVED";
-type FeeSchedule = {
-  minimumMinor: string;
-  fixedMinor: string;
-  perShareMinor: string;
-};
 type Assessment = {
   status: Verdict;
   reasonCodes: string[];
@@ -115,29 +117,6 @@ const quotePayloadSchema = z.strictObject({
   validUntilMs: timestampSchema,
 });
 
-const feeScheduleSchema = z.strictObject({
-  minimumMinor: integerStringSchema,
-  fixedMinor: integerStringSchema,
-  perShareMinor: integerStringSchema,
-});
-
-const riskModelPayloadSchema = z.strictObject({
-  schemaVersion: z.literal(1),
-  version: z.string().trim().min(1).max(64),
-  marketCode: z.enum(["JP", "US"]),
-  currencyCode: z.enum(["JPY", "USD"]),
-  validFromMs: timestampSchema,
-  validUntilMs: timestampSchema,
-  tickSize: decimalSchema,
-  entrySlippageBps: z.number().int().nonnegative().safe(),
-  stopSlippageBps: z.number().int().nonnegative().safe(),
-  gapReserveBps: z.number().int().nonnegative().safe(),
-  fxShockBps: z.number().int().nonnegative().safe(),
-  fxConversionFeeBps: z.number().int().nonnegative().safe(),
-  entryFee: feeScheduleSchema,
-  exitFee: feeScheduleSchema,
-});
-
 const fxPayloadSchema = z.strictObject({
   schemaVersion: z.literal(1),
   baseCurrency: z.literal("USD"),
@@ -160,11 +139,6 @@ function ceilDivide(numerator: bigint, denominator: bigint) {
   return numerator === BigInt(0)
     ? BigInt(0)
     : (numerator + denominator - BigInt(1)) / denominator;
-}
-
-function priceAtoms(value: string) {
-  const decimal = parseFixedDecimal(value);
-  return decimal.mantissa * BigInt(10) ** BigInt(priceScale - decimal.scale);
 }
 
 function ceilToTick(value: bigint, tick: bigint) {
@@ -191,19 +165,11 @@ function priceLossMinor(
   );
 }
 
-function feeMinor(schedule: FeeSchedule, shares: bigint) {
-  if (shares === BigInt(0)) return BigInt(0);
-  const minimum = BigInt(schedule.minimumMinor);
-  const variable =
-    BigInt(schedule.fixedMinor) + BigInt(schedule.perShareMinor) * shares;
-  return minimum > variable ? minimum : variable;
-}
-
 function convertedRiskJpyMinor(
   amountMinor: bigint,
   currency: "JPY" | "USD",
   rate: string | null,
-  model: z.infer<typeof riskModelPayloadSchema>,
+  model: PaperCostModel,
 ) {
   if (currency === "JPY") return amountMinor;
   if (!rate) return null;
@@ -226,7 +192,7 @@ function feeAndPriceRiskJpyMinor(
   priceDifferenceAtoms: bigint,
   currency: "JPY" | "USD",
   rate: string | null,
-  model: z.infer<typeof riskModelPayloadSchema>,
+  model: PaperCostModel,
 ) {
   const nativeRisk =
     priceLossMinor(priceDifferenceAtoms, shares, currency) +
@@ -239,7 +205,7 @@ function buyCommitmentMinor(
   shares: bigint,
   entryPriceAtoms: bigint,
   currency: "JPY" | "USD",
-  fee: FeeSchedule,
+  fee: PaperCostModel["entryFee"],
 ) {
   return (
     priceLossMinor(entryPriceAtoms, shares, currency) + feeMinor(fee, shares)
@@ -326,15 +292,37 @@ function candidateEvidenceReason(database: AppDatabase, input: PlanInput) {
 }
 
 function availableCash(
+  database: AppDatabase,
   ledger: NonNullable<ReturnType<typeof readPaperLedger>>,
 ) {
+  const reserved = new Map<"JPY" | "USD", bigint>([
+    ["JPY", BigInt(0)],
+    ["USD", BigInt(0)],
+  ]);
+  for (const order of database.orm
+    .select({
+      currencyCode: paperOrders.currencyCode,
+      reservedAmountMinor: paperOrders.reservedAmountMinor,
+    })
+    .from(paperOrders)
+    .where(inArray(paperOrders.status, ["PENDING", "PARTIALLY_FILLED"]))
+    .all()) {
+    if (order.currencyCode === "JPY" || order.currencyCode === "USD") {
+      reserved.set(
+        order.currencyCode,
+        reserved.get(order.currencyCode)! + order.reservedAmountMinor,
+      );
+    }
+  }
   return Object.fromEntries(
     (["JPY", "USD"] as const).map((currency) => {
       const balance = ledger.projection.cashBalances.get(currency);
       return [
         currency,
         (
-          (balance?.settled ?? BigInt(0)) + (balance?.payable ?? BigInt(0))
+          (balance?.settled ?? BigInt(0)) +
+          (balance?.payable ?? BigInt(0)) -
+          reserved.get(currency)!
         ).toString(),
       ];
     }),
@@ -493,7 +481,7 @@ function assess(
   }
   const model = parsePayload(
     input.riskModelEvidence!.content,
-    riskModelPayloadSchema,
+    paperCostModelSchema,
   );
   if (
     !model ||
@@ -535,7 +523,7 @@ function assess(
   const ledger = readPaperLedger(database);
   if (!ledger)
     return unavailable(input, "ACCOUNT_NOT_INITIALIZED", {}, {}, model.version);
-  const cash = availableCash(ledger);
+  const cash = availableCash(database, ledger);
   const valuationEvidence = [...input.equityEvidence];
   if (
     input.quoteEvidence &&
@@ -860,7 +848,7 @@ function addVersion(
   return { version, decision };
 }
 
-function parsePlanInputSnapshot(value: string) {
+export function parsePlanInputSnapshot(value: string) {
   try {
     const parsed = planInputSchema.safeParse(JSON.parse(value) as unknown);
     if (parsed.success) return parsed.data;

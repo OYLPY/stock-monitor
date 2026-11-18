@@ -136,6 +136,7 @@ async function createPlanFixture(
     validUntilMs: now + 60_000,
     tickSize: "1",
     entrySlippageBps: 0,
+    maxParticipationBps: 10_000,
     stopSlippageBps: 0,
     gapReserveBps: 0,
     fxShockBps: 0,

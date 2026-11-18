@@ -137,13 +137,13 @@ erDiagram
 | `plan_input_evidence`                             | 版本到报价、FX、分类和风险模型来源记录的显式引用，并保存角色与内容 hash。后续来源变化不能改变既有版本含义。                                                                                                                                                                                                                                                                            |
 | `risk_decisions`                                  | 计划版本、单调递增的版本内 `decision_no`、PASS/REJECT/UNRESOLVED、固定规则版本、计算输入 hash、原因和裁决时间。允许追加重评，不可改写历史。                                                                                                                                                                                                                                             |
 | `plan_approvals`                                  | 本机批准时刻、计划版本 ID/hash、最新匹配 PASS 裁决 ID。SQLite 触发器拒绝旧 PASS、否决或版本 hash 不匹配的批准；没有用户/AI 身份字段。                                                                                                                                                                                                                                                   |
-| `paper_orders` / `paper_order_events`             | 模拟订单当前投影与追加状态事件分开。订单需绑定账户、计划版本、同版本批准、数量、币种/当前预留余额、幂等请求 key 和状态；事件审计预留/释放、取消/过期/拒绝/部分成交，并关联对应 ledger event。状态机细节由 P03-02/P10 落实。                                                                                                                                                             |
-| `paper_fills`                                     | 模拟 fill key、订单、数量、精确价格/币种/费用、市场与执行时刻、quote/source ID、结算日、撮合和成本版本、对应唯一 ledger event。`UNIQUE(order_id, fill_key)`。数据类别仅允许 `REAL`/符合单独规则版本的 `DELAYED`；数据库与确定性用例共同拒绝历史/Fixture/未验证输入。                                                                                                                    |
+| `paper_orders` / `paper_order_events`             | `paper_orders` 是可更新投影，绑定账户、唯一计划版本/批准、计划 hash、证券/数量/币种、未成交预留、累计费用、状态和账户内幂等键；`paper_order_events` 按订单追加申请、撮合拒绝、部分/全部成交及撤单，记录前后状态、预留和 ledger event。事件表有 no-update/no-delete 触发器。                                                                                                                                       |
+| `paper_fills`                                     | 每个 fill 绑定订单与 `UNIQUE(order_id, fill_key)`；保存数量、十进制定点成交价、费用、报价 source record、market/execution 时间、FX source/rate、结算日、撮合/成本/结算规则版本及唯一 ledger/fee event。数据类别在 P10-04 仅允许 `REAL`；延迟、历史、Fixture 或未核验报价均不能写入。成交表有 no-update/no-delete 触发器。                                                                                                               |
 | `ledger_events`                                   | 每账户单调 `sequence_no`、事件类型、有效/记录时间、账户内唯一 idempotency key、规则版本、来源记录和 correction/reversal 链接。`UNIQUE(account_id, sequence_no)` 与 `UNIQUE(account_id, idempotency_key)`。                                                                                                                                                                              |
 | `cash_ledger_entries` / `position_ledger_entries` | 按事件追加带符号现金最小单位/整数股数；现金行保存币种和 scale，并区分已结算、应收、应付。金额是所属 bucket 的带符号增量；应收为正资产，应付以负值表示负债。预留只记录在订单/ledger 事件中，不作为额外现金资产；可用现金扣除未结算应付及有效预留，应收不能用于买入。FX 转换要在同一 event 中记录两种币及引用汇率，不可隐式借款。余额、现金可用额与持仓是投影，不是可手工覆盖的系统记录。 |
 | `equity_valuations` / `equity_valuation_evidence` / `equity_valuation_market_evidence` | 估值保存账户、as-of、账本 sequence 水位、含行情输入的 hash、JPY 权益整数、VERIFIED/UNRESOLVED、缺失原因和规则版本；账本证据连接表链接账本事件，市场证据表保存估值使用的报价/FX 原文、来源记录、内容 hash 与证券标识。三类估值记录均只追加。只有 VERIFIED 行有金额；按新的市场/FX 证据重算时追加新输入 hash。历史峰值仅使用 as-of 不晚于当前裁决时点的有效快照，不填补无报价/汇率的权益。 |
 
-账户开立、模拟 fill、费用、换汇、预留/释放、结算和公司行为均在数据库短事务内追加 ledger event 和相应流水；预留/释放写入订单事件和 ledger audit event，不伪装成现金流；换汇的 `fx_conversion_details` 要能复算两种现金 posting。事务提交成功才确认完成。回放从同一事件序列重建现金/持仓投影。重复 fill 或重复任务结果不能重复记账；纠错只能追加带 `reversal_of_event_id` 的冲正/调整。AI 只生成研究输出，不获得数据库连接、账本 repository 或写入 SQL；单一本地进程共享文件这一事实不提供抵御同 OS 账户恶意进程的安全保证。
+账户开立、成交和费用在数据库短事务内追加 ledger event 与现金/持仓流水；预留/释放作为 `paper_order_events` 审计记录，不伪装成现金流水；P10-04 当前没有 FX 转换或卖出结算写入用例。事务提交成功才确认成交。重复 fill 不能重复记账；纠错只能追加带 `reversal_of_event_id` 的冲正/调整。AI 只生成研究输出，不获得数据库连接、账本 repository 或写入 SQL；单一本地进程共享文件这一事实不提供抵御同 OS 账户恶意进程的安全保证。
 
 ### 调度和通知
 
@@ -233,17 +233,72 @@ CREATE TABLE position_ledger_entries (
   quantity_shares INTEGER NOT NULL CHECK (quantity_shares <> 0)
 ) STRICT;
 
+CREATE TABLE paper_orders (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES paper_accounts(id) ON DELETE RESTRICT,
+  plan_version_id TEXT NOT NULL UNIQUE REFERENCES paper_plan_versions(id) ON DELETE RESTRICT,
+  plan_approval_id TEXT NOT NULL UNIQUE REFERENCES plan_approvals(id) ON DELETE RESTRICT,
+  plan_hash_sha256 TEXT NOT NULL CHECK (length(plan_hash_sha256) = 64),
+  instrument_id TEXT NOT NULL REFERENCES instruments(id) ON DELETE RESTRICT,
+  requested_quantity_shares INTEGER NOT NULL CHECK (requested_quantity_shares > 0),
+  filled_quantity_shares INTEGER NOT NULL DEFAULT 0,
+  currency_code TEXT NOT NULL CHECK (currency_code IN ('JPY', 'USD')),
+  reserved_amount_minor INTEGER NOT NULL DEFAULT 0 CHECK (reserved_amount_minor >= 0),
+  fees_charged_minor INTEGER NOT NULL DEFAULT 0 CHECK (fees_charged_minor >= 0),
+  status TEXT NOT NULL CHECK (status IN (
+    'PENDING', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'EXPIRED', 'REJECTED'
+  )),
+  idempotency_key TEXT NOT NULL,
+  reason_code TEXT,
+  created_at_ms INTEGER NOT NULL,
+  updated_at_ms INTEGER NOT NULL,
+  UNIQUE (account_id, idempotency_key),
+  CHECK (filled_quantity_shares BETWEEN 0 AND requested_quantity_shares)
+) STRICT;
+
+CREATE TABLE paper_order_events (
+  id TEXT PRIMARY KEY,
+  order_id TEXT NOT NULL REFERENCES paper_orders(id) ON DELETE RESTRICT,
+  sequence_no INTEGER NOT NULL CHECK (sequence_no > 0),
+  event_type TEXT NOT NULL CHECK (event_type IN (
+    'SUBMITTED', 'PARTIAL_FILL', 'FILL', 'EXECUTION_REJECTED',
+    'CANCELED', 'EXPIRED', 'REJECTED'
+  )),
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  idempotency_key TEXT NOT NULL,
+  effective_at_ms INTEGER NOT NULL,
+  recorded_at_ms INTEGER NOT NULL,
+  reserved_before_minor INTEGER NOT NULL,
+  reserved_after_minor INTEGER NOT NULL,
+  filled_quantity_shares INTEGER NOT NULL,
+  reason_code TEXT,
+  ledger_event_id TEXT REFERENCES ledger_events(id) ON DELETE RESTRICT,
+  UNIQUE (order_id, sequence_no),
+  UNIQUE (order_id, idempotency_key)
+) STRICT;
+
 CREATE TABLE paper_fills (
   id TEXT PRIMARY KEY,
   order_id TEXT NOT NULL REFERENCES paper_orders(id) ON DELETE RESTRICT,
   fill_key TEXT NOT NULL,
   ledger_event_id TEXT NOT NULL UNIQUE REFERENCES ledger_events(id) ON DELETE RESTRICT,
+  fee_ledger_event_id TEXT UNIQUE REFERENCES ledger_events(id) ON DELETE RESTRICT,
   quantity_shares INTEGER NOT NULL CHECK (quantity_shares > 0),
   price_mantissa INTEGER NOT NULL CHECK (price_mantissa > 0),
   price_scale INTEGER NOT NULL CHECK (price_scale BETWEEN 0 AND 8),
-  execution_data_class TEXT NOT NULL CHECK (execution_data_class IN ('REAL', 'DELAYED')),
-  quote_id TEXT NOT NULL REFERENCES market_quotes(id) ON DELETE RESTRICT,
+  currency_code TEXT NOT NULL CHECK (currency_code IN ('JPY', 'USD')),
+  fee_minor INTEGER NOT NULL CHECK (fee_minor >= 0),
+  execution_data_class TEXT NOT NULL CHECK (execution_data_class = 'REAL'),
+  quote_record_id TEXT NOT NULL REFERENCES source_records(id) ON DELETE RESTRICT,
+  fx_source_record_id TEXT REFERENCES source_records(id) ON DELETE RESTRICT,
+  fx_rate TEXT,
+  market_at_ms INTEGER NOT NULL,
   executed_at_ms INTEGER NOT NULL,
+  settlement_date TEXT NOT NULL,
+  settlement_rule_version TEXT NOT NULL,
+  cost_model_version TEXT NOT NULL,
+  matching_rule_version TEXT NOT NULL,
   UNIQUE (order_id, fill_key)
 ) STRICT;
 
@@ -270,6 +325,14 @@ END;
 CREATE TRIGGER position_entries_no_delete
 BEFORE DELETE ON position_ledger_entries BEGIN
   SELECT RAISE(ABORT, 'position_ledger_entries are append-only');
+END;
+CREATE TRIGGER paper_order_events_no_update
+BEFORE UPDATE ON paper_order_events BEGIN
+  SELECT RAISE(ABORT, 'paper_order_events are append-only');
+END;
+CREATE TRIGGER paper_order_events_no_delete
+BEFORE DELETE ON paper_order_events BEGIN
+  SELECT RAISE(ABORT, 'paper_order_events are append-only');
 END;
 CREATE TRIGGER paper_fills_no_update
 BEFORE UPDATE ON paper_fills BEGIN
@@ -330,4 +393,4 @@ V1 可支持币种先限定 JPY/USD；如后续扩大市场或币种，先增加
 - [SQLite user_version PRAGMA](https://www.sqlite.org/pragma.html#pragma_user_version)：为应用保留的数据库头版本字段，SQLite 本身不解释它。
 - [SQLite Online Backup API](https://sqlite.org/backup.html) 与 [WAL](https://www.sqlite.org/wal.html)：活动库一致性快照与 WAL 文件/网络文件系统限制。
 - 需求映射：FR-Trade-004–010 / AC-TRD-001–015、FR-Trade-013 / AC-TRD-019、FR-Research-003–012、NFR-003/005/006/007 / AC-NFR-007–015、RQ-010/011/015–028。
-- P10-01 已将显式开户、追加账本、现金/持仓重放、费用与权益快照接入运行时；P10-02 增加计划/版本/证据/风险/批准记录及确定性 checker；P10-03 增加可信持仓报价与 USD/JPY 估值、只追加的市场估值证据和峰值回撤门禁。订单/成交仍待 P10-04，P12 恢复审计与完整回归也待验证，见 [需求追踪矩阵](../requirements/TRACEABILITY.md)。
+- P10-01 已将显式开户、追加账本、现金/持仓重放、费用与权益快照接入运行时；P10-02 增加计划/版本/证据/风险/批准记录及确定性 checker；P10-03 增加可信持仓报价与 USD/JPY 估值、只追加的市场估值证据和峰值回撤门禁；P10-04 增加本地模拟买单、部分成交、费用/滑点、预留和幂等成交持久化。卖出/止损退出、P10-05 账本审计/恢复及 P12 完整回归仍待完成，见 [需求追踪矩阵](../requirements/TRACEABILITY.md)。

@@ -1,6 +1,6 @@
 # 风控引擎与订单仓位计算
 
-> 状态：P03-03 风险规则已由 P10-02/P10-03 接入运行时。计划版本、证据 hash、确定性裁决和本机批准由 [`checker.ts`](../../src/features/risk/checker.ts) 执行；[`drawdown.ts`](../../src/features/risk/drawdown.ts) 按可信报价和 USD/JPY 证据估值，并在峰值回撤达到 20% 时阻止新头寸。报价或汇率缺失、失效、冲突或无法验证时权益保持 `UNRESOLVED`。模拟订单与成交接入仍由 P10-04 完成。本文件落实 [FR-Trade](../requirements/FR_TRADE.md) 的固定规则，不新增或放宽风险阈值。
+> 状态：P03-03 风险规则已由 P10-02/P10-03 接入运行时。计划版本、证据 hash、确定性裁决和本机批准由 [`checker.ts`](../../src/features/risk/checker.ts) 执行；[`drawdown.ts`](../../src/features/risk/drawdown.ts) 按可信报价和 USD/JPY 证据估值，并在峰值回撤达到 20% 时阻止新头寸。报价或汇率缺失、失效、冲突或无法验证时权益保持 `UNRESOLVED`。P10-04 已接入本地模拟买单和成交引擎；没有合格实时行情时仍不能创建真实来源成交。卖出/止损退出撮合及完整恢复审计仍未实现。本文件落实 [FR-Trade](../requirements/FR_TRADE.md) 的固定规则，不新增或放宽风险阈值。
 >
 > 相关设计：[DB Schema](DB_SCHEMA.md)、[API/DTO 契约](API_CONTRACTS.md)、[数据溯源](DATA_PROVENANCE.md)。
 
@@ -109,6 +109,26 @@ qMax = max { q | q > 0, q mod lotSize = 0,
 - `availableSettledCash(c)` 只使用该币种已结算现金，并扣除其他有效买单预留、未结清买入应付款及费用。未结算卖出应收款不增加购买力。JPY 和 USD 分别检查，不跨币种挪用。
 - `buyCommitment` 超过现金时，即使计划损失低于 2% 也必须拒绝。例如初始现金 1,000,000 JPY、日股 100 股一手、入场 12,000 JPY，即使止损距离仅 100 JPY，单手买入本金已是 1,200,000 JPY，仍因资金不足拒绝。
 - 没有有效报价、交易单位、成本模型或必需 FX 时不能计算可信的 `qMax`，结果是 `UNRESOLVED`，不能把未知数量写为 0 风险后放行。
+
+## P10-04 模拟入场成交
+
+模拟买单必须绑定同一计划版本的当前最新 `PASS` 裁决和本地批准，并按该版本计算的买入承诺预留已结算现金。撤单只释放未成交预留，不回写或冲掉已有成交。未成交订单的预留按币种分别从可用现金扣除。
+
+只有许可和来源角色已核验、未被 supersede、数据类别为 `REAL` 的 `MARKET_QUOTE` 可产生正式成交。报价 JSON 中的证券、币种、价格、成交量、`marketAtMs` 和有效区间必须通过 schema；`marketAtMs` 必须与 source record 的市场时刻相同，且位于报价有效期。撮合时间必须处于已支持交易日历的开市 session。Fixture 返回 `DEMO_ONLY` 拒绝结果，历史/延迟/过期/错时/闭市输入为 `NOT_VERIFIED`，均不写 fill 或现金/持仓/费用流水。
+
+当前 P10-04 撮合只处理获批多头计划的买入入场。参与成交量与价格按以下固定规则计算：
+
+```text
+eligibleVolume = floor(quote.volumeShares × maxParticipationBps / 10,000)
+volumeShares = floor(eligibleVolume / tradingUnit) × tradingUnit
+fillPrice = ceilToTick(quote.price + ceil(quote.price × entrySlippageBps / 10,000))
+```
+
+报价已到达或跌破计划止损价时拒绝入场，避免在保护价已触发后新开仓。最终成交数量还受未成交订单数量、保留资金和风险预算约束；对原计划止损价及已有 fill 以实际价格重算累计风险。向上跳空后最多只成交仍符合原批准风险预算的交易单位；无合法单位时记录拒绝尝试并保持订单未成交/部分成交状态和预留。该规则不把 2% 计划风险描述成损失上限。
+
+佣金按订单累计成交量计费：本次入账费用等于 `fee(cumulativeFilledShares) - feesChargedMinor`，因此多次部分成交不会重复收取最低佣金。成交价格、整数货币最小单位费用、FX 来源/汇率、quote 市场时间、实际执行时间和结算日均写入只追加的 fill/ledger 记录。相同订单与 quote source record 的重放返回既有成交，不再次扣款。订单投影、状态事件、fill、费用和账本流水在同一短事务内提交。
+
+结算日期基于已版本化的市场营业日历：US 使用 `us-t1-2024-v1`，JP 使用 `jp-t2-2019-v1`；超出本地日历覆盖范围时拒绝成交。当前仓库没有已核验的实时行情 Provider，因此即使撮合内核已实现，运行时没有合格真实报价仍不能创建 fill。卖出/止损退出撮合和卖出款结算目前尚未实现，不能据此声称模拟账户覆盖完整交易生命周期。
 
 ## 集中度报告
 
