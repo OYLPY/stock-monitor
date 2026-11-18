@@ -169,7 +169,7 @@
 - [x] [P09-01 — OHLCV 归一化与指标库](https://github.com/OYLPY/stock-monitor/issues/58) · 依赖：P05-02（供应商接入 P07-02/P07-03 不阻塞；按 DOC-0011 点时调整契约）。
 - [x] [P09-02 — 无未来函数的回测撮合引擎](https://github.com/OYLPY/stock-monitor/issues/59) · 依赖：P09-01, P03-04
 - [x] [P09-03 — 三类初始策略与参数边界](https://github.com/OYLPY/stock-monitor/issues/60) · 依赖：P09-01, P09-02 · 提交 e994228 / Quality CI 44228498133 成功
-- [ ] [P09-04 — 样本内/样本外与 Walk-forward 实验](https://github.com/OYLPY/stock-monitor/issues/61) · 依赖：P09-02, P09-03
+- [x] [P09-04 — 样本内/样本外与 Walk-forward 实验](https://github.com/OYLPY/stock-monitor/issues/61) · 依赖：P09-02, P09-03 · 提交 e222ccb / Quality CI 44233159341 成功；Issue 验收证据已更新，待交接索引提交 CI 后关闭
 - [ ] [P09-05 — 2020/2022 压力与费用/汇率敏感性](https://github.com/OYLPY/stock-monitor/issues/62) · 依赖：P09-04
 - [ ] [P09-06 — 五维评分与 18/25 验证候选门禁](https://github.com/OYLPY/stock-monitor/issues/63) · 依赖：P09-04, P09-05
 
