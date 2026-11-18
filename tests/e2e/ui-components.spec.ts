@@ -81,6 +81,16 @@ test("shadcn Select controls support keyboard use and preserve GET filters", asy
     page.waitForURL((url) => url.searchParams.get("market") === "JP"),
     page.getByRole("button", { name: "应用筛选" }).click(),
   ]);
+
+  await page.goto("/reports");
+  const generateMorningButton = page.getByRole("button", { name: "生成晨报" });
+  await generateMorningButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/reports\?task=/);
+  await expect(page.getByRole("status")).toContainText("报告任务排队中");
+  await expect(
+    page.getByText("任务已在本机队列中等待 Worker 处理；报告尚未生成。"),
+  ).toBeVisible();
 });
 
 test("backtest date picker and account tab use their shadcn interactions", async ({

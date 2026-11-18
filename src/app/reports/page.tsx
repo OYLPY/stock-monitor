@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
+import { z } from "zod";
 
+import { getLocalDatabasePath, openDatabase } from "@/db";
 import { ReportCenter } from "@/components/reports/report-center";
+import { listArchivedResearchReports } from "@/features/reports/archive";
+import { readTaskRun } from "@/features/task-queue/queue";
 
 export const metadata: Metadata = { title: "晨报与策略研究 | 量化研究工作台" };
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type ReportType = "MORNING" | "ANOMALY" | "DAILY_AUDIT" | "WEEKLY_AUDIT";
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -28,10 +34,27 @@ export default async function ReportsPage({
     ? (rawType as ReportType)
     : "";
 
-  return (
-    <ReportCenter
-      filters={{ query: firstValue(params.q)?.trim() ?? "", type }}
-      reports={[]}
-    />
-  );
+  const database = await openDatabase(getLocalDatabasePath());
+  try {
+    const taskId = z.string().uuid().safeParse(firstValue(params.task));
+    const task = taskId.success ? readTaskRun(database, taskId.data) : null;
+    return (
+      <ReportCenter
+        enqueueError={firstValue(params.enqueue) === "error"}
+        filters={{ query: firstValue(params.q)?.trim() ?? "", type }}
+        reports={listArchivedResearchReports(database)}
+        taskNotice={
+          task
+            ? {
+                id: task.id,
+                status: task.executionStatus,
+                resultCode: task.resultCode,
+              }
+            : null
+        }
+      />
+    );
+  } finally {
+    database.client.close();
+  }
 }

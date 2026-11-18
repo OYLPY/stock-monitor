@@ -15,8 +15,15 @@ const unavailableGroups = [
     id: "task-runtime",
     title: "任务运行",
     records: [
-      { label: "后台任务运行时", description: "任务状态尚未持久化。" },
-      { label: "执行日志", description: "生产执行日志尚未接入。" },
+      {
+        label: "报告任务状态",
+        description: "研究报告任务已保存到本机队列；具体状态在报告页面查看。",
+      },
+      {
+        label: "其他后台任务",
+        description: "其他任务类型与通知仍未接入。",
+      },
+      { label: "执行日志", description: "执行日志与历史查询尚未接入。" },
     ],
   },
   {
@@ -34,7 +41,7 @@ export default function TasksPage() {
       <header className="flex flex-col gap-2">
         <h1 className="sr-only">任务与通知</h1>
         <p className="text-sm text-muted-foreground">
-          当前版本没有生产任务运行时或通知存储，无法判断任务和通知数量。
+          报告任务运行在本机 Worker；本页尚未提供任务历史或通知管理。
         </p>
       </header>
 

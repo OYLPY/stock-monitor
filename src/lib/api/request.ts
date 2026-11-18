@@ -1,5 +1,5 @@
 import type { output, ZodType } from "zod";
-import { ApiError, type ApiValidationDetail } from "./errors";
+import { ApiError, type ApiValidationDetail } from "./errors.ts";
 
 export const MAX_JSON_BODY_BYTES = 64 * 1024;
 

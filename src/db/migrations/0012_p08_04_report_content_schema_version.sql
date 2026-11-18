@@ -1,0 +1,1 @@
+ALTER TABLE `research_reports` ADD `content_schema_version` integer DEFAULT 1 NOT NULL;

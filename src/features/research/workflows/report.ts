@@ -1,28 +1,33 @@
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import type { AppDatabase } from "@/db";
+import type { AppDatabase } from "../../../db/index.ts";
+import { marketDateAt } from "../../../domain/primitives.ts";
+import type { MarketCode, MarketDate } from "../../../domain/primitives.ts";
 import {
   marketPriceBars,
   paperAccounts,
   sourceRecords,
   sources,
-} from "@/db/schema";
-import { listMarketEvents } from "@/features/evidence/repository";
-import { runCodexTask } from "@/features/ai/codex-adapter";
+} from "../../../db/schema.ts";
+import { listMarketEvents } from "../../evidence/repository.ts";
+import { runCodexTask } from "../../ai/codex-adapter/index.ts";
+import { marketCalendarStateAt } from "../../market-calendar/market-calendar.ts";
 import {
   checkResearchEvidence,
   isUsableEvidenceReference,
   storedEvidenceUrl,
   type ResearchEvidenceReference,
-} from "@/features/research/evidence-checker";
+} from "../evidence-checker.ts";
 import {
   researchModelOutputSchema,
   researchReportSchema,
+  unverifiedStrategyValidationDimensions,
   type ResearchReport,
   type ResearchReportType,
-} from "@/features/reports/contract";
+} from "../../reports/contract.ts";
 
 const timeZone = "Asia/Tokyo";
+const dayMs = 24 * 60 * 60 * 1_000;
 const roleKeys = [
   "coordinator",
   "intelligence",
@@ -292,6 +297,88 @@ function qualifiedPriceInstruments(
   );
 }
 
+function previousMarketDate(date: MarketDate, marketCode: MarketCode) {
+  return marketDateAt(Date.parse(`${date}T12:00:00.000Z`) - dayMs, marketCode);
+}
+
+function latestCompletedMarketSession(
+  exchange: "NYSE" | "NASDAQ" | "TSE",
+  nowMs: number,
+) {
+  const marketCode = exchange === "TSE" ? "JP" : "US";
+  let date = marketCalendarStateAt(exchange, nowMs).date;
+  for (let daysBack = 0; daysBack < 14; daysBack += 1) {
+    const state = marketCalendarStateAt(
+      exchange,
+      Date.parse(`${date}T12:00:00.000Z`),
+    );
+    if (state.status === "CALENDAR_UNAVAILABLE") return null;
+    const closeAtMs = state.sessions.at(-1)?.closeAtMs;
+    if (closeAtMs !== undefined && closeAtMs <= nowMs) return state;
+    date = previousMarketDate(date, marketCode);
+  }
+  return null;
+}
+
+function marketCalendarSnapshots(nowMs: number) {
+  return (["NYSE", "NASDAQ", "TSE"] as const).map((exchange) => {
+    const current = marketCalendarStateAt(exchange, nowMs);
+    return {
+      exchange,
+      marketCode: current.market,
+      date: current.date,
+      currentStatus: current.status,
+      currentReason: current.reason ?? null,
+      latestCompletedDate:
+        latestCompletedMarketSession(exchange, nowMs)?.date ?? null,
+      timeZone: current.timeZone,
+      calendarVersion: current.calendarVersion,
+      checkedAt: current.checkedAt,
+      sourceUrls: [...current.sourceUrls],
+    };
+  });
+}
+
+function reportEventTimeline(
+  events: ReturnType<typeof collectEvidence>["events"],
+  asOfMs: number,
+) {
+  const toReportEvent = (event: (typeof events)[number]) => ({
+    category: event.category,
+    summary: event.summary,
+    marketCode: event.marketCode,
+    occurredAtMs: event.occurredAtMs!,
+    dataClass: event.dataClass,
+    verificationLevel: event.verificationLevel,
+    evidenceIds: event.evidenceIds,
+  });
+  const verifiedEvents = events.filter(
+    (event) =>
+      event.verificationLevel === "VERIFIED" &&
+      event.dataClass !== "FIXTURE" &&
+      event.evidenceIds.length > 0 &&
+      event.occurredAtMs !== null,
+  );
+  return {
+    status: "NOT_VERIFIED" as const,
+    asOfMs,
+    recentEvents: verifiedEvents
+      .filter(
+        (event) =>
+          event.occurredAtMs! <= asOfMs &&
+          event.occurredAtMs! >= asOfMs - dayMs,
+      )
+      .map(toReportEvent),
+    upcoming24hEvents: verifiedEvents
+      .filter(
+        (event) =>
+          event.occurredAtMs! > asOfMs && event.occurredAtMs! <= asOfMs + dayMs,
+      )
+      .map(toReportEvent),
+    note: "本机事件记录不构成完整财报、宏观或经济日历；未列出事件不表示没有已安排事件。",
+  };
+}
+
 function sourceCoverage(
   references: Map<string, ResearchEvidenceReference>,
   nowMs: number,
@@ -346,31 +433,34 @@ function sourceCoverage(
 }
 
 function marketSummary(
-  bars: StoredBar[],
   eventCount: number,
-  references: Map<string, ResearchEvidenceReference>,
+  events: ReturnType<typeof collectEvidence>["events"],
   ledgerState: ResearchReport["ledgerState"],
+  calendars: ResearchReport["marketCalendars"],
 ) {
-  const latestFor = (marketCode: "US" | "JP") =>
-    bars.find((bar) => bar.marketCode === marketCode);
-  const latestUs = latestFor("US");
-  const latestJp = latestFor("JP");
-  const eventIds = [...references.values()]
-    .filter((reference) => reference.marketCode !== null)
-    .map((reference) => reference.id)
+  const nyse = calendars.find(({ exchange }) => exchange === "NYSE");
+  const nasdaq = calendars.find(({ exchange }) => exchange === "NASDAQ");
+  const tse = calendars.find(({ exchange }) => exchange === "TSE");
+  const usCompletedDate =
+    nyse?.latestCompletedDate &&
+    nyse.latestCompletedDate === nasdaq?.latestCompletedDate
+      ? nyse.latestCompletedDate
+      : null;
+  const eventIds = events
+    .flatMap(({ evidenceIds }) => evidenceIds)
     .slice(0, 10);
   return [
     {
-      text: latestUs
-        ? `美股本机保存的行情记录截至 ${latestUs.tradingDate}；不代表已核实的最新完成交易日。`
-        : "美股本机没有已保存的价格记录；无法确认最新完成交易日。",
-      evidenceIds: latestUs ? [latestUs.sourceRecordId] : [],
+      text: usCompletedDate
+        ? `美股最近已完成交易日：${usCompletedDate}（NYSE 与 Nasdaq 内置官方日历一致）。`
+        : "美股最近已完成交易日无法核验；NYSE/Nasdaq 内置日历未覆盖当前日期或结果不一致。",
+      evidenceIds: [],
     },
     {
-      text: latestJp
-        ? `日股本机保存的行情记录截至 ${latestJp.tradingDate}；不代表已核实的最新完成交易日。`
-        : "日股本机没有已保存的价格记录；无法确认最新完成交易日。",
-      evidenceIds: latestJp ? [latestJp.sourceRecordId] : [],
+      text: tse?.latestCompletedDate
+        ? `日股最近已完成交易日：${tse.latestCompletedDate}（TSE 内置官方日历）。`
+        : "日股最近已完成交易日无法核验；TSE 内置日历未覆盖当前日期。",
+      evidenceIds: [],
     },
     {
       text:
@@ -380,7 +470,7 @@ function marketSummary(
       evidenceIds: eventIds,
     },
     {
-      text: "汇率、利率、宏观日历与官方交易日历尚无可核实的本地快照。",
+      text: "FX、利率和完整宏观/财报日历没有可核实的本机快照；交易日历快照与来源版本见报告明细。",
       evidenceIds: [],
     },
     {
@@ -413,10 +503,12 @@ function baseReport(input: {
   resultCode: string;
   marketDataReady: boolean;
   eventCount: number;
+  events: ReturnType<typeof collectEvidence>["events"];
   bars: StoredBar[];
   references: Map<string, ResearchEvidenceReference>;
   ledgerState: ResearchReport["ledgerState"];
   ledgerSummary: string | null;
+  calendars: ResearchReport["marketCalendars"];
 }) {
   const dataClass = [...input.references.values()].some(
     (reference) => reference.dataClass === "FIXTURE",
@@ -439,13 +531,11 @@ function baseReport(input: {
             : "REAL";
   const limitations = [
     "报告只使用本机已保存证据，不在报告任务中执行行情或新闻的外部采集。",
-    "本地价格记录覆盖、官方交易日历及 FX/利率快照未核实。",
+    "本地价格记录覆盖、临时停市覆盖及 FX/利率快照未核实；内置交易日历是有覆盖期限的官方静态快照。",
     "不进行回测、收益评分、纸面成交或真实交易；策略候选必须引用有效证据。",
   ];
   if (!input.marketDataReady) {
-    limitations.push(
-      "美股和日股均未达到可提出策略候选的行情证据门槛；候选列表强制为空。",
-    );
+    limitations.push("美股与日股的联合行情门槛未满足；候选列表强制为空。");
   }
   if (input.references.size === 0) {
     limitations.push(
@@ -466,11 +556,13 @@ function baseReport(input: {
     dataClass,
     resultCode: input.resultCode,
     marketSummary: marketSummary(
-      input.bars,
       input.eventCount,
-      input.references,
+      input.events,
       input.ledgerState,
+      input.calendars,
     ),
+    marketCalendars: input.calendars,
+    eventTimeline: reportEventTimeline(input.events, input.generatedAtMs),
     facts: [],
     inferences: [],
     hypotheses: [],
@@ -562,6 +654,7 @@ export async function runResearchReportWorkflow(input: {
 }) {
   const generatedAtMs = input.nowMs ?? Date.now();
   const evidence = collectEvidence(input.database, generatedAtMs);
+  const calendars = marketCalendarSnapshots(generatedAtMs);
   const qualifiedInstruments = new Map([
     ...qualifiedPriceInstruments(evidence.bars, "US", generatedAtMs),
     ...qualifiedPriceInstruments(evidence.bars, "JP", generatedAtMs),
@@ -589,13 +682,23 @@ export async function runResearchReportWorkflow(input: {
       evidence.references.size === 0 ? "NO_SAVED_EVIDENCE" : "NOT_VERIFIED",
     marketDataReady,
     eventCount: evidence.events.length,
+    events: evidence.events,
     bars: evidence.bars,
     references: evidence.references,
     ledgerState,
     ledgerSummary,
+    calendars,
   });
 
-  if (input.signal.aborted || evidence.references.size === 0) return base;
+  if (input.signal.aborted) {
+    return researchReportSchema.parse({
+      ...base,
+      executionStatus: "SKIPPED",
+      resultCode: "CANCELLED",
+      finalDecision: "研究任务已取消；报告不作为完成结果。",
+    });
+  }
+  if (evidence.references.size === 0) return base;
 
   const schema = z.toJSONSchema(researchModelOutputSchema);
   delete schema.$schema;
@@ -661,6 +764,7 @@ export async function runResearchReportWorkflow(input: {
       ? checked.candidates.map((candidate, index) => ({
           ...candidate,
           id: `${input.taskRunId}:candidate-${index + 1}`,
+          validationDimensions: unverifiedStrategyValidationDimensions,
         }))
       : [];
   const paperPlanner = {

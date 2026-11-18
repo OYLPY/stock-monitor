@@ -362,6 +362,34 @@ export const taskRuns = sqliteTable(
   ],
 );
 
+export const researchReports = sqliteTable(
+  "research_reports",
+  {
+    taskRunId: text("task_run_id")
+      .primaryKey()
+      .references(() => taskRuns.id, { onDelete: "restrict" }),
+    reportType: text("report_type").notNull(),
+    verificationLevel: text("verification_level").notNull(),
+    contentSchemaVersion: sqliteSmallInteger("content_schema_version")
+      .notNull()
+      .default(1),
+    reportJson: text("report_json").notNull(),
+    archivedAtMs: sqliteInt64("archived_at_ms").notNull(),
+  },
+  (table) => [
+    index("research_reports_archived_at").on(table.archivedAtMs),
+    check(
+      "research_reports_type",
+      sql`${table.reportType} IN ('MORNING', 'ANOMALY', 'DAILY_AUDIT', 'WEEKLY_AUDIT')`,
+    ),
+    check(
+      "research_reports_verification",
+      sql`${table.verificationLevel} IN ('VERIFIED', 'PARTIAL', 'NOT_VERIFIED', 'DEMO_ONLY')`,
+    ),
+    check("research_reports_json", sql`json_valid(${table.reportJson})`),
+  ],
+);
+
 export const taskRunAttempts = sqliteTable(
   "task_run_attempts",
   {

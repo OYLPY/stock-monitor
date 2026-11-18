@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { logInternalApiError } from "../security/logging";
+import { logInternalApiError } from "../security/logging.ts";
 
 export type ApiValidationDetail = Readonly<{
   path: string;
@@ -22,11 +22,16 @@ const API_ERRORS = {
 export type ApiErrorCode = keyof typeof API_ERRORS;
 
 export class ApiError extends Error {
+  readonly code: ApiErrorCode;
+  readonly details: readonly ApiValidationDetail[];
+
   constructor(
-    readonly code: ApiErrorCode,
-    readonly details: readonly ApiValidationDetail[] = [],
+    code: ApiErrorCode,
+    details: readonly ApiValidationDetail[] = [],
   ) {
     super(API_ERRORS[code].message);
+    this.code = code;
+    this.details = details;
     this.name = "ApiError";
   }
 }

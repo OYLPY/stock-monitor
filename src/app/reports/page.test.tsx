@@ -4,6 +4,23 @@ import type { ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+const pageMocks = vi.hoisted(() => ({
+  openDatabase: vi.fn(async () => ({ client: { close: vi.fn() } })),
+  listReports: vi.fn((): unknown[] => []),
+  readTaskRun: vi.fn((): unknown => null),
+}));
+
+vi.mock("@/db", () => ({
+  getLocalDatabasePath: () => "test-database.sqlite",
+  openDatabase: pageMocks.openDatabase,
+}));
+vi.mock("@/features/reports/archive", () => ({
+  listArchivedResearchReports: pageMocks.listReports,
+}));
+vi.mock("@/features/task-queue/queue", () => ({
+  readTaskRun: pageMocks.readTaskRun,
+}));
+
 vi.mock("@/components/shadcn/collapsible", async () => {
   const React = await import("react");
   const Content = ({ children }: { children: ReactNode }) =>
@@ -39,6 +56,55 @@ const reportFixture = {
     { text: "日本市场摘要四", evidenceIds: [] },
     { text: "日本市场摘要五", evidenceIds: [] },
   ],
+  marketCalendars: [
+    {
+      exchange: "NYSE" as const,
+      marketCode: "US" as const,
+      date: "2026-11-15",
+      currentStatus: "CLOSED" as const,
+      currentReason: "WEEKEND",
+      latestCompletedDate: "2026-11-13",
+      timeZone: "America/New_York",
+      calendarVersion: "nyse-cash-2026-2028-as-of-2026-11-16",
+      checkedAt: "2026-11-16T10:07:15.000Z",
+      sourceUrls: ["https://www.nyse.com/trade/hours-calendars"],
+    },
+    {
+      exchange: "NASDAQ" as const,
+      marketCode: "US" as const,
+      date: "2026-11-15",
+      currentStatus: "CLOSED" as const,
+      currentReason: "WEEKEND",
+      latestCompletedDate: "2026-11-13",
+      timeZone: "America/New_York",
+      calendarVersion: "nasdaq-us-cash-2026-as-of-2026-11-16",
+      checkedAt: "2026-11-16T10:07:15.000Z",
+      sourceUrls: [
+        "https://www.nasdaq.com/market-activity/stock-market-holiday-schedule",
+      ],
+    },
+    {
+      exchange: "TSE" as const,
+      marketCode: "JP" as const,
+      date: "2026-11-15",
+      currentStatus: "CLOSED" as const,
+      currentReason: "WEEKEND",
+      latestCompletedDate: "2026-11-13",
+      timeZone: "Asia/Tokyo",
+      calendarVersion: "jpx-cash-equities-2026-2027-as-of-2026-11-16",
+      checkedAt: "2026-11-16T10:07:15.000Z",
+      sourceUrls: [
+        "https://www.jpx.co.jp/english/corporate/about-jpx/calendar/index.html",
+      ],
+    },
+  ],
+  eventTimeline: {
+    status: "NOT_VERIFIED" as const,
+    asOfMs: Date.UTC(2026, 10, 16),
+    recentEvents: [],
+    upcoming24hEvents: [],
+    note: "本机事件记录不构成完整日历。",
+  },
   facts: [{ text: "来源支持的事实", evidenceIds: ["evidence-1"] }],
   inferences: [{ text: "基于事实的推论", evidenceIds: ["evidence-1"] }],
   hypotheses: [{ text: "待验证的研究假设", evidenceIds: ["evidence-1"] }],
@@ -51,6 +117,13 @@ const reportFixture = {
       opposingCase: "区间突破可能是假信号",
       evidenceIds: ["evidence-1"],
       unresolvedQuestions: ["需要样本外验证"],
+      validationDimensions: {
+        outOfSampleStability: "NOT_VERIFIED" as const,
+        afterCostReturn: "NOT_VERIFIED" as const,
+        maxDrawdown: "NOT_VERIFIED" as const,
+        executionFeasibility: "NOT_VERIFIED" as const,
+        crossEnvironmentRobustness: "NOT_VERIFIED" as const,
+      },
     },
   ],
   roleAudit: {
@@ -125,26 +198,55 @@ function renderReports(
   },
 ) {
   return renderToStaticMarkup(
-    createElement(ReportCenter, { filters, reports }),
+    createElement(ReportCenter, {
+      enqueueError: false,
+      filters,
+      reports,
+      taskNotice: null,
+    }),
   );
 }
 
 describe("reports page", () => {
   it("renders a truthful empty state without fabricated reports or scores", async () => {
+    pageMocks.listReports.mockReturnValue([]);
     const page = await ReportsPage({ searchParams: Promise.resolve({}) });
     const html = renderToStaticMarkup(createElement(() => page));
 
     expect(html).toContain("暂无已保存的报告");
-    expect(html).toContain("报告生成与归档运行时尚未接入");
+    expect(html).toContain("生成研究报告");
+    expect(html).toContain("生成晨报");
+    expect(html).toContain("只归档 NOT_VERIFIED 报告，不生成策略候选");
+    expect(html).toContain('action="/api/v1/reports" method="post"');
     expect(html).not.toContain("胜率");
     expect(html).not.toContain("Sharpe");
     expect(html).not.toContain("收益率");
+  });
+
+  it("loads persisted task status for the redirected report page", async () => {
+    pageMocks.readTaskRun.mockReturnValue({
+      id: "0c72b1db-1577-4828-9e25-82af2eadd323",
+      executionStatus: "PENDING",
+      resultCode: null,
+    });
+    const page = await ReportsPage({
+      searchParams: Promise.resolve({
+        task: "0c72b1db-1577-4828-9e25-82af2eadd323",
+      }),
+    });
+    const html = renderToStaticMarkup(createElement(() => page));
+
+    expect(html).toContain("报告任务排队中");
+    expect(html).toContain("报告尚未生成");
   });
 
   it("shows distinct evidence, inference, hypothesis, risk, and six-role audit", () => {
     const html = renderReports([reportFixture]);
 
     expect(html).toContain("来源支持的事实");
+    expect(html).toContain("交易日历与已保存事件");
+    expect(html).toContain("最近已完成交易日");
+    expect(html).toContain("本机事件记录不构成完整日历。");
     expect(html).toContain("基于事实的推论");
     expect(html).toContain("待验证的研究假设");
     expect(html).toContain("REJECTED");
@@ -196,6 +298,9 @@ describe("reports page", () => {
     );
 
     expect(html).toContain("日本市场晨报");
+    expect(html).toContain("五维验证状态");
+    expect(html).toContain("跨环境稳健性");
+    expect(html).toContain("未验证 · NOT_VERIFIED");
     expect(html).not.toMatch(/<h3[^>]*>日度审计<\/h3>/);
     expect(html).toContain("显示 1 / 2 份");
     expect(reportTitles.slice(0, 2)).toEqual(["日度审计", "日本市场晨报"]);

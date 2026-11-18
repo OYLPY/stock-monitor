@@ -136,6 +136,16 @@ export function readTaskRun(database: AppDatabase, id: string) {
   return row ? mapTaskRun(row) : null;
 }
 
+export function readTaskRunByIdempotencyKey(
+  database: AppDatabase,
+  idempotencyKey: string,
+) {
+  const row = database.client
+    .prepare("SELECT * FROM task_runs WHERE idempotency_key = ?")
+    .get(idempotencyKey) as TaskRunRow | undefined;
+  return row ? mapTaskRun(row) : null;
+}
+
 export function enqueueScheduledTask(
   database: AppDatabase,
   input: ScheduledTaskInput,

@@ -1,7 +1,7 @@
 import type {
   ResearchModelOutput,
   ResearchReport,
-} from "@/features/reports/contract";
+} from "../reports/contract.ts";
 
 export type ResearchEvidenceReference = {
   id: string;

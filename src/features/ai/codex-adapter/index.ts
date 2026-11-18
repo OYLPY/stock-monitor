@@ -4,11 +4,11 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { Codex, type Usage } from "@openai/codex-sdk";
 import { inArray } from "drizzle-orm";
-import type { AppDatabase } from "../../../db";
-import { sourceRecords } from "../../../db/schema";
-import { MAX_JSON_BODY_BYTES } from "../../../lib/api/request";
-import { recordAuditEvent } from "../../evidence/repository";
-import { CODEX_CONFIG_OVERRIDES } from "./config";
+import type { AppDatabase } from "../../../db/index.ts";
+import { sourceRecords } from "../../../db/schema.ts";
+import { MAX_JSON_BODY_BYTES } from "../../../lib/api/request.ts";
+import { recordAuditEvent } from "../../evidence/repository.ts";
+import { CODEX_CONFIG_OVERRIDES } from "./config.ts";
 
 const TURN_TIMEOUT_MS = 90_000;
 const CODEX_ENV_KEYS = [

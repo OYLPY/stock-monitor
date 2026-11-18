@@ -42,6 +42,22 @@ export const statementSchema = z.strictObject({
   evidenceIds: z.array(z.string().uuid()).max(10),
 });
 
+export const unverifiedStrategyValidationDimensions = {
+  outOfSampleStability: "NOT_VERIFIED",
+  afterCostReturn: "NOT_VERIFIED",
+  maxDrawdown: "NOT_VERIFIED",
+  executionFeasibility: "NOT_VERIFIED",
+  crossEnvironmentRobustness: "NOT_VERIFIED",
+} as const;
+
+const strategyValidationDimensionsSchema = z.strictObject({
+  outOfSampleStability: z.literal("NOT_VERIFIED"),
+  afterCostReturn: z.literal("NOT_VERIFIED"),
+  maxDrawdown: z.literal("NOT_VERIFIED"),
+  executionFeasibility: z.literal("NOT_VERIFIED"),
+  crossEnvironmentRobustness: z.literal("NOT_VERIFIED"),
+});
+
 export const candidateSchema = z.strictObject({
   id: z.string().min(1).max(160),
   marketCode: z.enum(["US", "JP"]),
@@ -52,6 +68,7 @@ export const candidateSchema = z.strictObject({
   opposingCase: z.string().max(1_000).nullable(),
   evidenceIds: z.array(z.string().uuid()).max(10),
   unresolvedQuestions: z.array(z.string().max(500)).max(10),
+  validationDimensions: strategyValidationDimensionsSchema,
 });
 
 const roleAuditSchema = z.record(
@@ -77,6 +94,42 @@ const sourceCoverageSchema = z.strictObject({
   delayStatement: z.string().max(500).nullable(),
   limitation: z.string().max(1_000).nullable(),
   evidenceIds: z.array(z.string().uuid()).max(100),
+});
+
+const marketCalendarSnapshotSchema = z.strictObject({
+  exchange: z.enum(["NYSE", "NASDAQ", "TSE"]),
+  marketCode: z.enum(["US", "JP"]),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  currentStatus: z.enum(["OPEN", "CLOSED", "CALENDAR_UNAVAILABLE"]),
+  currentReason: z
+    .enum([
+      "UNSUPPORTED_YEAR",
+      "WEEKEND",
+      "EXCHANGE_HOLIDAY",
+      "TEMPORARY_CLOSURE",
+      "INVALID_OVERRIDE",
+      "CONFLICTING_OVERRIDES",
+      "OUTSIDE_SESSION",
+    ])
+    .nullable(),
+  latestCompletedDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+  timeZone: z.string().max(64),
+  calendarVersion: z.string().min(1).max(120),
+  checkedAt: z.string().datetime(),
+  sourceUrls: z.array(z.string().url()).max(5),
+});
+
+const reportEventSchema = z.strictObject({
+  category: z.string().min(1).max(64),
+  summary: z.string().min(1).max(1_000),
+  marketCode: z.enum(["US", "JP"]).nullable(),
+  occurredAtMs: z.number().int().safe(),
+  dataClass: dataClassSchema,
+  verificationLevel: verificationLevelSchema,
+  evidenceIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
 const evidenceRejectionCodeSchema = z.enum([
@@ -117,6 +170,14 @@ export const researchReportSchema = z.strictObject({
     .regex(/^[A-Z][A-Z0-9_]{0,63}$/)
     .nullable(),
   marketSummary: z.array(statementSchema).max(5),
+  marketCalendars: z.array(marketCalendarSnapshotSchema).max(3),
+  eventTimeline: z.strictObject({
+    status: z.literal("NOT_VERIFIED"),
+    asOfMs: z.number().int().safe(),
+    recentEvents: z.array(reportEventSchema).max(20),
+    upcoming24hEvents: z.array(reportEventSchema).max(20),
+    note: z.string().max(1_000),
+  }),
   facts: z.array(statementSchema).max(30),
   inferences: z.array(statementSchema).max(20),
   hypotheses: z.array(statementSchema).max(20),
@@ -145,6 +206,18 @@ export const researchReportSchema = z.strictObject({
   limitations: z.array(z.string().max(1_000)).max(30),
   finalDecision: z.string().max(1_000).nullable(),
 });
+
+const legacyResearchReportSchema = researchReportSchema
+  .extend({
+    candidates: z.array(candidateSchema.omit({ validationDimensions: true })),
+  })
+  .transform((report) => ({
+    ...report,
+    candidates: report.candidates.map((candidate) => ({
+      ...candidate,
+      validationDimensions: unverifiedStrategyValidationDimensions,
+    })),
+  }));
 
 const modelStatementSchema = z.strictObject({
   text: z.string().min(1).max(1_000),
@@ -192,6 +265,7 @@ export const researchModelOutputSchema = z.strictObject({
 });
 
 export type ResearchReport = z.infer<typeof researchReportSchema>;
+export const researchReportSchemaV1 = legacyResearchReportSchema;
 export type ResearchReportType = z.infer<typeof reportTypeSchema>;
 export type ResearchModelOutput = z.infer<typeof researchModelOutputSchema>;
 export type ResearchRoleKey = z.infer<typeof roleKeySchema>;

@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { CircleHelp, Search } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/shadcn/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/alert";
 import { Badge } from "@/components/shadcn/badge";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -38,6 +39,14 @@ import {
   SelectValue,
 } from "@/components/shadcn/select";
 import { Separator } from "@/components/shadcn/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/shadcn/table";
 
 type ReportType = "MORNING" | "ANOMALY" | "DAILY_AUDIT" | "WEEKLY_AUDIT";
 type ExecutionStatus =
@@ -66,6 +75,13 @@ interface StrategyCandidate {
   opposingCase: string | null;
   evidenceIds: string[];
   unresolvedQuestions: string[];
+  validationDimensions: {
+    outOfSampleStability: "NOT_VERIFIED";
+    afterCostReturn: "NOT_VERIFIED";
+    maxDrawdown: "NOT_VERIFIED";
+    executionFeasibility: "NOT_VERIFIED";
+    crossEnvironmentRobustness: "NOT_VERIFIED";
+  };
 }
 
 interface SourceCoverage {
@@ -84,6 +100,29 @@ interface SourceCoverage {
   evidenceIds: string[];
 }
 
+interface MarketCalendarSnapshot {
+  exchange: "NYSE" | "NASDAQ" | "TSE";
+  marketCode: "US" | "JP";
+  date: string;
+  currentStatus: "OPEN" | "CLOSED" | "CALENDAR_UNAVAILABLE";
+  currentReason: string | null;
+  latestCompletedDate: string | null;
+  timeZone: string;
+  calendarVersion: string;
+  checkedAt: string;
+  sourceUrls: string[];
+}
+
+interface ReportEvent {
+  category: string;
+  summary: string;
+  marketCode: "US" | "JP" | null;
+  occurredAtMs: number;
+  dataClass: DataClass;
+  verificationLevel: VerificationLevel;
+  evidenceIds: string[];
+}
+
 interface ResearchReport {
   id: string;
   type: ReportType;
@@ -96,6 +135,14 @@ interface ResearchReport {
   dataClass: DataClass;
   resultCode: string | null;
   marketSummary: Statement[];
+  marketCalendars: MarketCalendarSnapshot[];
+  eventTimeline: {
+    status: "NOT_VERIFIED";
+    asOfMs: number;
+    recentEvents: ReportEvent[];
+    upcoming24hEvents: ReportEvent[];
+    note: string;
+  };
   facts: Statement[];
   inferences: Statement[];
   hypotheses: Statement[];
@@ -127,6 +174,24 @@ interface ReportFilters {
   query: string;
   type: "" | ReportType;
 }
+
+const taskStatusLabels: Record<ExecutionStatus, string> = {
+  PENDING: "排队中",
+  RUNNING: "运行中",
+  DONE: "完成",
+  FAILED: "失败",
+  BLOCKED_EXTERNAL: "外部阻断",
+  SKIPPED: "已跳过",
+};
+
+const calendarStatusLabels: Record<
+  MarketCalendarSnapshot["currentStatus"],
+  string
+> = {
+  OPEN: "交易时段内",
+  CLOSED: "当前休市",
+  CALENDAR_UNAVAILABLE: "日历未覆盖",
+};
 
 const reportTypeLabels: Record<ReportType, string> = {
   MORNING: "晨报",
@@ -181,6 +246,14 @@ const roleOrder: { key: RoleKey; label: string }[] = [
   { key: "riskOfficer", label: "独立风控 Risk Officer" },
   { key: "paperPlanner", label: "模拟员 Paper Planner" },
 ];
+
+const validationDimensionLabels = [
+  { key: "outOfSampleStability", label: "样本外稳定性" },
+  { key: "afterCostReturn", label: "扣费后收益" },
+  { key: "maxDrawdown", label: "最大回撤" },
+  { key: "executionFeasibility", label: "成交可行性" },
+  { key: "crossEnvironmentRobustness", label: "跨环境稳健性" },
+] as const;
 
 function formatTime(value: number | null, timeZone: string | null) {
   if (value === null) return "未提供";
@@ -289,6 +362,35 @@ function ReportCard({ report }: { report: ResearchReport }) {
   const demoOnly = hasFixtureInput || report.verificationLevel === "DEMO_ONLY";
   const verificationLevel = demoOnly ? "DEMO_ONLY" : report.verificationLevel;
   const candidateLimitExceeded = report.candidates.length > 3;
+  const renderEvents = (events: ReportEvent[]) =>
+    events.length ? (
+      <ul className="flex min-w-0 flex-col gap-3">
+        {events.map((event) => (
+          <li
+            key={`${event.category}-${event.occurredAtMs}-${event.evidenceIds[0]}`}
+          >
+            <Item
+              className="min-w-0 flex-col items-stretch gap-1.5"
+              variant="muted"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{event.marketCode ?? "美日"}</Badge>
+                <Badge variant="secondary">{event.category}</Badge>
+                <time className="text-xs text-muted-foreground">
+                  {formatTime(event.occurredAtMs, report.timeZone)}
+                </time>
+              </div>
+              <p className="break-words text-sm">{event.summary}</p>
+              <EvidenceIds ids={event.evidenceIds} />
+            </Item>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-muted-foreground">
+        没有可核验的已保存事件记录；这不代表没有事件。
+      </p>
+    );
 
   return (
     <li>
@@ -381,6 +483,98 @@ function ReportCard({ report }: { report: ResearchReport }) {
               </ol>
             )}
           </section>
+
+          <Collapsible>
+            <CollapsibleTrigger
+              render={
+                <Button className="w-full justify-between" variant="outline" />
+              }
+            >
+              交易日历与已保存事件
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <Separator />
+              <div className="flex min-w-0 flex-col gap-5 p-4">
+                <section className="flex flex-col gap-3">
+                  <h4 className="text-sm font-semibold">交易日历快照</h4>
+                  <ul className="flex min-w-0 flex-col gap-3">
+                    {report.marketCalendars.map((calendar) => (
+                      <li key={calendar.exchange}>
+                        <Item
+                          className="flex min-w-0 flex-col items-stretch gap-2"
+                          variant="muted"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h5 className="text-sm font-medium">
+                              {calendar.exchange} · {calendar.marketCode}
+                            </h5>
+                            <Badge variant="outline">
+                              {calendarStatusLabels[calendar.currentStatus]}
+                            </Badge>
+                          </div>
+                          <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
+                            <Definition label="市场当前日期">
+                              {calendar.date} · {calendar.timeZone}
+                              {calendar.currentReason
+                                ? ` · ${calendar.currentReason}`
+                                : ""}
+                            </Definition>
+                            <Definition label="最近已完成交易日">
+                              {calendar.latestCompletedDate ?? "无法核验"}
+                            </Definition>
+                            <Definition label="日历版本">
+                              <code>{calendar.calendarVersion}</code>
+                            </Definition>
+                            <Definition label="快照核对时间">
+                              {calendar.checkedAt}
+                            </Definition>
+                          </dl>
+                          <ul className="flex flex-wrap gap-3 text-sm">
+                            {calendar.sourceUrls.map((url) => {
+                              const safeUrl = safeSourceUrl(url);
+                              return safeUrl ? (
+                                <li key={url}>
+                                  <a
+                                    className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                    href={safeUrl}
+                                    rel="noreferrer noopener"
+                                    target="_blank"
+                                  >
+                                    官方日历来源
+                                  </a>
+                                </li>
+                              ) : null;
+                            })}
+                          </ul>
+                        </Item>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+                <section className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm font-semibold">
+                      最近 24 小时已发生
+                    </h4>
+                    <Badge variant="outline">NOT_VERIFIED</Badge>
+                  </div>
+                  {renderEvents(report.eventTimeline.recentEvents)}
+                </section>
+                <section className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm font-semibold">
+                      未来 24 小时已安排
+                    </h4>
+                    <Badge variant="outline">NOT_VERIFIED</Badge>
+                  </div>
+                  {renderEvents(report.eventTimeline.upcoming24hEvents)}
+                  <p className="text-sm text-muted-foreground">
+                    {report.eventTimeline.note}
+                  </p>
+                </section>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <section
             aria-labelledby={`risk-${report.id}`}
@@ -518,6 +712,29 @@ function ReportCard({ report }: { report: ResearchReport }) {
                                 {candidate.opposingCase ?? "未提供"}
                               </Definition>
                             </dl>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>五维验证状态</TableHead>
+                                  <TableHead>当前状态</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {validationDimensionLabels.map(
+                                  ({ key, label }) => (
+                                    <TableRow key={key}>
+                                      <TableCell>{label}</TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline">
+                                          未验证 ·{" "}
+                                          {candidate.validationDimensions[key]}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                  ),
+                                )}
+                              </TableBody>
+                            </Table>
                             <div className="mt-3 flex flex-col gap-3">
                               <EvidenceIds ids={candidate.evidenceIds} />
                               <div>
@@ -750,6 +967,14 @@ function reportSearchText(report: ResearchReport) {
     report.resultCode ?? "",
     report.finalDecision ?? "",
     ...report.marketSummary.map((line) => line.text),
+    ...report.marketCalendars.flatMap((calendar) => [
+      calendar.exchange,
+      calendar.date,
+      calendar.latestCompletedDate ?? "",
+      ...calendar.sourceUrls,
+    ]),
+    ...report.eventTimeline.recentEvents.map(({ summary }) => summary),
+    ...report.eventTimeline.upcoming24hEvents.map(({ summary }) => summary),
     ...report.facts.map((statement) => statement.text),
     ...report.inferences.map((statement) => statement.text),
     ...report.hypotheses.map((statement) => statement.text),
@@ -773,9 +998,17 @@ function reportSearchText(report: ResearchReport) {
 export function ReportCenter({
   reports,
   filters,
+  taskNotice,
+  enqueueError,
 }: {
   reports: ResearchReport[];
   filters: ReportFilters;
+  taskNotice: {
+    id: string;
+    status: ExecutionStatus;
+    resultCode: string | null;
+  } | null;
+  enqueueError: boolean;
 }) {
   const query = filters.query.trim().toLowerCase();
   const matchingReports = reports
@@ -799,6 +1032,69 @@ export function ReportCenter({
           阅读已保存的报告、证据和六角色审计。研究候选不代表已验证策略、获批计划或模拟成交。
         </p>
       </header>
+
+      <section aria-labelledby="report-generation-heading">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2 id="report-generation-heading">生成研究报告</h2>
+            </CardTitle>
+            <CardDescription>
+              报告由本机 Worker 处理并保存到本机数据库。行情或证据不足时只归档
+              NOT_VERIFIED 报告，不生成策略候选。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action="/api/v1/reports" method="post">
+              <input name="requestId" type="hidden" value={randomUUID()} />
+              <div className="flex flex-wrap gap-2">
+                <Button name="type" type="submit" value="MORNING">
+                  生成晨报
+                </Button>
+                <Button name="type" type="submit" value="ANOMALY">
+                  生成异常报告
+                </Button>
+                <Button name="type" type="submit" value="DAILY_AUDIT">
+                  生成日度审计
+                </Button>
+                <Button name="type" type="submit" value="WEEKLY_AUDIT">
+                  生成周度审计
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </section>
+
+      {enqueueError ? (
+        <Alert role="alert" variant="destructive">
+          <AlertTitle>报告任务未加入队列</AlertTitle>
+          <AlertDescription>
+            本机队列暂时不可用。没有生成或保存报告，请检查本机数据库后重试。
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {taskNotice ? (
+        <Alert role="status">
+          <AlertTitle>报告任务{taskStatusLabels[taskNotice.status]}</AlertTitle>
+          <AlertDescription>
+            <p>任务编号：{taskNotice.id}</p>
+            <p>
+              {taskNotice.status === "PENDING"
+                ? "任务已在本机队列中等待 Worker 处理；报告尚未生成。"
+                : taskNotice.status === "RUNNING"
+                  ? "本机 Worker 正在处理；报告完成后刷新本页查看归档。"
+                  : taskNotice.status === "DONE"
+                    ? "任务已结束；归档报告显示在下方。"
+                    : "任务未产生可用报告；查看状态码并修复阻断后重新生成。"}
+            </p>
+            {taskNotice.resultCode ? (
+              <code>{taskNotice.resultCode}</code>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <section
         aria-labelledby="report-filters-heading"
@@ -884,8 +1180,8 @@ export function ReportCenter({
               </EmptyTitle>
               <EmptyDescription>
                 <p>
-                  报告生成与归档运行时尚未接入。没有研究数据或 AI
-                  输出时，本机不会生成演示报告、策略评分或绩效数字。
+                  暂无已归档报告。选择上方报告类型可将任务加入本机队列；Worker
+                  完成前不会显示报告，也不会生成演示策略评分或绩效数字。
                 </p>
               </EmptyDescription>
             </EmptyHeader>

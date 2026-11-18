@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { instrumentCompositeKey } from "../../domain/primitives";
-import { type AppDatabase, withTransaction } from "../../db";
+import { instrumentCompositeKey } from "../../domain/primitives.ts";
+import { type AppDatabase, withTransaction } from "../../db/index.ts";
 import {
   auditEvents,
   marketEventEvidence,
@@ -10,7 +10,7 @@ import {
   marketEvents,
   sourceRecords,
   sources,
-} from "../../db/schema";
+} from "../../db/schema.ts";
 
 const sourceRoleSchema = z.enum([
   "REGULATORY_PRIMARY",

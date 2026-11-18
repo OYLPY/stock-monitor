@@ -78,6 +78,20 @@
       "when": 1795001652163,
       "tag": "0010_p07_02_market_price_bars_strict",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1795016625953,
+      "tag": "0011_p08_04_research_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1795018677948,
+      "tag": "0012_p08_04_report_content_schema_version",
+      "breakpoints": true
     }
   ]
 }
