@@ -172,9 +172,9 @@
         {
           "id": "P09-04",
           "title": "样本内/样本外与 Walk-forward 实验",
-          "scope": "实现时间序列划分、参数冻结、滚动窗口、重采样、避免数据窥探；记录交易次数、胜率、收益分布。",
+          "scope": "实现 expanding/rolling 时间折、embargo 隔离期、训练窗独占参数选择与冻结 hash、逐折闭合交易统计及显式区块长度的确定性 circular block bootstrap；不自动搜索策略参数。",
           "deliverables": "src/features/validation、测试报告",
-          "acceptance": "测试集不参与参数选择；小样本不通过；同一配置可重算结果",
+          "acceptance": "测试窗不参与选参且互不重叠；每折至少 30 笔闭合交易、无遗留仓位且数据可信才可标记 VERIFIED；不足为 NOT_VERIFIED、Fixture 为 DEMO_ONLY；重采样和输入可确定性重算",
           "depends": [
             "P09-02",
             "P09-03"
