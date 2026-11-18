@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
+import { runStressSensitivity } from "@/features/validation/stress-test";
 import { runBacktest } from "./engine";
 import type { BacktestRunInput, BacktestSession } from "./engine";
+import type { StressScenario } from "@/features/validation/stress-test";
 
-function businessDates(count: number): string[] {
+function businessDates(count: number, firstDate = "2026-01-05"): string[] {
   const dates: string[] = [];
-  for (let date = new Date("2026-01-05T00:00:00.000Z"); dates.length < count;) {
+  for (
+    let date = new Date(`${firstDate}T00:00:00.000Z`);
+    dates.length < count;
+  ) {
     if (date.getUTCDay() !== 0 && date.getUTCDay() !== 6) {
       dates.push(date.toISOString().slice(0, 10));
     }
@@ -130,6 +135,27 @@ function backtestInput(
     signals: [],
     ...overrides,
   };
+}
+
+function historicalFixtureInput(dates: readonly string[]): BacktestRunInput {
+  const defaults = backtestInput();
+  return backtestInput({
+    calendar: {
+      ...defaults.calendar,
+      sessions: dates.map((date) => session(date)),
+    },
+    settlementRules: {
+      ...defaults.settlementRules!,
+      records: dates.map((tradeDate, index) => ({
+        tradeDate,
+        settlementDate: dates[index + 1] ?? tradeDate,
+        settlementAtMs: dates[index + 1]
+          ? openAt(dates[index + 1])
+          : closeAt(tradeDate) + 1,
+        sourceRecordId: `settlement:${tradeDate}`,
+      })),
+    },
+  });
 }
 
 describe("runBacktest", () => {
@@ -629,5 +655,242 @@ describe("runBacktest", () => {
         }),
       ),
     ).toThrow("signal_precedes_source_bar_close");
+  });
+});
+
+function stressScenario(
+  overrides: Partial<StressScenario> = {},
+): StressScenario {
+  return {
+    id: "cost-stress",
+    version: "fixture-stress-v1",
+    sourceRecordId: "fixture-stress-source",
+    dataClass: "FIXTURE",
+    verificationStatus: "NOT_VERIFIED",
+    commissionBpsIncrease: 0,
+    spreadBpsIncrease: 0,
+    slippageBpsIncrease: 0,
+    gapReserveBps: 0,
+    terminalFxShockBps: 0,
+    ...overrides,
+  };
+}
+
+function stressAtoms(value: string): bigint {
+  const [whole, fraction] = value.split(".");
+  return BigInt(`${whole}${(fraction ?? "").padEnd(8, "0")}`);
+}
+
+describe("runStressSensitivity", () => {
+  it("replays explicit adverse cost and gap reserves deterministically", () => {
+    const dates = businessDates(4);
+    const input = backtestInput({
+      calendar: {
+        ...backtestInput().calendar,
+        sessions: [
+          session(dates[0]),
+          session(dates[1]),
+          session(dates[2], "110"),
+          session(dates[3]),
+        ],
+      },
+      signals: [
+        signal("stress-buy", dates[0], "BUY"),
+        signal("stress-sell", dates[1], "SELL"),
+      ],
+    });
+    const inputForStress = {
+      backtest: input,
+      reportingCurrency: "JPY" as const,
+      coverage: [],
+      fxObservations: [],
+      scenarios: [
+        stressScenario({
+          commissionBpsIncrease: 50,
+          spreadBpsIncrease: 25,
+          slippageBpsIncrease: 25,
+          gapReserveBps: 50,
+        }),
+      ],
+    };
+
+    const first = runStressSensitivity(inputForStress);
+    const replay = runStressSensitivity(inputForStress);
+    const scenario = first.scenarios[0];
+
+    expect(scenario).toEqual(replay.scenarios[0]);
+    expect(scenario.backtest.resultClass).toBe("DEMO_ONLY");
+    expect(scenario.executionChanged).toBe(false);
+    expect(stressAtoms(scenario.metrics.finalEquity!)).toBeLessThan(
+      stressAtoms(first.baseline.metrics.finalEquity!),
+    );
+    expect(stressAtoms(scenario.metrics.fees)).toBeGreaterThan(
+      stressAtoms(first.baseline.metrics.fees),
+    );
+    expect(
+      scenario.historicalWindows.map(({ status, metrics }) => ({
+        status,
+        metrics,
+      })),
+    ).toEqual([
+      { status: "NOT_VERIFIED", metrics: null },
+      { status: "NOT_VERIFIED", metrics: null },
+    ]);
+  });
+
+  it("does not exceed baseline liquidity capacity", () => {
+    const dates = businessDates(3);
+    const input = backtestInput({
+      signals: [signal("capacity-buy", dates[0], "BUY")],
+    });
+    const report = runStressSensitivity({
+      backtest: input,
+      reportingCurrency: "JPY",
+      coverage: [],
+      fxObservations: [],
+      scenarios: [stressScenario({ maxParticipationBps: 1 })],
+    });
+
+    expect(report.baseline.metrics.filledOrderCount).toBe(1);
+    expect(report.scenarios[0].metrics.filledOrderCount).toBe(0);
+    expect(report.scenarios[0].metrics.rejectedOrderCount).toBe(1);
+  });
+
+  it("marks fee scenarios whose changed fills can improve ending equity", () => {
+    const dates = businessDates(3);
+    const input = backtestInput({
+      initialCash: "10000",
+      calendar: {
+        ...backtestInput().calendar,
+        sessions: [
+          session(dates[0]),
+          session(dates[1], "100"),
+          session(dates[2], "50"),
+        ],
+      },
+      signals: [
+        signal("cash-limited-buy", dates[0], "BUY"),
+        signal("cash-limited-sell", dates[1], "SELL"),
+      ],
+    });
+    const report = runStressSensitivity({
+      backtest: input,
+      reportingCurrency: "JPY",
+      coverage: [],
+      fxObservations: [],
+      scenarios: [stressScenario({ commissionBpsIncrease: 1 })],
+    });
+    const baseline = report.baseline.metrics.finalEquity!;
+    const scenario = report.scenarios[0];
+
+    expect(scenario.executionChanged).toBe(true);
+    expect(stressAtoms(scenario.metrics.finalEquity!)).toBeGreaterThan(
+      stressAtoms(baseline),
+    );
+  });
+
+  it("keeps incomplete historical and FX coverage not verified", () => {
+    const dates = businessDates(4, "2020-01-06");
+    const input = historicalFixtureInput(dates);
+    const report = runStressSensitivity({
+      backtest: input,
+      reportingCurrency: "USD",
+      coverage: [
+        {
+          year: 2020,
+          sourceRecordId: "fixture-coverage",
+          coverage: "COMPLETE",
+          firstSessionDate: dates[0],
+          lastSessionDate: dates.at(-1)!,
+          dataClass: "HISTORICAL",
+          verificationStatus: "VERIFIED",
+          parameterSelection: "UNKNOWN",
+        },
+      ],
+      fxObservations: [],
+      scenarios: [stressScenario({ terminalFxShockBps: -500 })],
+    });
+    const window = report.baseline.historicalWindows[0];
+    const scenarioWindow = report.scenarios[0].historicalWindows[0];
+
+    expect(window.status).toBe("NOT_VERIFIED");
+    expect(window.metrics).toBeNull();
+    expect(window.reasonCodes).toContain("FIXTURE_NOT_HISTORICAL_EVIDENCE");
+    expect(window.reasonCodes).toContain(
+      "FX_HISTORY_INCOMPLETE_OR_NOT_POINT_IN_TIME",
+    );
+    expect(window.reasonCodes).toContain("PARAMETER_SELECTION_HISTORY_UNKNOWN");
+    expect(scenarioWindow.status).toBe("NOT_VERIFIED");
+    expect(scenarioWindow.reasonCodes).toContain("FX_HISTORY_NOT_VERIFIED");
+  });
+
+  it("rejects FX observations published after the market close", () => {
+    const dates = businessDates(4, "2020-01-06");
+    const fixtureInput = historicalFixtureInput(dates);
+    const input = {
+      ...fixtureInput,
+      source: {
+        ...fixtureInput.source,
+        dataClass: "REAL" as const,
+        verificationStatus: "VERIFIED" as const,
+      },
+    };
+    const report = runStressSensitivity({
+      backtest: input,
+      reportingCurrency: "USD",
+      coverage: [
+        {
+          year: 2020,
+          sourceRecordId: "fixture-coverage",
+          coverage: "COMPLETE",
+          firstSessionDate: dates[0],
+          lastSessionDate: dates.at(-1)!,
+          dataClass: "HISTORICAL",
+          verificationStatus: "VERIFIED",
+          parameterSelection: "EXCLUDED",
+        },
+      ],
+      fxObservations: dates.map((date, index) => ({
+        date,
+        baseCurrency: "JPY",
+        quoteCurrency: "USD",
+        rate: "0.0067",
+        marketAtMs: closeAt(date),
+        availableAtMs: closeAt(date) + Number(index === 1),
+        validFromMs: 0,
+        validUntilMs: closeAt(date),
+        sourceRecordId: `fixture-fx:${date}`,
+        dataClass: "HISTORICAL",
+        verificationStatus: "VERIFIED",
+      })),
+      scenarios: [],
+    });
+    const window = report.baseline.historicalWindows[0];
+
+    expect(report.baseline.backtest.resultClass).toBe("DEMO_ONLY");
+    expect(window.status).toBe("NOT_VERIFIED");
+    expect(window.metrics).toBeNull();
+    expect(window.reasonCodes).toContain(
+      "FX_HISTORY_INCOMPLETE_OR_NOT_POINT_IN_TIME",
+    );
+    expect(window.reasonCodes).toContain(
+      "HISTORICAL_PRICE_SOURCE_NOT_VERIFIED",
+    );
+    expect(window.reasonCodes).not.toContain("FX_HISTORY_NOT_VERIFIED");
+  });
+
+  it("rejects a scenario that loosens the baseline liquidity cap", () => {
+    const input = backtestInput({
+      costModels: [fixtureCostModel({ maxParticipationBps: 1_000 })],
+    });
+    expect(() =>
+      runStressSensitivity({
+        backtest: input,
+        reportingCurrency: "JPY",
+        coverage: [],
+        fxObservations: [],
+        scenarios: [stressScenario({ maxParticipationBps: 1_001 })],
+      }),
+    ).toThrow("stress_liquidity_capacity_must_not_increase");
   });
 });

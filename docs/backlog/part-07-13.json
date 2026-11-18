@@ -183,9 +183,9 @@
         {
           "id": "P09-05",
           "title": "2020/2022 压力与费用/汇率敏感性",
-          "scope": "可取得真实历史数据时检验2020与2022环境、不同手续费/滑点/FX冲击、流动性容量；不可取得则 NOT_VERIFIED。",
-          "deliverables": "stress-test 脚本、真实证据与Fixture区分",
-          "acceptance": "不得虚构历史结果；费用/跳空增大时策略净值和风险按规则变化",
+          "scope": "本地确定性重跑 2020/2022 历史窗口及显式手续费、价差/滑点、跳空滑点准备金、流动性容量和点时 FX 场景；无完整真实历史证据时返回 NOT_VERIFIED，不调用未经授权的外部服务。",
+          "deliverables": "src/features/validation/stress-test.ts、定向测试、设计/需求追踪；本地历史来源接线留给 P12-04",
+          "acceptance": "窗口覆盖和边界、HISTORICAL/VERIFIED 行情、回测状态及点时 FX/成本证据缺一即 NOT_VERIFIED；Fixture 保持 DEMO_ONLY；完整输入可确定性重算；同一成交集合下增加成本不得改善净权益，订单状态/数量/日期变化须显式标出并与单调成本比较区分。",
           "depends": [
             "P09-04"
           ]
