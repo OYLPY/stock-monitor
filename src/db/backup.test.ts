@@ -49,8 +49,8 @@ describe("SQLite backup and restore", () => {
       expect(backup.status).toBe("created");
       expect(await preflightBackup(backupDirectory)).toMatchObject({
         status: "valid",
-        sourceSchemaVersion: 10,
-        restoredSchemaVersion: 10,
+        sourceSchemaVersion: 11,
+        restoredSchemaVersion: 11,
       });
 
       await restoreDatabase(backupDirectory, restoredFile);
@@ -173,10 +173,10 @@ describe("SQLite backup and restore", () => {
         .prepare(
           `INSERT INTO schema_migrations
             (version, migration_name, checksum_sha256, application_version, applied_at_ms)
-            VALUES (11, '0010_future.sql', ?, '99.0.0', ?)`,
+            VALUES (12, '0011_future.sql', ?, '99.0.0', ?)`,
         )
         .run("f".repeat(64), Date.now());
-      client.pragma("user_version = 11");
+      client.pragma("user_version = 12");
       client.close();
 
       const databaseBytes = await readFile(backupFile);
@@ -194,10 +194,10 @@ describe("SQLite backup and restore", () => {
       manifest.sha256 = createHash("sha256")
         .update(databaseBytes)
         .digest("hex");
-      manifest.schemaVersion = 11;
+      manifest.schemaVersion = 12;
       manifest.migrations.push({
-        version: 11,
-        name: "0010_future.sql",
+        version: 12,
+        name: "0011_future.sql",
         checksumSha256: "f".repeat(64),
       });
       await writeFile(manifestPath, JSON.stringify(manifest));

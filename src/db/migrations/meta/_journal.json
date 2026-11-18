@@ -71,6 +71,13 @@
       "when": 1794997403620,
       "tag": "0009_p07_02_market_price_bars",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1795001652163,
+      "tag": "0010_p07_02_market_price_bars_strict",
+      "breakpoints": true
     }
   ]
 }

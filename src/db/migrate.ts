@@ -21,6 +21,12 @@ const legacyMigrationChecksums = new Map([
       "492f24e7d6ca9b86cbc22f1d9bf9a806cc106c89e75080e6ccd786f57433adca",
     ]),
   ],
+  [
+    10,
+    new Set([
+      "c1dfd1e72f415b332ff6e3b8599787f47f70ed6c1ed51e35a2958b35495b62a5",
+    ]),
+  ],
 ]);
 
 export async function migrateDatabase(
