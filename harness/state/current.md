@@ -1,6 +1,8 @@
 # 当前执行状态
 
-- **P09-01 / #58 实现已验收，Issue 保持打开**：修正提交 [`f547b42`](https://github.com/OYLPY/stock-monitor/commit/f547b42dde131dc06f22f017524bdbd807b08c08) 已推送；本地 format、lint、typecheck、unit（29 files / 162 tests）、build 和 [Quality CI 44212087898](https://github.com/OYLPY/stock-monitor/actions/runs/44212087898)（含 Playwright E2E）均成功。每根 bar 记录实际可用时间与信号时点；拆股仅在生效且不晚于有效 bar 数据可用时点时重基指标历史；未知可用时间/迟到行动标记 `NOT_VERIFIED`。#49 美股和 #50 日股供应商 Issue 仍 `BLOCKED_EXTERNAL`，不阻塞无供应商计算内核。当前提交六字段交接，等待本证据提交 CI 成功后关闭 #58 并开始 #59。
+- **P09-01 / #58 已完成并关闭**：修正提交 [`f547b42`](https://github.com/OYLPY/stock-monitor/commit/f547b42dde131dc06f22f017524bdbd807b08c08) 已推送；本地 format、lint、typecheck、unit（29 files / 162 tests）、build 和 [Quality CI 44212087898](https://github.com/OYLPY/stock-monitor/actions/runs/44212087898)（含 Playwright E2E）均成功。每根 bar 记录实际可用时间与信号时点；拆股仅在生效且不晚于有效 bar 数据可用时点时重基指标历史；未知可用时间/迟到行动标记 `NOT_VERIFIED`。#49 美股和 #50 日股供应商 Issue 仍 `BLOCKED_EXTERNAL`，不阻塞无供应商计算内核。
+
+- **P09-02 / #59 实现与远端 CI 已通过，Issue 等待交接记录 CI**：提交 [`43f3646`](https://github.com/OYLPY/stock-monitor/commit/43f36469ef29f5f68a0f15c3aba105d182b6d238)，匹配 [Quality CI 44221348723](https://github.com/OYLPY/stock-monitor/actions/runs/44221348723) success。全量测试 30 files / 178 tests；format、lint、typecheck、build 均 exit 0。实现信号后下一开盘撮合、固定精度成本/结算/公司行动和可重复回放；Fixture 只能得到 `DEMO_ONLY`，证据缺失为 `NOT_VERIFIED`。当前需提交六字段交接并确认该提交 CI 后，更新并关闭 #59，再继续 P09-03 / #60。详见 [P09-02 交接](../handoffs/P09-02.md)。
 
 - **UI-COMP-01 / #89 已完成并关闭**：首页导航改为原生 Next `Link` 并使用 `buttonVariants()` 样式，修复 Base UI Button 的 `nativeButton` 语义告警；修复随提交 [`5bb5141d441c6f256250375f5daf4a25282b40c8`](https://github.com/OYLPY/stock-monitor/commit/5bb5141d441c6f256250375f5daf4a25282b40c8) 推送。匹配 [Quality CI 44025841254](https://github.com/OYLPY/stock-monitor/actions/runs/44025841254) success，含 5 项 Playwright E2E；现有 E2E 没有专门断言浏览器 console warning。未修改 shadcn 生成组件和原有 `src/components/ui/*`。详见 [六字段交接](../handoffs/UI-COMP-01.md)。
 
