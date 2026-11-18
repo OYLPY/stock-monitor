@@ -146,7 +146,17 @@ describe("runResearchReportWorkflow", () => {
     });
 
     expect(report.riskVerdict?.status).toBe("REJECTED");
+    expect(report.verificationLevel).toBe("NOT_VERIFIED");
     expect(report.candidates).toEqual([]);
+    expect(report.evidenceValidation.status).toBe("FAILED");
+    expect(report.evidenceValidation.rejections).toContainEqual(
+      expect.objectContaining({
+        outputPath: "candidates[0]",
+        reasons: expect.arrayContaining(["CANDIDATE_SYMBOL_NOT_COVERED"]),
+      }),
+    );
+    expect(report.sourceCoverage[0]?.url).toBeNull();
+    expect(report.sourceCoverage[0]?.status).toBe("UNKNOWN");
     expect(report.roleAudit.paperPlanner.status).toBe("SKIPPED");
     expect(
       fixture.database.orm.select().from(paperAccounts).all(),

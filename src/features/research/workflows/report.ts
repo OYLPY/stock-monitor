@@ -10,6 +10,12 @@ import {
 import { listMarketEvents } from "@/features/evidence/repository";
 import { runCodexTask } from "@/features/ai/codex-adapter";
 import {
+  checkResearchEvidence,
+  isUsableEvidenceReference,
+  storedEvidenceUrl,
+  type ResearchEvidenceReference,
+} from "@/features/research/evidence-checker";
+import {
   researchModelOutputSchema,
   researchReportSchema,
   type ResearchReport,
@@ -23,24 +29,7 @@ const roleKeys = [
   "marketStructure",
   "strategyResearch",
   "riskOfficer",
-  "paperPlanner",
 ] as const;
-
-type EvidenceReference = {
-  id: string;
-  canonicalUrl: string | null;
-  publishedAtMs: number | null;
-  occurredAtMs: number | null;
-  availableAtMs: number | null;
-  collectedAtMs: number;
-  dataClass: "REAL" | "DELAYED" | "HISTORICAL" | "FIXTURE" | "NOT_VERIFIED";
-  publisher: string;
-  referenceUrl: string | null;
-  authorityRole: string;
-  licenseStatus: string;
-  marketCode: "US" | "JP" | null;
-  text: string[];
-};
 
 type StoredBar = {
   marketCode: "US" | "JP";
@@ -54,13 +43,14 @@ type StoredBar = {
   volumeShares: bigint;
   sourceRecordId: string;
   collectedAtMs: number;
-  dataClass: EvidenceReference["dataClass"];
+  dataClass: ResearchEvidenceReference["dataClass"];
   publisher: string;
   referenceUrl: string | null;
   canonicalUrl: string | null;
   publishedAtMs: number | null;
   occurredAtMs: number | null;
   availableAtMs: number | null;
+  timestampInvalid: boolean;
   authorityRole: string;
   licenseStatus: string;
 };
@@ -78,6 +68,14 @@ function toSafeNumber(value: bigint | null): number | null {
   return Number.isSafeInteger(number) ? number : null;
 }
 
+function hasInvalidTimestamp(...values: (bigint | null)[]) {
+  return values.some(
+    (value) =>
+      value !== null &&
+      (!Number.isSafeInteger(Number(value)) || Number(value) < 0),
+  );
+}
+
 function price(mantissa: bigint, scale: number) {
   const digits = mantissa.toString().padStart(scale + 1, "0");
   return scale === 0
@@ -93,7 +91,7 @@ function extractDateMs(value: string, marketCode: "US" | "JP") {
 }
 
 function collectEvidence(database: AppDatabase, nowMs: number) {
-  const references = new Map<string, EvidenceReference>();
+  const references = new Map<string, ResearchEvidenceReference>();
   const events = listMarketEvents(database)
     .map((event) => {
       const revision = event.revisions.at(-1);
@@ -111,6 +109,12 @@ function collectEvidence(database: AppDatabase, nowMs: number) {
       const text = `${revision.category}: ${revision.summary}; ${revision.importanceReason}`;
       if (existing) {
         existing.text.push(text);
+        existing.timestampInvalid ||= hasInvalidTimestamp(
+          evidence.publishedAtMs,
+          evidence.occurredAtMs,
+          evidence.availableAtMs,
+          evidence.collectedAtMs,
+        );
         continue;
       }
       references.set(evidence.sourceRecordId, {
@@ -120,7 +124,13 @@ function collectEvidence(database: AppDatabase, nowMs: number) {
         occurredAtMs: toSafeNumber(evidence.occurredAtMs),
         availableAtMs: toSafeNumber(evidence.availableAtMs),
         collectedAtMs: Number(evidence.collectedAtMs),
-        dataClass: evidence.dataClass as EvidenceReference["dataClass"],
+        timestampInvalid: hasInvalidTimestamp(
+          evidence.publishedAtMs,
+          evidence.occurredAtMs,
+          evidence.availableAtMs,
+          evidence.collectedAtMs,
+        ),
+        dataClass: evidence.dataClass,
         publisher: evidence.publisher,
         referenceUrl: evidence.sourceReferenceUrl,
         authorityRole: evidence.authorityRole,
@@ -129,6 +139,8 @@ function collectEvidence(database: AppDatabase, nowMs: number) {
           revision.marketCode === "US" || revision.marketCode === "JP"
             ? revision.marketCode
             : null,
+        currencyCodes: [],
+        units: [],
         text: [text],
       });
     }
@@ -178,15 +190,27 @@ function collectEvidence(database: AppDatabase, nowMs: number) {
           publishedAtMs: toSafeNumber(row.publishedAtMs),
           occurredAtMs: toSafeNumber(row.occurredAtMs),
           availableAtMs: toSafeNumber(row.availableAtMs),
-          dataClass: row.dataClass as EvidenceReference["dataClass"],
+          timestampInvalid: hasInvalidTimestamp(
+            row.publishedAtMs,
+            row.occurredAtMs,
+            row.availableAtMs,
+            row.collectedAtMs,
+          ),
+          dataClass: row.dataClass,
         }) satisfies StoredBar,
     );
 
   for (const bar of rows) {
-    const text = `${bar.marketCode} ${bar.symbol} ${bar.tradingDate} ${bar.publisher} ${bar.dataClass} ${bar.licenseStatus} ${bar.authorityRole} open=${price(bar.openMantissa, bar.priceScale)} high=${price(bar.highMantissa, bar.priceScale)} low=${price(bar.lowMantissa, bar.priceScale)} close=${price(bar.closeMantissa, bar.priceScale)} volume=${bar.volumeShares.toString()}`;
+    const currencyCode: "USD" | "JPY" = bar.marketCode === "US" ? "USD" : "JPY";
+    const text = `${bar.marketCode} ${bar.symbol} ${bar.tradingDate} ${bar.publisher} ${bar.dataClass} ${bar.licenseStatus} ${bar.authorityRole} open=${price(bar.openMantissa, bar.priceScale)} high=${price(bar.highMantissa, bar.priceScale)} low=${price(bar.lowMantissa, bar.priceScale)} close=${price(bar.closeMantissa, bar.priceScale)} volume=${bar.volumeShares.toString()} currency=${currencyCode} priceUnit=${currencyCode}/share volumeUnit=share`;
     const existing = references.get(bar.sourceRecordId);
     if (existing) {
       existing.text.push(text);
+      existing.timestampInvalid ||= bar.timestampInvalid;
+      existing.currencyCodes = [
+        ...new Set([...existing.currencyCodes, currencyCode]),
+      ];
+      existing.units = ["share"];
       continue;
     }
     references.set(bar.sourceRecordId, {
@@ -196,12 +220,15 @@ function collectEvidence(database: AppDatabase, nowMs: number) {
       occurredAtMs: bar.occurredAtMs,
       availableAtMs: bar.availableAtMs,
       collectedAtMs: bar.collectedAtMs,
+      timestampInvalid: bar.timestampInvalid,
       dataClass: bar.dataClass,
       publisher: bar.publisher,
       referenceUrl: bar.referenceUrl,
       authorityRole: bar.authorityRole,
       licenseStatus: bar.licenseStatus,
       marketCode: bar.marketCode,
+      currencyCodes: [currencyCode],
+      units: ["share"],
       text: [text],
     });
   }
@@ -266,43 +293,53 @@ function qualifiedPriceInstruments(
 }
 
 function sourceCoverage(
-  references: Map<string, EvidenceReference>,
+  references: Map<string, ResearchEvidenceReference>,
   nowMs: number,
 ) {
   return [...references.values()].map((reference) => {
     const ageMs = nowMs - reference.collectedAtMs;
     const status =
-      reference.dataClass === "REAL"
-        ? ageMs <= 24 * 60 * 60 * 1_000
-          ? "AVAILABLE"
-          : "STALE"
-        : reference.dataClass === "DELAYED"
-          ? "DELAYED"
-          : reference.dataClass === "HISTORICAL"
-            ? "STALE"
-            : "UNKNOWN";
+      !storedEvidenceUrl(reference) ||
+      !isUsableEvidenceReference(reference, nowMs)
+        ? "UNKNOWN"
+        : reference.dataClass === "REAL"
+          ? ageMs <= 24 * 60 * 60 * 1_000
+            ? "AVAILABLE"
+            : "STALE"
+          : reference.dataClass === "DELAYED"
+            ? "DELAYED"
+            : reference.dataClass === "HISTORICAL"
+              ? "STALE"
+              : "UNKNOWN";
     return {
       id: reference.id,
       name: reference.publisher,
-      url: reference.canonicalUrl ?? reference.referenceUrl,
+      url: storedEvidenceUrl(reference),
       status,
       dataClass: reference.dataClass,
       marketAtMs: reference.occurredAtMs ?? reference.publishedAtMs,
       marketTimeZone: null,
-      collectedAtMs: reference.collectedAtMs,
+      collectedAtMs: Number.isSafeInteger(reference.collectedAtMs)
+        ? reference.collectedAtMs
+        : null,
       collectedTimeZone: "UTC",
       currency:
-        reference.marketCode === "JP"
-          ? "JPY"
-          : reference.marketCode === "US"
-            ? "USD"
-            : null,
+        reference.currencyCodes.length === 1
+          ? reference.currencyCodes[0]
+          : reference.currencyCodes.length > 1
+            ? null
+            : reference.marketCode === "JP"
+              ? "JPY"
+              : reference.marketCode === "US"
+                ? "USD"
+                : null,
       delayStatement:
         reference.dataClass === "DELAYED"
           ? "来源记录标记为延迟；具体延迟时长未核实。"
           : null,
-      limitation:
-        "来源记录仅保存元数据与内容哈希；公司披露只使用已归一化摘要，未读取原始正文。",
+      limitation: storedEvidenceUrl(reference)
+        ? "来源记录仅保存元数据与内容哈希；公司披露只使用已归一化摘要，未读取原始正文。"
+        : "来源记录没有可核验网页 URL；引用仅能回链本机来源编号。",
       evidenceIds: [reference.id],
     };
   });
@@ -311,7 +348,7 @@ function sourceCoverage(
 function marketSummary(
   bars: StoredBar[],
   eventCount: number,
-  references: Map<string, EvidenceReference>,
+  references: Map<string, ResearchEvidenceReference>,
   ledgerState: ResearchReport["ledgerState"],
 ) {
   const latestFor = (marketCode: "US" | "JP") =>
@@ -377,7 +414,7 @@ function baseReport(input: {
   marketDataReady: boolean;
   eventCount: number;
   bars: StoredBar[];
-  references: Map<string, EvidenceReference>;
+  references: Map<string, ResearchEvidenceReference>;
   ledgerState: ResearchReport["ledgerState"];
   ledgerSummary: string | null;
 }) {
@@ -438,6 +475,7 @@ function baseReport(input: {
     inferences: [],
     hypotheses: [],
     candidates: [],
+    evidenceValidation: { status: "NOT_RUN", rejections: [] },
     roleAudit: emptyRoleAudit(
       input.executionStatus === "DONE" ? "SKIPPED" : input.executionStatus,
     ),
@@ -475,6 +513,9 @@ function reportPrompt(
     sourceRecordId: bar.sourceRecordId,
     dataClass: bar.dataClass,
     collectedAtMs: bar.collectedAtMs,
+    currencyCode: bar.marketCode === "US" ? "USD" : "JPY",
+    priceUnit: `${bar.marketCode === "US" ? "USD" : "JPY"}/share`,
+    volumeUnit: "share",
   }));
   const eventEvidence = input.events.map((event) => ({
     ...event,
@@ -483,13 +524,15 @@ function reportPrompt(
   const references = [...input.references.values()].map((reference) => ({
     id: reference.id,
     publisher: reference.publisher,
-    url: reference.canonicalUrl ?? reference.referenceUrl,
+    url: storedEvidenceUrl(reference),
     dataClass: reference.dataClass,
     authorityRole: reference.authorityRole,
     licenseStatus: reference.licenseStatus,
     collectedAtMs: reference.collectedAtMs,
     publishedAtMs: reference.publishedAtMs,
     occurredAtMs: reference.occurredAtMs,
+    currencyCodes: reference.currencyCodes,
+    units: reference.units,
     contentAvailable: false,
     summaries: reference.text,
   }));
@@ -499,6 +542,7 @@ function reportPrompt(
     "You are one local Codex call performing six roles in sequence: coordinator, intelligence, market structure, strategy research, independent risk officer, paper planner. These are role labels in one model response, not independent agents.",
     "Only use the persisted records below. Do not use web search, TradingView, unseen files, memory, assumed live quotes, or facts absent from these records. Source records contain metadata, hashes and normalized summaries only; raw disclosure bodies are unavailable.",
     "Every fact, inference, hypothesis and candidate must cite only the supplied sourceRecordId values. Do not invent dates, prices, trading sessions, news, returns, backtests, scores, trades, account balances, FX or interest rates.",
+    "Use only source-record dates, numeric values, currencies and units; cite price candidates with a qualified bar for that exact market and symbol. If an exact value or its currency/unit is not present in cited records, omit the claim.",
     "Set paperPlanner to SKIPPED. The deterministic paper ledger and risk engines are not available to this report workflow. riskOfficer may return VETO or NO_VETO, but NO_VETO is not approval.",
     marketDataReady
       ? "At least 30 recent, licensed price observations exist for both markets. Candidate strategies remain unverified research hypotheses; do not claim performance, validation or paper execution."
@@ -596,59 +640,29 @@ export async function runResearchReportWorkflow(input: {
   }
 
   const model = parsed.data;
-  const allowedIds = new Set(evidence.references.keys());
-  const keepSupported = <T extends { evidenceIds: string[] }>(items: T[]) =>
-    items.filter((item) => item.evidenceIds.every((id) => allowedIds.has(id)));
-  const roleAudit = Object.fromEntries(
-    roleKeys.map((key) => {
-      const role = model.roleAudit[key];
-      const valid = role.evidenceIds.every((id) => allowedIds.has(id));
-      return [
-        key,
-        {
-          status: valid ? role.status : "SKIPPED",
-          summary: valid ? role.summary : "引用证据不可用，角色输出未采纳。",
-          evidenceIds: valid ? role.evidenceIds : [],
-        },
-      ];
-    }),
-  ) as ResearchReport["roleAudit"];
-  const riskOfficerReview = model.riskOfficerReview.evidenceIds.every((id) =>
-    allowedIds.has(id),
-  )
-    ? model.riskOfficerReview
-    : {
-        opinion: "VETO" as const,
-        summary: "风险意见引用了未提供的证据；按失败关闭处理。",
-        evidenceIds: [],
-      };
+  const checked = checkResearchEvidence({
+    model,
+    references: evidence.references,
+    qualifiedInstruments,
+    nowMs: generatedAtMs,
+  });
+  const {
+    facts,
+    inferences,
+    hypotheses,
+    roleAudit,
+    riskOfficerReview,
+    evidenceValidation,
+  } = checked;
   const candidates =
     marketDataReady &&
     riskOfficerReview.opinion !== "VETO" &&
     roleAudit.strategyResearch.status === "DONE"
-      ? keepSupported(model.candidates)
-          .filter((candidate) =>
-            qualifiedInstruments.has(
-              `${candidate.marketCode}:${candidate.symbol}`,
-            ),
-          )
-          .map((candidate, index) => ({
-            ...candidate,
-            id: `${input.taskRunId}:candidate-${index + 1}`,
-          }))
+      ? checked.candidates.map((candidate, index) => ({
+          ...candidate,
+          id: `${input.taskRunId}:candidate-${index + 1}`,
+        }))
       : [];
-  const hasUnsupportedOutput =
-    keepSupported(model.facts).length !== model.facts.length ||
-    keepSupported(model.inferences).length !== model.inferences.length ||
-    keepSupported(model.hypotheses).length !== model.hypotheses.length ||
-    keepSupported(model.candidates).length !== model.candidates.length ||
-    roleKeys.some(
-      (key) =>
-        !model.roleAudit[key].evidenceIds.every((id) => allowedIds.has(id)),
-    );
-  const acceptedFacts = keepSupported(model.facts);
-  const acceptedInferences = keepSupported(model.inferences);
-  const acceptedHypotheses = keepSupported(model.hypotheses);
   const paperPlanner = {
     status: "SKIPPED" as const,
     summary: "确定性账户与纸面交易门禁未接入，本角色不生成模拟计划。",
@@ -661,10 +675,11 @@ export async function runResearchReportWorkflow(input: {
     resultCode: marketDataReady
       ? "RESEARCH_NOT_VERIFIED"
       : "NO_QUALIFIED_MARKET_DATA",
-    facts: acceptedFacts,
-    inferences: acceptedInferences,
-    hypotheses: acceptedHypotheses,
+    facts,
+    inferences,
+    hypotheses,
     candidates,
+    evidenceValidation,
     roleAudit,
     riskVerdict: {
       status: riskOfficerReview.opinion === "VETO" ? "REJECTED" : "UNRESOLVED",
@@ -674,12 +689,13 @@ export async function runResearchReportWorkflow(input: {
           : ["模型未提出否决不代表风控通过；确定性交易风险和行情门禁未执行。"],
     },
     riskOfficerReview,
-    limitations: hasUnsupportedOutput
-      ? [
-          ...base.limitations,
-          "部分模型输出引用未知或无效证据，已丢弃并保持 NOT_VERIFIED。",
-        ]
-      : base.limitations,
+    limitations:
+      evidenceValidation.status === "FAILED"
+        ? [
+            ...base.limitations,
+            `引用校验拒绝 ${evidenceValidation.rejections.length} 项输出；原因详见 evidenceValidation.rejections。`,
+          ]
+        : base.limitations,
     finalDecision: roleKeys.some((key) => roleAudit[key].status !== "DONE")
       ? "研究流程不完整；缺失角色步骤已标注，继续观察且不产生纸面交易计划。"
       : candidates.length > 0

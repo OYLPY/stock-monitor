@@ -79,6 +79,29 @@ const sourceCoverageSchema = z.strictObject({
   evidenceIds: z.array(z.string().uuid()).max(100),
 });
 
+const evidenceRejectionCodeSchema = z.enum([
+  "MISSING_CITATION",
+  "UNKNOWN_SOURCE_ID",
+  "SOURCE_TIMESTAMP_INVALID",
+  "SOURCE_TIMESTAMP_FUTURE",
+  "SOURCE_TIMESTAMP_AFTER_COLLECTION",
+  "SOURCE_URL_INVALID",
+  "SOURCE_DATA_CLASS_INVALID",
+  "UNSUPPORTED_NUMBER",
+  "UNSUPPORTED_CURRENCY_OR_UNIT",
+  "UNSUPPORTED_DATE",
+  "FUTURE_DATE",
+  "CANDIDATE_PRICE_EVIDENCE_MISSING",
+  "CANDIDATE_SYMBOL_NOT_COVERED",
+  "ROLE_MISSING_CITATION",
+]);
+
+const evidenceRejectionSchema = z.strictObject({
+  outputPath: z.string().min(1).max(100),
+  evidenceIds: z.array(z.string().uuid()).max(10),
+  reasons: z.array(evidenceRejectionCodeSchema).min(1).max(10),
+});
+
 export const researchReportSchema = z.strictObject({
   id: z.string().min(1).max(160),
   type: reportTypeSchema,
@@ -98,6 +121,10 @@ export const researchReportSchema = z.strictObject({
   inferences: z.array(statementSchema).max(20),
   hypotheses: z.array(statementSchema).max(20),
   candidates: z.array(candidateSchema).max(3),
+  evidenceValidation: z.strictObject({
+    status: z.enum(["NOT_RUN", "PASSED", "FAILED"]),
+    rejections: z.array(evidenceRejectionSchema).max(100),
+  }),
   roleAudit: roleAuditSchema,
   riskVerdict: z
     .strictObject({
@@ -114,7 +141,7 @@ export const researchReportSchema = z.strictObject({
     .nullable(),
   ledgerState: z.enum(["INITIALIZED", "NOT_INITIALIZED", "UNAVAILABLE"]),
   ledgerSummary: z.string().max(1_000).nullable(),
-  sourceCoverage: z.array(sourceCoverageSchema).max(100),
+  sourceCoverage: z.array(sourceCoverageSchema).max(1_200),
   limitations: z.array(z.string().max(1_000)).max(30),
   finalDecision: z.string().max(1_000).nullable(),
 });
