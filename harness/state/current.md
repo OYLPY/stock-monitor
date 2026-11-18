@@ -1,6 +1,6 @@
 # 当前执行状态
 
-- **P07-02 / #49 本机行情可见性补充进行中**：增加用户 CSV 日线导入及本机表格展示；不请求外部服务，不保存原始 CSV，行情与许可保持 `NOT_VERIFIED`，不进入图表/回测/策略评分/纸面账本。#49 仍 `BLOCKED_EXTERNAL`，供应商验收未完成；本次提交与 CI 状态待记录。详见 [P07-02 六字段交接](../handoffs/P07-02.md)。
+- **P07-02 / #49 本机行情可见性补充已推送**：提交 [`2317c9c`](https://github.com/OYLPY/stock-monitor/commit/2317c9ca079bd5c13682dafe87face8fe2969ead) 与 [Quality CI 44293436859](https://github.com/OYLPY/stock-monitor/actions/runs/44293436859) success；用户 CSV 日线可在本机表格查看，不请求外部服务、不保存原始 CSV，数据与许可保持 `NOT_VERIFIED`，不进入图表/回测/策略评分/纸面账本。Issue 已更新但保持 open / `BLOCKED_EXTERNAL`，外部 Provider 验收未完成。详见 [P07-02 六字段交接](../handoffs/P07-02.md)。
 
 - **P10-05 / #68 已完成并关闭**：实现提交 [`9fedda8`](https://github.com/OYLPY/stock-monitor/commit/9fedda8f53fc2aa14f3e7717ed5684a982500078) / [Quality CI 44263245240](https://github.com/OYLPY/stock-monitor/actions/runs/44263245240) success；六字段交接提交 [`8b4f674`](https://github.com/OYLPY/stock-monitor/commit/8b4f67441894e63875ac1fe2e21be39d6916a75d) / [Quality CI 44263902351](https://github.com/OYLPY/stock-monitor/actions/runs/44263902351) success；GitHub #68 已关闭。审计覆盖不可变账本/订单/成交/费用、权益快照和恢复一致性；无可信行情仍为 `NOT_VERIFIED`。详见 [P10-05 六字段交接](../handoffs/P10-05.md)。
 
