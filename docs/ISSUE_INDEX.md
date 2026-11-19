@@ -201,7 +201,7 @@
 ### [P13 本地发布与交付](https://github.com/OYLPY/stock-monitor/issues/14)
 
 - [ ] [P13-01 — 安装、配置与本地运行手册](https://github.com/OYLPY/stock-monitor/issues/80) · 依赖：P12-06
-- [ ] [P13-02 — 产品使用手册与研究风险说明](https://github.com/OYLPY/stock-monitor/issues/81) · 依赖：P12-03
+- [x] [P13-02 — 产品使用手册与研究风险说明](https://github.com/OYLPY/stock-monitor/issues/81) · DOC-0040：[产品使用指南](USER_GUIDE.md) · main 提交 [2c910a9](https://github.com/OYLPY/stock-monitor/commit/2c910a93e846cde6685c17007f9fa937346c162d) / Quality CI [44445047507](https://github.com/OYLPY/stock-monitor/actions/runs/44445047507) success（含 E2E）；#81 已关闭 · [验收记录](../harness/evidence/P13-02-documentation.md) · [六字段交接](../harness/handoffs/P13-02.md) · 依赖：P12-03
 - [ ] [P13-03 — 本地发布脚本、备份及重装验收](https://github.com/OYLPY/stock-monitor/issues/82) · 依赖：P13-01, P05-05
 - [ ] [P13-04 — 最终交付报告与未完成事项登记](https://github.com/OYLPY/stock-monitor/issues/83) · 依赖：P13-02, P13-03
 
