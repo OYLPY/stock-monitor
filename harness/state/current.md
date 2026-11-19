@@ -1,8 +1,10 @@
 # 当前执行状态
 
-- **P07-05 / #52 实现与代码 CI 已通过**：实现提交 [`47a1004`](https://github.com/OYLPY/stock-monitor/commit/47a1004b4f39c26275b44c9303299adc63c556e0)，匹配 [Quality CI 44511845436](https://github.com/OYLPY/stock-monitor/actions/runs/44511845436) 全部成功；当前补齐六字段交接、Issue 索引和状态记录。文档提交及匹配 CI 完成后关闭 #52。未运行本机 Worker、Codex 报告或行情采集，也未读写用户本机数据库。
+- **当前任务：P11-03 / #71**：实现提交 [`56c289f`](https://github.com/OYLPY/stock-monitor/commit/56c289fbbaec0561a7a8659c73511801b39795e1) 已推送；匹配 [Quality CI 44522557415](https://github.com/OYLPY/stock-monitor/actions/runs/44522557415) 的 format/lint/typecheck/unit/build/E2E 均成功。正在推送六字段交接、Issue 索引和状态记录；该记录的 CI 成功后关闭 #71。
 
-- **紧接任务：P11-03 / #71**：待 #52 完成文档 CI 并关闭后立即开始；依赖 #55、#70 已关闭。开始时先将 Issue 中过时的 PR 工作流文字修正为本仓库授权的 main 直推/no-PR，再实施本地事件告警和去重。行情源不足时不能推断“无异常”，也不能虚构重大性或通知。
+- **下一任务：P11-05 / #73**：#71 关闭后立即开始本机通知渠道与持续运行指南；先将 Issue 中遗留 PR 要求更新为授权的 main 直推/no-PR。依赖 #72 已关闭。
+
+- **已完成依赖：P07-05 / #52、P08-03 / #55、P11-02 / #70**：均已关闭。行情源不足时不能推断“无异常”，也不能虚构重大性或通知。
 
 - **行情边界**：P07-02 / #49、P07-03 / #50 仍因许可、历史覆盖或注册要求为 `BLOCKED_EXTERNAL`。它们继续阻断报价/成交量实时信号和历史绩效验证，不阻断官方 Fed/BOJ 标题归档、报告队列或其他无行情依赖的 Issue。未接入获授权行情源前，候选仍为空且市场信号为 `NOT_VERIFIED`。
 
