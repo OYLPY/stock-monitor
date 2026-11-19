@@ -11,6 +11,7 @@
 - 复制文档结构：用 [文档模板](templates/DOCUMENT_TEMPLATES.md)。
 - 查 GitHub Issue、阶段与任务依赖：用 [Issue 索引](ISSUE_INDEX.md)；它只管理工作项。
 - 查 RQ/FR/AC 的需求关系：用 [需求索引](requirements/REQUIREMENTS_INDEX.md) 与 [追踪矩阵](requirements/TRACEABILITY.md)；它们不替代文档目录。
+- 首次使用、理解各页面步骤、状态标签、研究限制与常见问题：读[使用指南](USER_GUIDE.md)。
 - 查阶段目标与依赖路线：用 [开发计划](DEVELOPMENT_PLAN.md)。
 - 查 UI token、shadcn 组件和可访问性约定：用 [UI 设计规范](design/UI_DESIGN.md)。
 - 查市场日历、交易时段和调度通知契约：读 [调度与事件通知契约](design/SCHEDULER.md)。
