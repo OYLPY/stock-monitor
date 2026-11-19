@@ -14,7 +14,9 @@
 
 ### P11-01 本机任务队列
 
-- `pnpm worker` 启动独立 Node Worker；每项任务在隔离的 Node Worker Thread 中运行，关闭浏览器或 Next.js 页面不影响该进程。`pnpm worker cancel <taskRunId>` 可取消待运行或正在运行的任务。
+- `pnpm dev` / `pnpm start` 通过本机启动器同时启动 Next.js 和独立 Node Worker；关闭浏览器页面不影响 Worker，停止应用时会向 Worker 发送终止信号。`pnpm worker` 仍可单独启动 Worker；每项任务在隔离的 Node Worker Thread 中运行。
+- `/tasks` 从 SQLite 显示最近 100 条任务的状态和执行摘要；刷新后仍读取同一持久队列。研究报告可返回归档页，待处理或运行中任务可通过本机取消 API 复用队列取消状态机。浏览器只接收展示字段，不读取原始任务输入。
+- `pnpm worker cancel <taskRunId>` 仍可在命令行取消待运行或正在运行的任务。
 - Node Worker 使用 Node 原生 TypeScript strip runtime；Worker 可达的运行时代码使用显式相对 `.ts` 导入，因为该运行时不解析 `tsconfig` 路径别名。
 - 队列保存 `scheduled_local_at`、IANA `time_zone` 和解析后的 UTC `scheduled_at_ms`。DST 不存在或重复的当地时间拒绝入队，不按运行机器时区猜测；P11-01 提供一次性计划时刻，周期报告计划由 P11-04 接入。
 - SQLite `worker_state` 使用带期限的本机单实例锁；`task_runs` 以短事务认领，到期租约恢复时使用 fencing generation。任务尝试和事件日志持久化到 `task_run_attempts` / `task_run_events`。

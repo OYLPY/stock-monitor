@@ -200,6 +200,7 @@
 | ID | 任务与实施重点 | 交付物 | 验收/依赖 |
 |---|---|---|---|
 | [`P11-01`](https://github.com/OYLPY/stock-monitor/issues/69) | **Worker 任务队列与调度器**：实现独立本地进程、计划任务时区、任务锁、运行日志、恢复/取消、非重入及超时保护；保留本机运行边界。 | worker/scheduler、持久化队列 | 浏览器关闭不影响运行中的 Worker；重启补偿，不重复任务副作用；依赖：P04-04, P05-01 |
+| [P11-01 Follow-up](https://github.com/OYLPY/stock-monitor/issues/90) | **自动启动与持久化任务队列管理**：`pnpm dev` / `pnpm start` 一并启动本机 Next.js 和独立 Worker；`/tasks` 从 SQLite 列出任务并支持安全取消。 | 本机启动器、任务队列表、取消接口 | 页面刷新后记录仍存在；任务状态、尝试和结果可查看；Worker 随应用启动/停止；依赖：P11-01/#69 |
 | [`P11-02`](https://github.com/OYLPY/stock-monitor/issues/70) | **美日市场时段扫描与假日异常**：基于 P07 市场日历只在至少一个常规交易时段扫描；日本午休、DST、节假日、特别收市正确处理；快照陈旧不得触发信号。 | worker/market-watch、日历测试 | 周末/双休无扫描；美东9:30–16:00/JST转换正确；午休不监控；依赖：P11-01, P07-01 |
 | [`P11-03`](https://github.com/OYLPY/stock-monitor/issues/71) | **重大新事件规则、去重与告警**：多来源确认与置信级、先后比较、事件指纹、最多三项、只有独立新重大事项才通知；数据不可用不得推断无异常。 | src/features/alerts、通知历史 | 同事件多源仅一次提醒；旧信息不会反复告警；无变化不通知；依赖：P07-05, P08-03, P11-02 |
 | [`P11-04`](https://github.com/OYLPY/stock-monitor/issues/72) | **晨报、日审计和周审计任务编排**：在本机 Worker 按 Asia/Tokyo 07:00 调度晨报、每日 16:00 调度策略/纸面审计、周一 07:30 调度周审计；结果持久化并附数据限制。盘中扫描和异常提醒仍由 P11-03 单独负责。行情适配器 #49/#50 不阻断 `NOT_VERIFIED` 报告归档。 | worker/jobs、任务参数与失败报告 | 行情缺失时仍归档 NOT_VERIFIED 且无候选；休市可做研究但不冒充盘中；错过计划时刻显式记录延迟；失败状态可审查；依赖：P08-04, P11-01 |

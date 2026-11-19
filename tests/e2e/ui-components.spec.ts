@@ -87,9 +87,13 @@ test("shadcn Select controls support keyboard use and preserve GET filters", asy
   await generateMorningButton.focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/reports\?task=/);
-  await expect(page.getByRole("status")).toContainText("报告任务排队中");
+  await expect(page.getByRole("status")).toContainText(
+    /报告任务(排队中|运行中)/,
+  );
   await expect(
-    page.getByText("任务已在本机队列中等待 Worker 处理；报告尚未生成。"),
+    page.getByText(
+      /任务已在本机队列中等待 Worker 处理；报告尚未生成。|本机 Worker 正在处理；报告完成后刷新本页查看归档。/,
+    ),
   ).toBeVisible();
 });
 

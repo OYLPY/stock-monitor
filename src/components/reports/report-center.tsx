@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { CircleHelp, Search } from "lucide-react";
+import Link from "next/link";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/alert";
 import { Badge } from "@/components/shadcn/badge";
@@ -1092,6 +1093,11 @@ export function ReportCenter({
             {taskNotice.resultCode ? (
               <code>{taskNotice.resultCode}</code>
             ) : null}
+            <p>
+              <Link className="underline underline-offset-4" href="/tasks">
+                查看完整任务队列
+              </Link>
+            </p>
           </AlertDescription>
         </Alert>
       ) : null}

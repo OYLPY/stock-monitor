@@ -9,6 +9,12 @@ import type {
 } from "./types.ts";
 
 const MAX_ATTEMPTS = 3;
+const REPORT_TYPE_LABELS: Record<string, string> = {
+  MORNING: "晨报",
+  ANOMALY: "异常报告",
+  DAILY_AUDIT: "日度审计",
+  WEEKLY_AUDIT: "周度审计",
+};
 
 type TaskRunRow = {
   id: string;
@@ -32,6 +38,35 @@ type TaskRunRow = {
   created_at_ms: bigint | number;
   started_at_ms: bigint | number | null;
   finished_at_ms: bigint | number | null;
+};
+
+type TaskRunListRow = Pick<
+  TaskRunRow,
+  | "id"
+  | "run_type"
+  | "input_json"
+  | "execution_status"
+  | "attempt_count"
+  | "cancellation_requested_at_ms"
+  | "result_code"
+  | "error_code"
+  | "created_at_ms"
+  | "started_at_ms"
+  | "finished_at_ms"
+>;
+
+export type TaskRunQueueItem = {
+  id: string;
+  kind: "REPORT" | "MARKET_WATCH" | "OTHER";
+  label: string;
+  executionStatus: TaskRunStatus;
+  attemptCount: number;
+  cancellationRequestedAtMs: number | null;
+  resultCode: string | null;
+  errorCode: string | null;
+  createdAtMs: number;
+  startedAtMs: number | null;
+  finishedAtMs: number | null;
 };
 
 export type ScheduledTaskInput = {
@@ -134,6 +169,78 @@ export function readTaskRun(database: AppDatabase, id: string) {
     .prepare("SELECT * FROM task_runs WHERE id = ?")
     .get(id) as TaskRunRow | undefined;
   return row ? mapTaskRun(row) : null;
+}
+
+export function listTaskRuns(database: AppDatabase, limit = 100) {
+  const rows = database.client
+    .prepare(
+      `SELECT id, run_type, input_json, execution_status, attempt_count,
+              cancellation_requested_at_ms, result_code, error_code,
+              created_at_ms, started_at_ms, finished_at_ms
+       FROM task_runs
+       ORDER BY created_at_ms DESC, id DESC
+       LIMIT ?`,
+    )
+    .all(limit) as TaskRunListRow[];
+
+  return rows.map((row): TaskRunQueueItem => {
+    const common = {
+      id: row.id,
+      executionStatus: row.execution_status,
+      attemptCount: safeNumber(row.attempt_count)!,
+      cancellationRequestedAtMs: safeNumber(row.cancellation_requested_at_ms),
+      resultCode: row.result_code,
+      errorCode: row.error_code,
+      createdAtMs: safeNumber(row.created_at_ms)!,
+      startedAtMs: safeNumber(row.started_at_ms),
+      finishedAtMs: safeNumber(row.finished_at_ms),
+    };
+
+    if (row.run_type === "RESEARCH_REPORT") {
+      const input: unknown = JSON.parse(row.input_json);
+      const reportType =
+        typeof input === "object" && input !== null && "type" in input
+          ? input.type
+          : null;
+      return {
+        ...common,
+        kind: "REPORT",
+        label:
+          typeof reportType === "string"
+            ? (REPORT_TYPE_LABELS[reportType] ?? "研究报告")
+            : "研究报告",
+      };
+    }
+
+    return {
+      ...common,
+      kind: row.run_type === "MARKET_WATCH" ? "MARKET_WATCH" : "OTHER",
+      label: row.run_type === "MARKET_WATCH" ? "市场扫描" : "后台任务",
+    };
+  });
+}
+
+export function readWorkerStatus(database: AppDatabase, nowMs = Date.now()) {
+  const row = database.client
+    .prepare(
+      `SELECT process_id, heartbeat_at_ms, lease_until_ms
+       FROM worker_state WHERE singleton_id = 1`,
+    )
+    .get() as
+    | {
+        process_id: bigint | number | null;
+        heartbeat_at_ms: bigint | number | null;
+        lease_until_ms: bigint | number | null;
+      }
+    | undefined;
+
+  const leaseUntilMs = safeNumber(row?.lease_until_ms ?? null);
+  return {
+    running: leaseUntilMs !== null && leaseUntilMs > nowMs,
+    processId: safeNumber(row?.process_id ?? null),
+    heartbeatAtMs: safeNumber(row?.heartbeat_at_ms ?? null),
+    leaseUntilMs,
+  };
 }
 
 export function readTaskRunByIdempotencyKey(

@@ -17,7 +17,6 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: "list",
-  globalTeardown: "./tests/e2e/global-teardown.ts",
   use: {
     baseURL: "http://127.0.0.1:3003",
     browserName: "chromium",
@@ -32,6 +31,7 @@ export default defineConfig({
     timeout: 60_000,
     reuseExistingServer: false,
     env: {
+      STOCK_MONITOR_E2E_DATA_DIR: testDataDirectory,
       STOCK_MONITOR_DATA_DIR: testDataDirectory,
       OPENAI_API_KEY: secretSentinel,
     },

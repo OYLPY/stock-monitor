@@ -9,7 +9,9 @@ import {
   claimNextTask,
   enqueueScheduledTask,
   finishTaskRun,
+  listTaskRuns,
   readTaskRun,
+  readWorkerStatus,
   renewTaskLease,
 } from "./queue.ts";
 import { resolveScheduledAt } from "./time.ts";
@@ -77,6 +79,61 @@ describe("task queue", () => {
           input: { a: 1, z: 3 },
         }),
       ).toThrow("idempotency_key_reused");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("lists persisted task summaries and reports only a live worker lease", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      const createdAtMs = 1_700_000_000_000;
+      const older = enqueueScheduledTask(fixture.database, {
+        idempotencyKey: randomUUID(),
+        runType: "RESEARCH_REPORT",
+        input: { type: "MORNING" },
+        ...pastSchedule,
+        timeoutMs: 5_000,
+        createdAtMs,
+      }).task;
+      const newer = enqueueScheduledTask(fixture.database, {
+        idempotencyKey: randomUUID(),
+        runType: "RESEARCH_REPORT",
+        input: { type: "WEEKLY_AUDIT" },
+        ...pastSchedule,
+        timeoutMs: 5_000,
+        createdAtMs: createdAtMs + 1,
+      }).task;
+
+      expect(listTaskRuns(fixture.database, 1)).toMatchObject([
+        { id: newer.id, kind: "REPORT", label: "周度审计" },
+      ]);
+      expect(listTaskRuns(fixture.database).map(({ id }) => id)).toEqual([
+        newer.id,
+        older.id,
+      ]);
+      expect(listTaskRuns(fixture.database)[0]).not.toHaveProperty("inputJson");
+      expect(readWorkerStatus(fixture.database, createdAtMs)).toMatchObject({
+        running: false,
+        processId: null,
+      });
+
+      expect(
+        acquireWorkerLock(
+          fixture.database,
+          "worker-live",
+          123,
+          createdAtMs,
+          1_000,
+        ),
+      ).toBe(true);
+      expect(readWorkerStatus(fixture.database, createdAtMs)).toMatchObject({
+        running: true,
+        processId: 123,
+      });
+      expect(
+        readWorkerStatus(fixture.database, createdAtMs + 1_000).running,
+      ).toBe(false);
     } finally {
       await fixture.cleanup();
     }

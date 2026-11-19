@@ -32,9 +32,11 @@ try {
       },
     });
     process.stdout.write(
-      JSON.stringify({ event: "worker_stopped", ...result }) + "\n",
+      JSON.stringify({
+        event: result.acquired ? "worker_stopped" : "worker_already_running",
+        ...result,
+      }) + "\n",
     );
-    if (!result.acquired) process.exitCode = 1;
   } else {
     process.stderr.write("usage: pnpm worker [cancel <taskRunId>]\n");
     process.exitCode = 2;

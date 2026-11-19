@@ -177,6 +177,16 @@ async function seedFixtureReport() {
       },
       nowMs + 1,
     );
+
+    enqueueScheduledTask(database, {
+      idempotencyKey: "e2e:p11-01-followup:pending-weekly-audit",
+      runType: "RESEARCH_REPORT",
+      input: { type: "WEEKLY_AUDIT" },
+      timeZone: "Asia/Tokyo",
+      scheduledLocalAt: "2099-01-01T07:00",
+      timeoutMs: 900_000,
+      createdAtMs: nowMs + 2,
+    });
   } finally {
     database.client.close();
   }
