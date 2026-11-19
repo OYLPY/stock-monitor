@@ -22,7 +22,7 @@
 | `git diff --check`                                      | 退出码 0                                                                         |
 | 隔离副本 `corepack pnpm dev --port 3004` + `GET /tasks` | HTTP 200；服务端渲染显示 Worker 运行中；停止应用后无残留子进程且临时数据库已释放 |
 
-E2E 使用临时 SQLite 与明确标记的 Fixture。没有请求行情/新闻服务、连接券商、执行回测或创建纸面成交。`pnpm format:check` 等仓库要求的本地检查均通过；GitHub Quality CI 和提交 SHA 待推送后补记。
+E2E 使用临时 SQLite 与明确标记的 Fixture。没有请求行情/新闻服务、连接券商、执行回测或创建纸面成交。实现已提交并推送为 [`f951fa3`](https://github.com/OYLPY/stock-monitor/commit/f951fa32264d1a1020d41b551dbd7699d5f9454c)；GitHub Quality CI [44462349343](https://github.com/OYLPY/stock-monitor/actions/runs/44462349343) 的 format、lint、typecheck、unit、build、Playwright E2E 全部成功。
 
 ## 已处理的验证阻碍
 
