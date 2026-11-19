@@ -1,4 +1,4 @@
-import { parseFixedDecimal } from "@/domain/primitives";
+import { parseFixedDecimal } from "../../domain/primitives.ts";
 import { z } from "zod";
 
 const decimalSchema = z.string().regex(/^\d+(?:\.\d{1,8})?$/);

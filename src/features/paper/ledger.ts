@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { asc, eq, inArray } from "drizzle-orm";
 
-import type { AppDatabase } from "@/db";
-import { withTransaction } from "@/db";
+import type { AppDatabase } from "../../db/index.ts";
+import { withTransaction } from "../../db/index.ts";
 import {
   cashLedgerEntries,
   instruments,
@@ -11,7 +11,7 @@ import {
   positionLedgerEntries,
   sourceRecords,
   sources,
-} from "@/db/schema";
+} from "../../db/schema.ts";
 
 export type PaperLedgerCashPosting = {
   bucket: "SETTLED" | "UNSETTLED_RECEIVABLE" | "UNSETTLED_PAYABLE";

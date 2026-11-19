@@ -2,25 +2,25 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { withTransaction, type AppDatabase } from "@/db";
+import { withTransaction, type AppDatabase } from "../../db/index.ts";
 import {
   equityValuationEvidence,
   equityValuationMarketEvidence,
   equityValuations,
   instruments,
-} from "@/db/schema";
+} from "../../db/schema.ts";
 import {
   convertMoney,
   parseFixedDecimal,
   parseFxRate,
-} from "@/domain/primitives";
+} from "../../domain/primitives.ts";
 import {
   paperLedgerInputHash,
   readPaperLedger,
   replayPaperLedger,
   type PaperLedgerEvent,
-} from "@/features/paper/ledger";
-import { getSourceEvidence, sourceEvidenceInputSchema } from "./evidence";
+} from "../paper/ledger.ts";
+import { getSourceEvidence, sourceEvidenceInputSchema } from "./evidence.ts";
 
 const timestampSchema = z.number().int().nonnegative().safe();
 const decimalSchema = z.string().regex(/^\d+(?:\.\d{1,8})?$/);

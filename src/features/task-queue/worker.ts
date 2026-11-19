@@ -27,6 +27,7 @@ export type WorkerOptions = {
   lockDurationMs?: number;
   cancellationGraceMs?: number;
   maxTasks?: number;
+  onIdle?: (nowMs: number) => void;
 };
 
 async function stopRunner(runner: Worker, graceMs: number) {
@@ -243,6 +244,7 @@ export async function runWorker(
           break;
         continue;
       }
+      options.onIdle?.(nowMs);
       if (options.maxTasks !== undefined) break;
       await delay(heartbeatIntervalMs, undefined, {
         signal: options.signal,

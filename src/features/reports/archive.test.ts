@@ -9,11 +9,14 @@ import {
   listArchivedResearchReports,
 } from "./archive";
 
-function enqueue(database: Parameters<typeof enqueueScheduledTask>[0]) {
+function enqueue(
+  database: Parameters<typeof enqueueScheduledTask>[0],
+  type: "MORNING" | "DAILY_AUDIT" = "MORNING",
+) {
   return enqueueScheduledTask(database, {
     idempotencyKey: randomUUID(),
     runType: "RESEARCH_REPORT",
-    input: { type: "MORNING" },
+    input: { type },
     timeZone: "Asia/Tokyo",
     scheduledLocalAt: "2000-01-01T00:00",
     timeoutMs: 60_000,
@@ -61,6 +64,40 @@ describe("research report archive", () => {
         idempotencyKey: nextTask.idempotencyKey,
       });
       expect(listArchivedResearchReports(fixture.database)).toHaveLength(2);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("archives the deterministic paper audit and marks delayed report execution", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      const task = enqueue(fixture.database, "DAILY_AUDIT");
+      const result = await runResearchReportTask(fixture.database, {
+        taskRunId: task.id,
+        idempotencyKey: task.idempotencyKey,
+        attemptNo: 1,
+        input: JSON.parse(task.inputJson),
+        runType: task.runType,
+        timeZone: task.timeZone,
+        scheduledLocalAt: task.scheduledLocalAt,
+        scheduledAtMs: task.scheduledAtMs,
+        signal: new AbortController().signal,
+      });
+      const report = getArchivedResearchReport(fixture.database, task.id);
+
+      expect(report?.ledgerSummary).toContain("纸面账本审计：账本");
+      expect(
+        report?.limitations.some((item) => item.includes("计划时刻")),
+      ).toBe(true);
+      expect(result.details).toMatchObject({
+        delayed: true,
+        scheduledLocalAt: task.scheduledLocalAt,
+      });
+      expect(report).toMatchObject({
+        verificationLevel: "NOT_VERIFIED",
+        candidates: [],
+      });
     } finally {
       await fixture.cleanup();
     }

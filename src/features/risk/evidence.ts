@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import type { AppDatabase } from "@/db";
-import { sourceRecords, sources } from "@/db/schema";
+import type { AppDatabase } from "../../db/index.ts";
+import { sourceRecords, sources } from "../../db/schema.ts";
 
 export const sourceEvidenceInputSchema = z.strictObject({
   sourceRecordId: z.uuid(),

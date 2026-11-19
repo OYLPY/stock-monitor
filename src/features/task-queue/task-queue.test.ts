@@ -218,6 +218,28 @@ describe("task queue", () => {
     }
   });
 
+  it("invokes the scheduler hook when the worker has no due tasks", async () => {
+    const fixture = await createTestDatabase();
+    const controller = new AbortController();
+    let idleCalls = 0;
+    try {
+      const result = await runWorker(fixture.database, {
+        signal: controller.signal,
+        heartbeatIntervalMs: 10,
+        lockDurationMs: 1_000,
+        onIdle: () => {
+          idleCalls += 1;
+          controller.abort();
+        },
+      });
+
+      expect(result).toEqual({ acquired: true, processed: 0 });
+      expect(idleCalls).toBe(1);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
   it("fails an invalid handler result without leaving the task running", async () => {
     const fixture = await createTestDatabase();
     try {

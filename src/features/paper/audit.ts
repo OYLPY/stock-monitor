@@ -1,15 +1,15 @@
 import { asc, eq, inArray } from "drizzle-orm";
 
-import type { AppDatabase } from "@/db";
+import type { AppDatabase } from "../../db/index.ts";
 import {
   equityValuations,
   paperFills,
   paperOrderEvents,
   paperOrders,
-} from "@/db/schema";
-import { notionalMinor } from "@/features/paper/cost-model";
-import { verifyPaperEquitySnapshot } from "@/features/risk/drawdown";
-import { readPaperLedger } from "@/features/paper/ledger";
+} from "../../db/schema.ts";
+import { notionalMinor } from "./cost-model.ts";
+import { verifyPaperEquitySnapshot } from "../risk/drawdown.ts";
+import { readPaperLedger } from "./ledger.ts";
 
 type EquityPoint = {
   asOfMs: bigint;

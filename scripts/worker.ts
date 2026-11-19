@@ -1,6 +1,7 @@
 import { openDatabase, getLocalDatabasePath } from "../src/db/index.ts";
 import { cancelTaskRun } from "../src/features/task-queue/queue.ts";
 import { runWorker } from "../src/features/task-queue/worker.ts";
+import { enqueueScheduledReportJobs } from "../src/features/reports/jobs.ts";
 
 const [command, taskRunId] = process.argv.slice(2);
 const database = await openDatabase(getLocalDatabasePath());
@@ -20,7 +21,16 @@ try {
     process.stdout.write(
       JSON.stringify({ event: "worker_starting", pid: process.pid }) + "\n",
     );
-    const result = await runWorker(database, { signal: controller.signal });
+    let lastScheduleCheckMinute = -1;
+    const result = await runWorker(database, {
+      signal: controller.signal,
+      onIdle: (nowMs) => {
+        const minute = Math.floor(nowMs / 60_000);
+        if (minute === lastScheduleCheckMinute) return;
+        lastScheduleCheckMinute = minute;
+        enqueueScheduledReportJobs(database, nowMs);
+      },
+    });
     process.stdout.write(
       JSON.stringify({ event: "worker_stopped", ...result }) + "\n",
     );
