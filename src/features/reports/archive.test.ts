@@ -23,6 +23,17 @@ function enqueue(
   }).task;
 }
 
+const offlineFetcher: typeof fetch = async () => {
+  throw new Error("offline_test_source");
+};
+
+function runOfflineReportTask(
+  database: Parameters<typeof runResearchReportTask>[0],
+  context: Parameters<typeof runResearchReportTask>[1],
+) {
+  return runResearchReportTask(database, context, offlineFetcher);
+}
+
 describe("research report archive", () => {
   it("archives missing-data reports without candidates and deduplicates task retries", async () => {
     const fixture = await createTestDatabase();
@@ -40,8 +51,8 @@ describe("research report archive", () => {
         signal: new AbortController().signal,
       };
 
-      const first = await runResearchReportTask(fixture.database, context);
-      const retry = await runResearchReportTask(fixture.database, context);
+      const first = await runOfflineReportTask(fixture.database, context);
+      const retry = await runOfflineReportTask(fixture.database, context);
       const reports = listArchivedResearchReports(fixture.database);
 
       expect(first.details).toEqual(retry.details);
@@ -58,7 +69,7 @@ describe("research report archive", () => {
       );
 
       const nextTask = enqueue(fixture.database);
-      await runResearchReportTask(fixture.database, {
+      await runOfflineReportTask(fixture.database, {
         ...context,
         taskRunId: nextTask.id,
         idempotencyKey: nextTask.idempotencyKey,
@@ -73,7 +84,7 @@ describe("research report archive", () => {
     const fixture = await createTestDatabase();
     try {
       const task = enqueue(fixture.database, "DAILY_AUDIT");
-      const result = await runResearchReportTask(fixture.database, {
+      const result = await runOfflineReportTask(fixture.database, {
         taskRunId: task.id,
         idempotencyKey: task.idempotencyKey,
         attemptNo: 1,
@@ -107,7 +118,7 @@ describe("research report archive", () => {
     const fixture = await createTestDatabase();
     try {
       const task = enqueue(fixture.database);
-      const complete = await runResearchReportTask(fixture.database, {
+      const complete = await runOfflineReportTask(fixture.database, {
         taskRunId: task.id,
         idempotencyKey: task.idempotencyKey,
         attemptNo: 1,
@@ -145,7 +156,7 @@ describe("research report archive", () => {
     const fixture = await createTestDatabase();
     try {
       const task = enqueue(fixture.database);
-      await runResearchReportTask(fixture.database, {
+      await runOfflineReportTask(fixture.database, {
         taskRunId: task.id,
         idempotencyKey: task.idempotencyKey,
         attemptNo: 1,
@@ -174,7 +185,7 @@ describe("research report archive", () => {
     const fixture = await createTestDatabase();
     try {
       const task = enqueue(fixture.database);
-      await runResearchReportTask(fixture.database, {
+      await runOfflineReportTask(fixture.database, {
         taskRunId: task.id,
         idempotencyKey: task.idempotencyKey,
         attemptNo: 1,

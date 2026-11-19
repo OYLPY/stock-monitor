@@ -1,4 +1,5 @@
 import { parentPort, workerData } from "node:worker_threads";
+import { tsImport } from "tsx/esm/api";
 import type {
   JsonValue,
   TaskHandlerRegistry,
@@ -60,9 +61,9 @@ function isJsonValue(value: unknown): value is JsonValue {
 }
 
 try {
-  const handlersModule = (await import(data.handlersModuleUrl)) as {
-    taskHandlers: TaskHandlerRegistry;
-  };
+  const handlersModule = (await tsImport(data.handlersModuleUrl, {
+    parentURL: import.meta.url,
+  })) as { taskHandlers: TaskHandlerRegistry };
   const handler = handlersModule.taskHandlers[data.task.runType];
   if (!handler) {
     runner?.postMessage({

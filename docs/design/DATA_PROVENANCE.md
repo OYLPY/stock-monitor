@@ -1,6 +1,6 @@
 # 市场数据与证据溯源设计
 
-> 状态：P02-02 设计基线；P05-04 / #40 已将来源注册、带 SHA-256/时间/版本的来源记录、事件修订/证据和 hash-chain 审计落入 SQLite 仓储，并实现缺少可信证据时拒绝 `VERIFIED`、Fixture 保持 `DEMO_ONLY`。P07-04 / #51 增加披露引用归一化、SEC/BOJ/BLS/Fed RSS 响应采集和按来源上游 ID 幂等写入；当前只持久化来源元数据与内容 hash，不保存原文。P07-02 / #49 的本机 CSV 补充路径仅保存解析后的 OHLCV 与文件 hash，仍标记 `NOT_VERIFIED`，不能替代获准行情 Provider。采集器仅以注入 fetcher 做离线测试，未验证线上接口可用性，未核准或使用外部凭据。供应商能力和数据时效仍须按 P04/P07 的许可、费用、覆盖、频率与样本验证。
+> 状态：P02-02 设计基线；P05-04 / #40 已将来源注册、带 SHA-256/时间/版本的来源记录、事件修订/证据和 hash-chain 审计落入 SQLite 仓储，并实现缺少可信证据时拒绝 `VERIFIED`、Fixture 保持 `DEMO_ONLY`。P07-04 / #51 增加披露引用归一化、SEC/BOJ/BLS/Fed RSS 响应采集和按来源上游 ID 幂等写入；当前只持久化来源元数据与内容 hash，不保存原文。P07-02 / #49 的本机 CSV 补充路径仅保存解析后的 OHLCV 与文件 hash，仍标记 `NOT_VERIFIED`，不能替代获准行情 Provider。P11-06 / #91 已将无需凭据的 BLS CPI/就业、BOJ USD/JPY 每日参考汇率、Fed/BOJ 官方 RSS 接入报告任务，并在 2026-11-19 对真实公开端点做只读 smoke；这不证明股票行情可用或获得广泛再分发许可。供应商能力和数据时效仍须按 P04/P07 的许可、费用、覆盖、频率与样本验证。
 >
 > 产品为本地即开即用工具，不增加应用登录或用户管理。来源凭据如适用，只由本机服务端/Worker 持有。参见 [系统架构](ARCHITECTURE.md)、[FR-Research](../requirements/FR_RESEARCH.md)、[NFR](../requirements/NFR.md) 和 [需求追踪矩阵](../requirements/TRACEABILITY.md)。
 
@@ -30,7 +30,7 @@
 | 美国经济事件日历        | BLS、BEA 等发布机构各自公布 release schedule；例如 BLS 日历使用 Eastern Time。                                                                                                                                                                                                                    | 将权威机构、预定时间、报告期和计划更新时间分别保留；计划日程不等于实际发布，也不保证不变。                                                                                                                                                                                             |
 | 日本经济事件日历        | BOJ 与总务省统计局等按各自统计类别公布日程；BOJ 标注日程会更新且发布时间可能变更，某些时刻为 approximate。                                                                                                                                                                                        | 记录 `scheduledAt`、时区、时间精度、日程抓取/更新版本与实际 `releasedAt`（取得时）；“around”类时刻不得伪造成精确分钟。                                                                                                                                                                 |
 
-以上是来源类别和已核实的约束，不代表这些来源已在应用中接通。官方来源事实和访问日期汇总见[来源核验记录](../research/P02-02-DATA-SOURCE-FINDINGS.md)。
+报告任务已自动接通上述 BLS/BOJ/Fed 公开宏观与公告来源；美日股票 OHLCV 仍未接通，#49/#50 维持 `BLOCKED_EXTERNAL`。其他来源类别和约束不代表已接通。来源证据见[来源核验记录](../research/P02-02-DATA-SOURCE-FINDINGS.md)与[数据源实测记录](../research/data-sources.md)。
 
 ### 本机 CSV 行情查看
 
@@ -41,9 +41,17 @@ P07-02 / #49 增加用户提供 CSV 的本机录入路径，用于在没有外�
 - SEC、BOJ、BLS 与 Fed RSS 采集器在 `src/providers/disclosures/collectors.ts`。公开来源单次请求失败、响应 schema/覆盖不匹配、响应截断、响应超限或非官方链接时，不写入引用并返回 `NOT_VERIFIED`；成功只说明该次接口响应被验证，不代表实时性或完整覆盖。
 - SEC Submissions 使用零填充 CIK 与显式联系 `User-Agent`，SQLite 审计链限每个本地数据库滚动 1 秒最多 10 次。只把 accession、申报日期和 form 建成引用；`filingDate` 保持原始日期文本，`publishedAt` / `availableAt` 不从接受或采集时刻推导。官方网页没有列出 Submissions JSON 的完整字段 schema，因此真实响应字段仍须运行时验证。
 - BOJ `getDataCode` 最多查询 250 个系列、60,000 个观察；采集器每个本地数据库每秒最多请求一次，任何非空 `NEXTPOSITION` 或返回系列/日期数组不完整都整体降为 `NOT_VERIFIED`。`SURVEY_DATES` 是观察期；`DATE` 是输出文件生成时刻，`LAST_UPDATE` 是最近修改日，两者都不替代发布时间。
-- BLS v1 每次最多 25 个 series、10 年，未注册使用者每滚动 24 小时最多 25 个查询；采集器持久记录尝试次数。返回标记 `DELAYED`，观测期仅保留为 `rawTimeText`，没有发布日期时保持 null。Fed RSS 必须显式传入官方 `/feeds/` HTTPS URL、禁止跨域重定向和 DTD，并按本地规则每分钟最多一次需求驱动查询；此前检查的一个链接 404 不代表其他链接不可用。
-- EDINET/BEA 需要缺失的 API key，TDnet 需要未授权付费订阅，issuer IR 需逐站确认许可；这些来源不得由采集器绕过 `BLOCKED_EXTERNAL` 或手工引用边界。所有 collectors 只将内容 fingerprint 写入 source record 的哈希，不保存原始披露/宏观载荷；因此该模块提供引用与变更识别，不构成可用于数值回测的宏观行情数据库。
+- BLS v1 每次最多 25 个 series、10 年，未注册使用者每滚动 24 小时最多 25 个查询；采集器持久记录尝试次数。返回标记 `DELAYED`，观测期仅保留为 `rawTimeText`，没有发布日期时保持 null。Fed 与 BOJ RSS 必须是官方 HTTPS URL、禁止跨域重定向和 DTD，并按本地规则每分钟最多一次需求驱动查询。P11-06 报告任务也取 BOJ `FM08` 的 `FXERD04/FXERD05`；观察日期标为 `Asia/Tokyo`，空值及当前东京日期与未来的日值不会进入 sourceRecord，避免把未完成时段当成最新已完成观察。
+- EDINET/BEA 需要缺失的 API key，TDnet 需要未授权付费订阅，issuer IR 需逐站确认许可；这些来源不得由采集器绕过 `BLOCKED_EXTERNAL` 或手工引用边界。采集器不保存完整 HTTP/RSS 原文；RSS 与披露保存标题、链接、时间及内容 hash，BLS/BOJ 宏观序列保存观测期/数值摘要及 hash。该实现提供引用与变更识别，不构成获准的美日股票 OHLCV、完整经济日历或可用于策略回测的完整历史数据库。
 - 源 ID 在同一 source 下用于幂等去重；同一 ID 的内容变化创建显式 supersedes 版本。多个不同 source 的同一语义事件归并留给 P07-05。
+
+### P11-06 报告任务来源采集（2026-11-19）
+
+- MORNING、DAILY_AUDIT 和 WEEKLY 报告开始分析前，请求 BLS v1 CPI-U/失业率、BOJ FM08 USD/JPY reference-rate series、Federal Reserve press-release RSS 与 BOJ official RSS。采集只使用公开端点，无 API key、账号或付费操作；当前 BOJ/RSS licenseStatus 仍为 UNKNOWN，成功访问不意味着获准转售或外部再分发。
+- BLS 实测响应使用 `Results.series` 对象结构，series 项可带 `latest`；`footnotes` 可含空对象。采集器接纳这种结构，只持久化可解析的数值字符串，`-` 等 unavailable values 不当作观测数值；CPI/就业仍按 BLS 声明标为 `DELAYED`。
+- 报告引用只从已持久化的 sourceRecord 建立：保留 sourceRecord ID、source role、license 状态、collect time、原始观测期/发布日期和数值/标题。Fed/BOJ RSS 正文不可用，不能从标题推断全文；BLS 观测期不冒充发布时间；BOJ 日频 FX 只保留有值且早于本机 Asia/Tokyo 当前日期的记录。
+- 采集状态与报告限制逐来源保留。HTTP/超时/schema/限流故障不产生事实引用；空 feed 不表示没有新事件。没有获许可且覆盖充分的 US/JP 股票 OHLCV 时，策略候选固定为零，回测、收益或盘中判断不得标为已验证。
+- 2026-11-19 只读 smoke 结果、接口时间与响应 schema 见 [DOC-0036 实测记录](../research/data-sources.md)。
 
 ## 统一证据与观察契约
 

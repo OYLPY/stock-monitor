@@ -18,11 +18,9 @@ const next = spawn(
   [nextCli, command, ...process.argv.slice(3)],
   { stdio: "inherit" },
 );
-const worker = spawn(
-  process.execPath,
-  ["--experimental-strip-types", workerScript],
-  { stdio: "inherit" },
-);
+const worker = spawn(process.execPath, ["--import", "tsx", workerScript], {
+  stdio: "inherit",
+});
 
 let stopping = false;
 let nextClosed = false;

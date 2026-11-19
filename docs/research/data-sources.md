@@ -131,6 +131,19 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - [BLS API FAQ](https://www.bls.gov/developers/api_faqs.htm)、[v1 规格](https://www.bls.gov/developers/api_signature.htm)、[v2 规格](https://www.bls.gov/developers/api_signature_v2.htm) 与[功能/延迟说明](https://www.bls.gov/bls/api_features.htm)。
 - [BEA API 指南](https://apps.bea.gov/API/docs/)、[用户指南 PDF](https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf)、[Swagger](https://apps.bea.gov/API/swagger/index.htm) 与[服务条款](https://apps.bea.gov/api/_pdf/bea_api_tos.pdf)。
 
+## P11-06 / #91：报告自动采集公开官方来源的实测（2026-11-19）
+
+本轮只对公开官方端点发起一次只读 smoke；未注册、未申请 API key、未使用付费服务。BLS v1 可无需注册访问，官方文档说明未注册请求限额为每天 25 次、每次最多 25 个 series，API 数据通常比发布滞后一天；BOJ 官方 API 手册列出代码 API 与 `FM08` 汇率序列，Federal Reserve 与 BOJ 页面提供 RSS。[BLS API FAQ](https://www.bls.gov/developers/api_faqs.htm)、[BLS API 特性](https://www.bls.gov/bls/api_features.htm)、[BOJ API 手册](https://www.stat-search.boj.or.jp/info/api_manual.pdf)、[Fed RSS 目录](https://www.federalreserve.gov/feeds/feeds.htm)、[BOJ What's New / RSS](https://www.boj.or.jp/en/whatsnew/index.htm)
+
+| 来源                   | 请求与采集时间（JST）                                                                                                                         | 实测结果                                                                                                                                                             | 报告使用边界                                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| BLS Public Data API v1 | `POST https://api.bls.gov/publicAPI/v1/timeseries/data/`；2026-11-19 14:38:32 发起；序列 `CUUR0000SA0`、`LNS14000000`，期间 2025–2026         | HTTP 200；API `REQUEST_SUCCEEDED`；实际载荷为 `Results.series` 对象、可选 `latest`、`footnotes` 空对象；2 个 series、44 个原始观测，其中 42 个数值、2 个不可用的 `-` | CPI 与失业率只保存数值观察并保留原观测期；`-` 不作为数字事实；没有发布日期时间戳，状态为 `DELAYED`；不得用作股票行情                        |
+| BOJ FM08               | `GET https://www.stat-search.boj.or.jp/api/v1/getDataCode`；`FXERD04,FXERD05`、`startDate=202501`、`endDate=202611`；2026-11-19 14:40:19 发起 | HTTP 200；API `STATUS=200`、响应时间 `2026-11-19T14:40:22.101+09:00`；2 个 series、1,398 个日期槽位；每个 series 有 244 个空值，最新非空观测期为 2026-11-17          | 日期槽位包括空值与当前月未完成日；采集器只持久化有值且早于当前东京日期的观察值，并标为 `HISTORICAL`、`Asia/Tokyo`；该参考汇率不是可成交报价 |
+| Federal Reserve RSS    | `GET https://www.federalreserve.gov/feeds/press_all.xml`；2026-11-19 14:38:32 批次                                                            | HTTP 200；`text/xml`；14,568 bytes                                                                                                                                   | 只存标题、官方链接、可解析的发布日期和来源记录 ID；不抓取正文，也不从空 feed 推断“没有新事项”                                               |
+| Bank of Japan RSS      | `GET https://www.boj.or.jp/en/rss/whatsnew.xml`；2026-11-19 14:38:32 批次                                                                     | HTTP 200；`application/xml; charset=UTF-8`；15,633 bytes                                                                                                             | 同上；只接受 BOJ 官方主机名，官方 RSS 返回的 HTTP 项目链接规范化为 HTTPS                                                                    |
+
+集成测试覆盖 SQLite 关闭重开后的 sourceRecord 可追溯、重复采集不新增事实记录、BOJ 空值/未完成日期过滤，以及各来源请求失败时降级为 `NOT_VERIFIED`。以上 smoke 只证明本次公开端点和响应结构可访问；没有运行本机 Worker、Codex 报告、实时市场扫描或行情回测。未接入美日股票 OHLCV，报告仍必须零策略候选并对市场结论标为 `NOT_VERIFIED`。
+
 ## 发现、相反证据与结论
 
 ### 已由官方材料支持的事实

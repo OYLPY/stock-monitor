@@ -437,6 +437,7 @@ function marketSummary(
   events: ReturnType<typeof collectEvidence>["events"],
   ledgerState: ResearchReport["ledgerState"],
   calendars: ResearchReport["marketCalendars"],
+  sourceCollectionAttempted: boolean,
 ) {
   const nyse = calendars.find(({ exchange }) => exchange === "NYSE");
   const nasdaq = calendars.find(({ exchange }) => exchange === "NASDAQ");
@@ -470,7 +471,9 @@ function marketSummary(
       evidenceIds: eventIds,
     },
     {
-      text: "FX、利率和完整宏观/财报日历没有可核实的本机快照；交易日历快照与来源版本见报告明细。",
+      text: sourceCollectionAttempted
+        ? "报告任务已尝试采集 BLS 宏观数据、日银 USD/JPY 参考汇率与 Fed/日银公告；具体来源状态和观测期见事实与来源覆盖。未接入完整宏观与财报日历。"
+        : "未提供本次报告的宏观来源采集记录；完整 FX、利率和财报日历覆盖无法核实。",
       evidenceIds: [],
     },
     {
@@ -509,6 +512,7 @@ function baseReport(input: {
   ledgerState: ResearchReport["ledgerState"];
   ledgerSummary: string | null;
   calendars: ResearchReport["marketCalendars"];
+  sourceCollectionStatuses: string[];
 }) {
   const dataClass = [...input.references.values()].some(
     (reference) => reference.dataClass === "FIXTURE",
@@ -530,10 +534,11 @@ function baseReport(input: {
             ? "DELAYED"
             : "REAL";
   const limitations = [
-    "报告只使用本机已保存证据，不在报告任务中执行行情或新闻的外部采集。",
-    "本地价格记录覆盖、临时停市覆盖及 FX/利率快照未核实；内置交易日历是有覆盖期限的官方静态快照。",
+    "报告只使用本机证据；报告任务会请求官方 BLS/BOJ/Fed 来源，但不读取未入库数据或原始公告正文。",
+    "本地股票行情覆盖、临时停市覆盖、美国利率快照及完整经济/财报日历未核实；内置交易日历是有覆盖期限的官方静态快照。",
     "不进行回测、收益评分、纸面成交或真实交易；策略候选必须引用有效证据。",
   ];
+  limitations.push(...input.sourceCollectionStatuses);
   if (!input.marketDataReady) {
     limitations.push("美股与日股的联合行情门槛未满足；候选列表强制为空。");
   }
@@ -560,6 +565,7 @@ function baseReport(input: {
       input.events,
       input.ledgerState,
       input.calendars,
+      input.sourceCollectionStatuses.length > 0,
     ),
     marketCalendars: input.calendars,
     eventTimeline: reportEventTimeline(input.events, input.generatedAtMs),
@@ -592,6 +598,7 @@ function reportPrompt(
   type: ResearchReportType,
   input: ReturnType<typeof collectEvidence>,
   marketDataReady: boolean,
+  sourceCollectionStatuses: string[],
 ) {
   const bars = input.bars.map((bar) => ({
     market: bar.marketCode,
@@ -634,6 +641,7 @@ function reportPrompt(
     "You are one local Codex call performing six roles in sequence: coordinator, intelligence, market structure, strategy research, independent risk officer, paper planner. These are role labels in one model response, not independent agents.",
     "Only use the persisted records below. Do not use web search, TradingView, unseen files, memory, assumed live quotes, or facts absent from these records. Source records contain metadata, hashes and normalized summaries only; raw disclosure bodies are unavailable.",
     "Every fact, inference, hypothesis and candidate must cite only the supplied sourceRecordId values. Do not invent dates, prices, trading sessions, news, returns, backtests, scores, trades, account balances, FX or interest rates.",
+    "BLS values are historical survey observations, not release timestamps. BOJ FX observations are daily Tokyo-market reference rates, not executable quotes. RSS items provide titles and links only, not article bodies. Do not infer details beyond these summaries or infer that no event occurred when a feed is empty or unavailable.",
     "Use only source-record dates, numeric values, currencies and units; cite price candidates with a qualified bar for that exact market and symbol. If an exact value or its currency/unit is not present in cited records, omit the claim.",
     "Set paperPlanner to SKIPPED. The deterministic paper ledger and risk engines are not available to this report workflow. riskOfficer may return VETO or NO_VETO, but NO_VETO is not approval.",
     marketDataReady
@@ -641,6 +649,7 @@ function reportPrompt(
       : "Market data is missing, unverified, stale, incomplete or below the minimum coverage. Return zero candidates and do not infer no new events. Mark affected role outputs as SKIPPED when they lack evidence.",
     `Persisted event summaries: ${JSON.stringify(eventEvidence)}`,
     `Persisted price bars: ${JSON.stringify(bars)}`,
+    `Official source collection statuses: ${JSON.stringify(sourceCollectionStatuses)}`,
     `Source records: ${JSON.stringify(references)}`,
   ].join("\n\n");
 }
@@ -651,9 +660,15 @@ export async function runResearchReportWorkflow(input: {
   type: ResearchReportType;
   signal: AbortSignal;
   nowMs?: number;
+  sourceReferences?: ResearchEvidenceReference[];
+  sourceCollectionStatuses?: string[];
 }) {
   const generatedAtMs = input.nowMs ?? Date.now();
   const evidence = collectEvidence(input.database, generatedAtMs);
+  for (const reference of input.sourceReferences ?? []) {
+    evidence.references.set(reference.id, reference);
+  }
+  const sourceCollectionStatuses = input.sourceCollectionStatuses ?? [];
   const calendars = marketCalendarSnapshots(generatedAtMs);
   const qualifiedInstruments = new Map([
     ...qualifiedPriceInstruments(evidence.bars, "US", generatedAtMs),
@@ -688,6 +703,7 @@ export async function runResearchReportWorkflow(input: {
     ledgerState,
     ledgerSummary,
     calendars,
+    sourceCollectionStatuses,
   });
 
   if (input.signal.aborted) {
@@ -703,7 +719,12 @@ export async function runResearchReportWorkflow(input: {
   const schema = z.toJSONSchema(researchModelOutputSchema);
   delete schema.$schema;
   const result = await runCodexTask(input.database, {
-    prompt: reportPrompt(input.type, evidence, marketDataReady),
+    prompt: reportPrompt(
+      input.type,
+      evidence,
+      marketDataReady,
+      sourceCollectionStatuses,
+    ),
     sourceRecordIds: [...evidence.references.keys()],
     outputSchema: schema,
     signal: input.signal,

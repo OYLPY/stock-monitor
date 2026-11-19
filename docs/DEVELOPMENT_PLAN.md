@@ -205,6 +205,7 @@
 | [`P11-03`](https://github.com/OYLPY/stock-monitor/issues/71) | **重大新事件规则、去重与告警**：多来源确认与置信级、先后比较、事件指纹、最多三项、只有独立新重大事项才通知；数据不可用不得推断无异常。 | src/features/alerts、通知历史 | 同事件多源仅一次提醒；旧信息不会反复告警；无变化不通知；依赖：P07-05, P08-03, P11-02 |
 | [`P11-04`](https://github.com/OYLPY/stock-monitor/issues/72) | **晨报、日审计和周审计任务编排**：在本机 Worker 按 Asia/Tokyo 07:00 调度晨报、每日 16:00 调度策略/纸面审计、周一 07:30 调度周审计；结果持久化并附数据限制。盘中扫描和异常提醒仍由 P11-03 单独负责。行情适配器 #49/#50 不阻断 `NOT_VERIFIED` 报告归档。 | worker/jobs、任务参数与失败报告 | 行情缺失时仍归档 NOT_VERIFIED 且无候选；休市可做研究但不冒充盘中；错过计划时刻显式记录延迟；失败状态可审查；依赖：P08-04, P11-01 |
 | [`P11-05`](https://github.com/OYLPY/stock-monitor/issues/73) | **本地通知渠道与持续运行指南**：实现系统支持的本地通知/页面通知及可控静默，明确电脑关闭和系统睡眠限制；生成 macOS launchd/Windows Task Scheduler 文档或脚本。 | 通知适配器、运维说明 | 仅重大新信息触达；无授权时不启用系统通知；不声称设备关机后继续运行；依赖：P11-03, P11-04 |
+| [P11-06](https://github.com/OYLPY/stock-monitor/issues/91) | **报告任务自动采集官方宏观与央行来源**：报告前采集 BLS CPI/就业、BOJ USD/JPY、Fed/BOJ RSS；按来源限制持久化引用与观测时点，来源失效时可见降级。 | report task、sourceRecord 引用、公开接口实测 | SQLite 重开可追溯、重试不重复事实、失败安全降级；缺少股票 OHLCV 时始终零候选；依赖：P07-04, P08-04, P11-01 |
 
 ### P12 — 完整测试与安全质量审计
 

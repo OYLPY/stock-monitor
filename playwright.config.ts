@@ -33,6 +33,7 @@ export default defineConfig({
     env: {
       STOCK_MONITOR_E2E_DATA_DIR: testDataDirectory,
       STOCK_MONITOR_DATA_DIR: testDataDirectory,
+      CODEX_HOME: join(testDataDirectory, "codex-home"),
       OPENAI_API_KEY: secretSentinel,
     },
   },

@@ -4,6 +4,7 @@ import { auditEvents, sourceRecords } from "../../db/schema";
 import { createTestDatabase } from "../../db/test-database";
 import {
   collectBlsSeries,
+  collectBojRss,
   collectBojSeries,
   collectFederalReserveRss,
   collectSecFilings,
@@ -204,24 +205,34 @@ describe("official disclosure collectors", () => {
         status: "REQUEST_SUCCEEDED",
         responseTime: 20,
         message: [],
-        Results: [
-          {
-            series: [
-              {
-                seriesID: "CUUR0000SA0",
-                data: [
-                  {
-                    year: "2026",
-                    period: "M10",
-                    periodName: "October",
-                    value: "324.5",
-                    footnotes: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+        Results: {
+          series: [
+            {
+              seriesID: "CUUR0000SA0",
+              data: [
+                {
+                  year: "2026",
+                  period: "M10",
+                  periodName: "October",
+                  value: "324.5",
+                  footnotes: [{}],
+                },
+                {
+                  year: "2026",
+                  period: "M09",
+                  periodName: "September",
+                  value: "-",
+                  footnotes: [
+                    {
+                      code: "9",
+                      text: "Data unavailable for this survey period.",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
       }),
     );
 
@@ -234,6 +245,7 @@ describe("official disclosure collectors", () => {
 
       expect(result.status).toBe("DELAYED");
       expect(result.records).toHaveLength(1);
+      expect(result.reason).toContain("excluded 1 unavailable values");
       expect(result.records[0]?.record).toMatchObject({
         recordType: "OTHER",
         dataClass: "HISTORICAL",
@@ -261,7 +273,7 @@ describe("official disclosure collectors", () => {
       Response.json({
         status: "REQUEST_SUCCEEDED",
         message: [],
-        Results: [{ series: [{ seriesID: "CUUR0000SA0", data: [] }] }],
+        Results: { series: [{ seriesID: "CUUR0000SA0", data: [] }] },
       }),
     );
 
@@ -318,6 +330,56 @@ describe("official disclosure collectors", () => {
     }
   });
 
+  it("does not persist blank or not-yet-complete BOJ daily observations", async () => {
+    const fixture = await createTestDatabase();
+    const fetcher = vi.fn<typeof fetch>(async () =>
+      Response.json({
+        STATUS: 200,
+        MESSAGE: "Successfully completed",
+        DATE: "2026-11-19T11:00:00.000+09:00",
+        NEXTPOSITION: null,
+        RESULTSET: [
+          {
+            SERIES_CODE: "FXERD04",
+            NAME_OF_TIME_SERIES: "U.S.Dollar/Yen Spot Rate at 17:00",
+            UNIT: "Yen per U.S. Dollar",
+            FREQUENCY: "DAILY",
+            CATEGORY: "Foreign Exchange",
+            VALUES: {
+              SURVEY_DATES: [20261118, 20261119, 20261120, 20261121],
+              VALUES: [154.4, 155.1, 156.2, null],
+            },
+          },
+        ],
+      }),
+    );
+    const now = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(Date.UTC(2026, 10, 19, 2));
+
+    try {
+      const result = await collectBojSeries(
+        fixture.database,
+        { databaseCode: "FM08", seriesCodes: ["FXERD04"] },
+        fetcher,
+      );
+
+      expect(result.status).toBe("AVAILABLE");
+      expect(result.records).toHaveLength(1);
+      expect(result.records[0]?.record).toMatchObject({
+        rawTimeText: "20261118",
+        sourceTimeZone: "Asia/Tokyo",
+      });
+      expect(result.records[0]?.title).toContain("154.4");
+      expect(
+        fixture.database.orm.select().from(sourceRecords).all(),
+      ).toHaveLength(1);
+    } finally {
+      now.mockRestore();
+      await fixture.cleanup();
+    }
+  });
+
   it("limits Federal Reserve RSS polling to once per rolling minute", async () => {
     const fixture = await createTestDatabase();
     const fetcher = vi.fn<typeof fetch>(
@@ -355,24 +417,22 @@ describe("official disclosure collectors", () => {
       Response.json({
         status: "REQUEST_SUCCEEDED",
         message: [],
-        Results: [
-          {
-            series: [
-              {
-                seriesID: "CUUR0000SA0",
-                data: [
-                  {
-                    year: "2026",
-                    period: "M10",
-                    periodName: "October",
-                    value,
-                    footnotes: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+        Results: {
+          series: [
+            {
+              seriesID: "CUUR0000SA0",
+              data: [
+                {
+                  year: "2026",
+                  period: "M10",
+                  periodName: "October",
+                  value,
+                  footnotes: [],
+                },
+              ],
+            },
+          ],
+        },
       }),
     );
 
@@ -434,6 +494,43 @@ describe("official disclosure collectors", () => {
         fixture.database.orm.select().from(sourceRecords).all(),
       ).toHaveLength(1);
       expect(result.records[0]?.record.contentHashSha256).not.toBe("");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("collects the official BOJ RSS feed and upgrades its same-host HTTP links", async () => {
+    const fixture = await createTestDatabase();
+    const fetcher = vi.fn<typeof fetch>(
+      async () =>
+        new Response(
+          `<rss><channel><item><title>Statement by the Governor</title><link>http://www.boj.or.jp/en/mopo/mpmdeci/mpr_2026.htm</link><guid>boj-policy-2026</guid><pubDate>Thu, 19 Nov 2026 10:13:00 +0900</pubDate></item></channel></rss>`,
+          { status: 200, headers: { "Content-Type": "application/xml" } },
+        ),
+    );
+
+    try {
+      const result = await collectBojRss(
+        fixture.database,
+        { feedUrl: "https://www.boj.or.jp/en/rss/whatsnew.xml" },
+        fetcher,
+      );
+      const rateLimited = await collectBojRss(
+        fixture.database,
+        { feedUrl: "https://www.boj.or.jp/en/rss/whatsnew.xml" },
+        fetcher,
+      );
+
+      expect(result.status).toBe("AVAILABLE");
+      expect(result.records[0]).toMatchObject({
+        provider: "boj.rss",
+        title: "Statement by the Governor",
+      });
+      expect(result.records[0]?.record.canonicalUrl).toBe(
+        "https://www.boj.or.jp/en/mopo/mpmdeci/mpr_2026.htm",
+      );
+      expect(rateLimited.status).toBe("BLOCKED_EXTERNAL");
+      expect(fetcher).toHaveBeenCalledTimes(1);
     } finally {
       await fixture.cleanup();
     }

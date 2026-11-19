@@ -7,6 +7,7 @@ import {
   createMarketEvent,
   registerSource,
 } from "@/features/evidence/repository";
+import type { ResearchEvidenceReference } from "../evidence-checker";
 import { runResearchReportWorkflow } from "./report";
 
 vi.mock("@/features/ai/codex-adapter", () => ({
@@ -130,6 +131,141 @@ describe("runResearchReportWorkflow", () => {
     expect(report.executionStatus).toBe("SKIPPED");
     expect(report.resultCode).toBe("CANCELLED");
     expect(runCodexTask).not.toHaveBeenCalled();
+  });
+
+  it("passes persisted official macro evidence to Codex without unlocking candidates", async () => {
+    const fixture = await createTestDatabase();
+    fixtures.push(fixture);
+    const nowMs = Date.UTC(2026, 10, 19, 2);
+    const source = registerSource(fixture.database, {
+      sourceKey: "boj.timeseries",
+      publisher: "Bank of Japan Time-Series Data Search",
+      sourceType: "REGULATORY",
+      authorityRole: "REGULATORY_PRIMARY",
+      referenceUrl: "https://www.stat-search.boj.or.jp/index_en.html",
+      licenseUrl: null,
+      licenseStatus: "UNKNOWN",
+      credentialRequirement: "NOT_REQUIRED",
+    });
+    const record = appendSourceRecord(fixture.database, {
+      sourceId: source.id,
+      recordKey: "disclosure:FXERD04:20261118",
+      recordType: "OTHER",
+      recordVersion: 1,
+      supersedesRecordId: null,
+      publishedAtMs: null,
+      occurredAtMs: null,
+      availableAtMs: null,
+      rawTimeText: "20261118",
+      sourceTimeZone: "Asia/Tokyo",
+      canonicalUrl: "https://www.stat-search.boj.or.jp/api/v1/getDataCode",
+      dataClass: "HISTORICAL",
+      content:
+        "FXERD04 U.S.Dollar/Yen Spot Rate at 17:00 (Yen per U.S. Dollar) 20261118: 154.4",
+    });
+    const reference: ResearchEvidenceReference = {
+      id: record.id,
+      canonicalUrl: record.canonicalUrl,
+      publishedAtMs: null,
+      occurredAtMs: null,
+      availableAtMs: null,
+      collectedAtMs: nowMs - 1_000,
+      timestampInvalid: false,
+      dataClass: record.dataClass,
+      publisher: source.publisher,
+      referenceUrl: record.canonicalUrl,
+      authorityRole: source.authorityRole,
+      licenseStatus: source.licenseStatus,
+      marketCode: null,
+      currencyCodes: ["JPY", "USD"],
+      units: [],
+      text: [
+        "20261118 Asia/Tokyo observation date: FXERD04 U.S.Dollar/Yen Spot Rate at 17:00 (Yen per U.S. Dollar) 20261118: 154.4",
+      ],
+    };
+    const role = {
+      status: "DONE" as const,
+      summary: "Reviewed persisted official macro evidence.",
+      evidenceIds: [record.id],
+    };
+    vi.mocked(runCodexTask).mockResolvedValue({
+      callId: "codex-call",
+      startedAtMs: nowMs,
+      completedAtMs: nowMs,
+      sourceReferences: [],
+      dataClass: "NOT_VERIFIED",
+      status: "DONE",
+      output: JSON.stringify({
+        facts: [
+          {
+            text: "BOJ published a USD/JPY reference-rate observation.",
+            evidenceIds: [record.id],
+          },
+        ],
+        inferences: [],
+        hypotheses: [],
+        candidates: [
+          {
+            marketCode: "US",
+            symbol: "AAPL",
+            logic: "Macro reference evidence without equity bars.",
+            trigger: "Await verified market prices.",
+            invalidation: null,
+            opposingCase: null,
+            evidenceIds: [record.id],
+            unresolvedQuestions: ["No verified US or JP equity OHLCV."],
+          },
+        ],
+        roleAudit: {
+          coordinator: role,
+          intelligence: role,
+          marketStructure: role,
+          strategyResearch: role,
+          riskOfficer: role,
+          paperPlanner: {
+            status: "SKIPPED",
+            summary: "No paper order can be created by the report workflow.",
+            evidenceIds: [],
+          },
+        },
+        riskOfficerReview: {
+          opinion: "VETO",
+          summary: "Equity OHLCV coverage is missing.",
+          evidenceIds: [record.id],
+        },
+        riskReasons: ["US and JP equity OHLCV are not verified."],
+        finalDecision: "Continue observing.",
+      }),
+      verificationStatus: "NOT_VERIFIED",
+      usage: null,
+    });
+
+    const report = await runResearchReportWorkflow({
+      database: fixture.database,
+      taskRunId: "7918b7f2-243f-4af8-8eef-602df736dfd2",
+      type: "MORNING",
+      signal: new AbortController().signal,
+      nowMs,
+      sourceReferences: [reference],
+      sourceCollectionStatuses: [
+        "BLS v1: DELAYED; 28 observations stored.",
+        "BOJ USD/JPY daily series: AVAILABLE; 910 observations stored.",
+      ],
+    });
+
+    expect(runCodexTask).toHaveBeenCalledWith(
+      fixture.database,
+      expect.objectContaining({
+        sourceRecordIds: [record.id],
+        prompt: expect.stringContaining("154.4"),
+      }),
+    );
+    expect(report.verificationLevel).toBe("NOT_VERIFIED");
+    expect(report.candidates).toEqual([]);
+    expect(report.facts[0]?.evidenceIds).toEqual([record.id]);
+    expect(report.limitations).toContain(
+      "BOJ USD/JPY daily series: AVAILABLE; 910 observations stored.",
+    );
   });
 
   it("keeps the paper planner inert and lets a risk veto suppress candidates", async () => {

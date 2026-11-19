@@ -17,6 +17,8 @@ const BLS_REQUEST_WINDOW_MS = 24 * 60 * 60 * 1_000;
 const BLS_REQUEST_LIMIT = 25;
 const BOJ_REQUEST_WINDOW_MS = 1_000;
 const BOJ_REQUEST_LIMIT = 1;
+const BOJ_RSS_REQUEST_WINDOW_MS = 60_000;
+const BOJ_RSS_REQUEST_LIMIT = 1;
 const FED_REQUEST_WINDOW_MS = 60_000;
 const FED_REQUEST_LIMIT = 1;
 const secEndpoint = "https://data.sec.gov/submissions/";
@@ -65,6 +67,14 @@ const bojInputSchema = z.strictObject({
     .min(1)
     .max(250)
     .refine((codes) => new Set(codes).size === codes.length),
+  startDate: z
+    .string()
+    .regex(/^\d{6}$/)
+    .optional(),
+  endDate: z
+    .string()
+    .regex(/^\d{6}$/)
+    .optional(),
 });
 
 const bojResponseSchema = z.object({
@@ -135,29 +145,27 @@ const blsInputSchema = z
 const blsResponseSchema = z.object({
   status: z.string(),
   message: z.array(z.string()),
-  Results: z.array(
-    z.object({
-      series: z.array(
-        z.object({
-          seriesID: z.string().min(1).max(64),
-          data: z.array(
-            z.object({
-              year: z.string().regex(/^\d{4}$/),
-              period: z.string().min(1).max(16),
-              periodName: z.string().trim().min(1).max(64),
-              value: z.string().max(100),
-              footnotes: z.array(
-                z.object({
-                  code: z.string().max(16),
-                  text: z.string().max(200),
-                }),
-              ),
-            }),
-          ),
-        }),
-      ),
-    }),
-  ),
+  Results: z.object({
+    series: z.array(
+      z.object({
+        seriesID: z.string().min(1).max(64),
+        data: z.array(
+          z.object({
+            year: z.string().regex(/^\d{4}$/),
+            period: z.string().min(1).max(16),
+            periodName: z.string().trim().min(1).max(64),
+            value: z.string().max(100),
+            footnotes: z.array(
+              z.object({
+                code: z.string().max(16).optional(),
+                text: z.string().max(500).optional(),
+              }),
+            ),
+          }),
+        ),
+      }),
+    ),
+  }),
 });
 
 const feedInputSchema = z.strictObject({ feedUrl: z.string().url().max(500) });
@@ -182,7 +190,10 @@ const rssResponseSchema = z.object({
 export type DisclosureCollectionStatus =
   "AVAILABLE" | "DELAYED" | "BLOCKED_EXTERNAL" | "NOT_VERIFIED";
 
-type CitationResult = ReturnType<typeof recordDisclosureCitation>;
+type CitationResult = ReturnType<typeof recordDisclosureCitation> & {
+  provider: DisclosureProvider;
+  title: string;
+};
 export type DisclosureCollectionResult = {
   status: DisclosureCollectionStatus;
   reason: string;
@@ -303,7 +314,11 @@ function persistCitations(
   inputs: DisclosureCitationInput[],
 ): CitationResult[] {
   return withTransaction(database, () =>
-    inputs.map((input) => persistCitation(database, input)),
+    inputs.map((input) => ({
+      ...persistCitation(database, input),
+      provider: input.provider,
+      title: input.title,
+    })),
   );
 }
 
@@ -314,7 +329,7 @@ function contentFingerprint(value: unknown): string {
 function persistCitation(
   database: AppDatabase,
   input: DisclosureCitationInput,
-): CitationResult {
+): ReturnType<typeof recordDisclosureCitation> {
   try {
     return recordDisclosureCitation(database, input);
   } catch (error) {
@@ -435,7 +450,7 @@ export async function collectSecFilings(
 
 export async function collectBojSeries(
   database: AppDatabase,
-  input: { databaseCode: string; seriesCodes: string[] },
+  input: z.input<typeof bojInputSchema>,
   fetcher: Fetcher = fetch,
 ): Promise<DisclosureCollectionResult> {
   const parsedInput = bojInputSchema.safeParse(input);
@@ -445,7 +460,7 @@ export async function collectBojSeries(
       "BOJ query parameters are invalid.",
     );
   }
-  const { databaseCode, seriesCodes } = parsedInput.data;
+  const { databaseCode, seriesCodes, startDate, endDate } = parsedInput.data;
   if (
     !reserveRequest(
       database,
@@ -464,9 +479,12 @@ export async function collectBojSeries(
   url.searchParams.set("lang", "en");
   url.searchParams.set("db", databaseCode);
   url.searchParams.set("code", seriesCodes.join(","));
+  if (startDate) url.searchParams.set("startDate", startDate);
+  if (endDate) url.searchParams.set("endDate", endDate);
 
   let citations: DisclosureCitationInput[];
   let observationCount = 0;
+  let acceptedObservationCount = 0;
   try {
     const response = bojResponseSchema.parse(
       await requestJson(
@@ -492,6 +510,14 @@ export async function collectBojSeries(
       throw new Error("boj_series_coverage_mismatch");
     }
 
+    const todayInTokyo = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .format(new Date(Date.now()))
+      .replaceAll("-", "");
     citations = [];
     for (const series of response.RESULTSET) {
       const { SURVEY_DATES: surveyDates, VALUES: values } = series.VALUES;
@@ -505,12 +531,20 @@ export async function collectBojSeries(
       for (const [index, surveyDate] of surveyDates.entries()) {
         const value = values[index];
         const period = String(surveyDate);
+        if (
+          value === null ||
+          value === "" ||
+          (/^\d{8}$/.test(period) && period >= todayInTokyo)
+        ) {
+          continue;
+        }
+        acceptedObservationCount += 1;
         citations.push({
           provider: "boj.timeseries",
           externalId: `${series.SERIES_CODE}:${period}`,
           recordType: "OTHER",
           referenceUrl: bojEndpoint,
-          title: `${series.SERIES_CODE} ${period}: ${value === null ? "null" : value}`,
+          title: `${series.SERIES_CODE} ${series.NAME_OF_TIME_SERIES} (${series.UNIT}) ${period}: ${value}`,
           contentFingerprint: contentFingerprint({
             name: series.NAME_OF_TIME_SERIES,
             unit: series.UNIT,
@@ -521,7 +555,7 @@ export async function collectBojSeries(
             value,
           }),
           rawTimeText: period,
-          sourceTimeZone: null,
+          sourceTimeZone: "Asia/Tokyo",
           dataClass: "HISTORICAL",
         });
       }
@@ -532,9 +566,9 @@ export async function collectBojSeries(
   const records = persistCitations(database, citations);
   return collectionResult(
     "AVAILABLE",
-    observationCount
-      ? `Retrieved ${observationCount} BOJ observations; survey dates are observation periods, not release times.`
-      : "BOJ returned no observations; this is not a no-event assertion.",
+    acceptedObservationCount
+      ? `Accepted ${acceptedObservationCount} BOJ observations with values; excluded ${observationCount - acceptedObservationCount} blank or not-yet-complete observations. Survey dates are observation periods, not release times.`
+      : "BOJ returned no usable observations for completed Tokyo dates; this is not a no-event assertion.",
     records,
   );
 }
@@ -575,6 +609,7 @@ export async function collectBlsSeries(
     ...(startYear && endYear ? { startyear: startYear, endyear: endYear } : {}),
   };
   let citations: DisclosureCitationInput[];
+  let unavailableObservationCount = 0;
   try {
     const response = blsResponseSchema.parse(
       await requestJson(
@@ -593,7 +628,7 @@ export async function collectBlsSeries(
     if (response.status !== "REQUEST_SUCCEEDED" || response.message.length) {
       throw new Error("bls_request_not_succeeded");
     }
-    const series = response.Results.flatMap((result) => result.series);
+    const series = response.Results.series;
     const returnedIds = new Set(series.map((item) => item.seriesID));
     if (
       returnedIds.size !== series.length ||
@@ -603,18 +638,23 @@ export async function collectBlsSeries(
       throw new Error("bls_series_coverage_mismatch");
     }
     citations = series.flatMap((item) =>
-      item.data.map((observation) => ({
-        provider: "bls.api" as const,
-        externalId: `${item.seriesID}:${observation.year}:${observation.period}`,
-        recordType: "OTHER" as const,
-        referenceUrl: blsEndpoint,
-        title: `${item.seriesID} ${observation.periodName} ${observation.year}: ${observation.value}`,
-        contentFingerprint: contentFingerprint(observation),
-        rawTimeText: `${observation.year} ${observation.period} (${observation.periodName})`,
-        sourceTimeZone: null,
-        dataClass: "HISTORICAL" as const,
-      })),
+      item.data
+        .filter((observation) => /^[-+]?\d+(?:\.\d+)?$/.test(observation.value))
+        .map((observation) => ({
+          provider: "bls.api" as const,
+          externalId: `${item.seriesID}:${observation.year}:${observation.period}`,
+          recordType: "OTHER" as const,
+          referenceUrl: blsEndpoint,
+          title: `${item.seriesID} ${observation.periodName} ${observation.year}: ${observation.value}`,
+          contentFingerprint: contentFingerprint(observation),
+          rawTimeText: `${observation.year} ${observation.period} (${observation.periodName})`,
+          sourceTimeZone: null,
+          dataClass: "HISTORICAL" as const,
+        })),
     );
+    unavailableObservationCount =
+      series.reduce((count, item) => count + item.data.length, 0) -
+      citations.length;
   } catch (error) {
     return requestFailure(error);
   }
@@ -622,22 +662,32 @@ export async function collectBlsSeries(
   return collectionResult(
     "DELAYED",
     records.length
-      ? `Retrieved ${records.length} BLS observations. API v1 data is delayed and does not establish a release timestamp.`
-      : "BLS returned no observations; this is not a no-event assertion.",
+      ? `Retrieved ${records.length} numeric BLS observations; excluded ${unavailableObservationCount} unavailable values. API v1 data is delayed and does not establish a release timestamp.`
+      : "BLS returned no numeric observations; this is not a no-event assertion.",
     records,
   );
 }
 
-export async function collectFederalReserveRss(
+type RssProvider = "boj.rss" | "federalreserve.rss";
+
+async function collectOfficialRss(
   database: AppDatabase,
   input: { feedUrl: string },
+  config: {
+    provider: RssProvider;
+    allowedDomain: string;
+    feedPathPrefix: string;
+    requestLimit: number;
+    requestWindowMs: number;
+    publisher: string;
+  },
   fetcher: Fetcher = fetch,
 ): Promise<DisclosureCollectionResult> {
   const parsedInput = feedInputSchema.safeParse(input);
   if (!parsedInput.success) {
     return collectionResult(
       "BLOCKED_EXTERNAL",
-      "A verified Federal Reserve feed URL is required.",
+      `A verified ${config.publisher} feed URL is required.`,
     );
   }
   let feedUrl: URL;
@@ -647,35 +697,32 @@ export async function collectFederalReserveRss(
   } catch {
     return collectionResult(
       "BLOCKED_EXTERNAL",
-      "A verified Federal Reserve feed URL is required.",
+      `A verified ${config.publisher} feed URL is required.`,
     );
   }
   if (
     feedUrl.protocol !== "https:" ||
     feedUrl.username ||
     feedUrl.password ||
-    !feedUrl.pathname.startsWith("/feeds/") ||
-    !(
-      feedUrl.hostname === "federalreserve.gov" ||
-      feedUrl.hostname.endsWith(".federalreserve.gov")
-    )
+    !feedUrl.pathname.startsWith(config.feedPathPrefix) ||
+    !isOfficialDomain(feedUrl.hostname, config.allowedDomain)
   ) {
     return collectionResult(
       "BLOCKED_EXTERNAL",
-      "Only official Federal Reserve HTTPS feeds are allowed.",
+      `Only official ${config.publisher} HTTPS feeds are allowed.`,
     );
   }
   if (
     !reserveRequest(
       database,
-      "federalreserve.rss",
-      FED_REQUEST_LIMIT,
-      FED_REQUEST_WINDOW_MS,
+      config.provider,
+      config.requestLimit,
+      config.requestWindowMs,
     )
   ) {
     return collectionResult(
       "BLOCKED_EXTERNAL",
-      "The local Federal Reserve feed limit of one request per rolling minute has been reached.",
+      `The local ${config.publisher} feed request limit has been reached.`,
     );
   }
 
@@ -707,6 +754,11 @@ export async function collectFederalReserveRss(
       const guid = item.guid ? textValue(item.guid) : link;
       const rawTimeText = item.pubDate ? textValue(item.pubDate) : null;
       const itemUrl = new URL(link);
+      const httpLinkFromOfficialFeed =
+        itemUrl.protocol === "http:" &&
+        config.provider === "boj.rss" &&
+        isOfficialDomain(itemUrl.hostname, config.allowedDomain);
+      if (httpLinkFromOfficialFeed) itemUrl.protocol = "https:";
       if (
         guid.length > 220 ||
         /[\r\n\0]/.test(guid) ||
@@ -714,15 +766,15 @@ export async function collectFederalReserveRss(
         itemUrl.protocol !== "https:" ||
         itemUrl.username ||
         itemUrl.password ||
-        !isFederalReserveHost(itemUrl.hostname)
+        !isOfficialDomain(itemUrl.hostname, config.allowedDomain)
       ) {
         throw new Error("invalid_rss_item_fields");
       }
       const publishedAtMs = rawTimeText ? Date.parse(rawTimeText) : Number.NaN;
       return {
-        provider: "federalreserve.rss" as const,
+        provider: config.provider,
         externalId: guid,
-        referenceUrl: link,
+        referenceUrl: itemUrl.toString(),
         title: textValue(item.title),
         contentFingerprint: contentFingerprint({
           guid,
@@ -742,9 +794,49 @@ export async function collectFederalReserveRss(
   return collectionResult(
     "AVAILABLE",
     records.length
-      ? `Retrieved ${records.length} Federal Reserve RSS references.`
-      : "Federal Reserve feed returned no items; this is not a no-event assertion.",
+      ? `Retrieved ${records.length} ${config.publisher} RSS references.`
+      : `${config.publisher} feed returned no items; this is not a no-event assertion.`,
     records,
+  );
+}
+
+export function collectFederalReserveRss(
+  database: AppDatabase,
+  input: { feedUrl: string },
+  fetcher: Fetcher = fetch,
+) {
+  return collectOfficialRss(
+    database,
+    input,
+    {
+      provider: "federalreserve.rss",
+      allowedDomain: "federalreserve.gov",
+      feedPathPrefix: "/feeds/",
+      requestLimit: FED_REQUEST_LIMIT,
+      requestWindowMs: FED_REQUEST_WINDOW_MS,
+      publisher: "Federal Reserve",
+    },
+    fetcher,
+  );
+}
+
+export function collectBojRss(
+  database: AppDatabase,
+  input: { feedUrl: string },
+  fetcher: Fetcher = fetch,
+) {
+  return collectOfficialRss(
+    database,
+    input,
+    {
+      provider: "boj.rss",
+      allowedDomain: "boj.or.jp",
+      feedPathPrefix: "/en/rss/",
+      requestLimit: BOJ_RSS_REQUEST_LIMIT,
+      requestWindowMs: BOJ_RSS_REQUEST_WINDOW_MS,
+      publisher: "Bank of Japan",
+    },
+    fetcher,
   );
 }
 
@@ -752,9 +844,6 @@ function textValue(value: string | { "#text": string }): string {
   return typeof value === "string" ? value : value["#text"];
 }
 
-function isFederalReserveHost(hostname: string): boolean {
-  return (
-    hostname === "federalreserve.gov" ||
-    hostname.endsWith(".federalreserve.gov")
-  );
+function isOfficialDomain(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
 }

@@ -68,15 +68,17 @@ const schema = {
   workerState,
 };
 
+const SQLITE_BUSY_TIMEOUT_MS = 5_000;
+
 function createSqliteClient(filePath: string) {
   if (!isAbsolute(filePath)) throw new Error("database_path_must_be_absolute");
   mkdirSync(dirname(filePath), { recursive: true });
 
-  const client = new Database(filePath, { timeout: 200 });
+  const client = new Database(filePath, { timeout: SQLITE_BUSY_TIMEOUT_MS });
   try {
     client.defaultSafeIntegers(true);
     client.pragma("foreign_keys = ON");
-    client.pragma("busy_timeout = 200");
+    client.pragma(`busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}`);
     client.pragma("synchronous = FULL");
     if (client.pragma("journal_mode = WAL", { simple: true }) !== "wal") {
       throw new Error("sqlite_wal_unavailable");

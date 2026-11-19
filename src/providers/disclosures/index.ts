@@ -70,6 +70,20 @@ const officialSourcePolicies = {
     requestPolicy:
       "A query is limited to 60,000 observations; excessive request frequency may be restricted.",
   },
+  "boj.rss": {
+    publisher: "Bank of Japan",
+    sourceType: "REGULATORY",
+    authorityRole: "REGULATORY_PRIMARY",
+    referenceUrl: "https://www.boj.or.jp/en/whatsnew/index.htm",
+    licenseUrl: null,
+    licenseStatus: "UNKNOWN",
+    credentialRequirement: "NOT_REQUIRED",
+    accessMode: "PUBLIC_FEED",
+    allowedDomain: "boj.or.jp",
+    timeZone: "Asia/Tokyo",
+    requestPolicy:
+      "Public RSS feed; no numeric polling quota was verified, so collection must remain demand-driven.",
+  },
   "federalreserve.rss": {
     publisher: "Board of Governors of the Federal Reserve System",
     sourceType: "REGULATORY",
@@ -170,6 +184,7 @@ const citationInputSchema = z.strictObject({
     "edinet.v2",
     "tdnet.api",
     "boj.timeseries",
+    "boj.rss",
     "federalreserve.rss",
     "bls.api",
     "bea.api",
@@ -384,6 +399,7 @@ export function recordDisclosureCitation(
 export {
   collectBlsSeries,
   collectBojSeries,
+  collectBojRss,
   collectFederalReserveRss,
   collectSecFilings,
 } from "./collectors";

@@ -615,6 +615,7 @@ describe("local SQLite database", () => {
 
   it("surfaces a competing writer and succeeds after the lock is released", async () => {
     const fixture = await createTestDatabase();
+    fixture.database.client.pragma("busy_timeout = 200");
     const lockHolder = new Database(fixture.filePath, { timeout: 200 });
     try {
       lockHolder.exec("BEGIN IMMEDIATE");

@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0033 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 >
-> 状态：P03-05 设计契约；P11-01 已实现任务队列、尝试/事件日志、Worker 租约、任务取消、超时和过期租约恢复。工作流步骤检查点及 Codex/外部数据任务处理器仍未接通。
+> 状态：P03-05 设计契约；P11-01 已实现任务队列、尝试/事件日志、Worker 租约、任务取消、超时和过期租约恢复。P11-06 已接通报告 Worker 与持久化官方来源采集；多步工作流检查点仍未实现。
 >
 > 关联：[调度与事件通知](SCHEDULER.md)、[AI 六角色工作流](AI_WORKFLOW.md)、[API/DTO](API_CONTRACTS.md)、[DB Schema](DB_SCHEMA.md)、[失败与恢复](FAILURE_MODES.md)、[上下文工程规约](../CONTEXT_ENGINEERING.md)。
 
