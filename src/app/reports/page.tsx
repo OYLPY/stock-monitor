@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getLocalDatabasePath, openDatabase } from "@/db";
 import { ReportCenter } from "@/components/reports/report-center";
 import { listArchivedResearchReports } from "@/features/reports/archive";
-import { readTaskRun } from "@/features/task-queue/queue";
+import { listTaskRuns, readTaskRun } from "@/features/task-queue/queue";
 
 export const metadata: Metadata = { title: "晨报与策略研究 | 量化研究工作台" };
 export const dynamic = "force-dynamic";
@@ -43,6 +43,7 @@ export default async function ReportsPage({
         enqueueError={firstValue(params.enqueue) === "error"}
         filters={{ query: firstValue(params.q)?.trim() ?? "", type }}
         reports={listArchivedResearchReports(database)}
+        tasks={listTaskRuns(database).filter((item) => item.kind === "REPORT")}
         taskNotice={
           task
             ? {

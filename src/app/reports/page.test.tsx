@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 const pageMocks = vi.hoisted(() => ({
   openDatabase: vi.fn(async () => ({ client: { close: vi.fn() } })),
   listReports: vi.fn((): unknown[] => []),
+  listTaskRuns: vi.fn((): unknown[] => []),
   readTaskRun: vi.fn((): unknown => null),
 }));
 
@@ -18,7 +19,12 @@ vi.mock("@/features/reports/archive", () => ({
   listArchivedResearchReports: pageMocks.listReports,
 }));
 vi.mock("@/features/task-queue/queue", () => ({
+  listTaskRuns: pageMocks.listTaskRuns,
   readTaskRun: pageMocks.readTaskRun,
+}));
+vi.mock("@/components/tasks/cancel-task-button", () => ({
+  CancelTaskButton: ({ label }: { label: string }) =>
+    createElement("button", { type: "button" }, `取消${label}`),
 }));
 
 vi.mock("@/components/shadcn/collapsible", async () => {
@@ -202,6 +208,7 @@ function renderReports(
       enqueueError: false,
       filters,
       reports,
+      tasks: [],
       taskNotice: null,
     }),
   );
@@ -238,6 +245,33 @@ describe("reports page", () => {
 
     expect(html).toContain("报告任务排队中");
     expect(html).toContain("报告尚未生成");
+  });
+
+  it("shows persisted report tasks after loading the page without a task query", async () => {
+    pageMocks.listTaskRuns.mockReturnValue([
+      {
+        id: "0c72b1db-1577-4828-9e25-82af2eadd323",
+        kind: "REPORT",
+        label: "晨报",
+        executionStatus: "PENDING",
+        attemptCount: 0,
+        cancellationRequestedAtMs: null,
+        resultCode: null,
+        errorCode: null,
+        createdAtMs: Date.UTC(2026, 10, 18, 22),
+        startedAtMs: null,
+        finishedAtMs: null,
+      },
+    ]);
+    const page = await ReportsPage({ searchParams: Promise.resolve({}) });
+    const html = renderToStaticMarkup(createElement(() => page));
+
+    expect(html).toContain("报告任务");
+    expect(html).toContain("晨报");
+    expect(html).toContain("排队中");
+    expect(html).toContain("管理全部任务");
+    expect(html).toContain("0c72b1db");
+    expect(html).toContain("取消晨报");
   });
 
   it("shows distinct evidence, inference, hypothesis, risk, and six-role audit", () => {

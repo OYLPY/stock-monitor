@@ -10,6 +10,13 @@ test("archives and displays a local fixture report without implying market data 
     name: "P12-03 E2E Fixture：风控否决与证据展示",
   });
   await expect(title).toBeVisible();
+  const archivedTask = page.getByRole("row").filter({ hasText: "E2E_FIXTURE" });
+  await expect(archivedTask).toContainText("晨报");
+  await page.reload();
+  await expect(
+    page.getByRole("row").filter({ hasText: "E2E_FIXTURE" }),
+  ).toContainText("完成");
+
   const reportCard = page.locator('[data-slot="card"]').filter({ has: title });
   await expect(reportCard).toContainText("仅演示 · DEMO_ONLY");
   await expect(reportCard).toContainText("Fixture");

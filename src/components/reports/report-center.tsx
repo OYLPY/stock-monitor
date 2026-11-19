@@ -43,11 +43,14 @@ import { Separator } from "@/components/shadcn/separator";
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table";
+import { CancelTaskButton } from "@/components/tasks/cancel-task-button";
+import type { TaskRunQueueItem } from "@/features/task-queue/queue";
 
 type ReportType = "MORNING" | "ANOMALY" | "DAILY_AUDIT" | "WEEKLY_AUDIT";
 type ExecutionStatus =
@@ -998,11 +1001,13 @@ function reportSearchText(report: ResearchReport) {
 
 export function ReportCenter({
   reports,
+  tasks,
   filters,
   taskNotice,
   enqueueError,
 }: {
   reports: ResearchReport[];
+  tasks: TaskRunQueueItem[];
   filters: ReportFilters;
   taskNotice: {
     id: string;
@@ -1101,6 +1106,96 @@ export function ReportCenter({
           </AlertDescription>
         </Alert>
       ) : null}
+
+      <section
+        aria-labelledby="report-tasks-heading"
+        className="flex flex-col gap-4"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold" id="report-tasks-heading">
+            报告任务
+          </h2>
+          <Link className="text-sm underline underline-offset-4" href="/tasks">
+            管理全部任务
+          </Link>
+        </div>
+        <Table>
+          <TableCaption>
+            最近的本机报告任务；状态保存在本机数据库。
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">任务</TableHead>
+              <TableHead scope="col">状态</TableHead>
+              <TableHead scope="col">创建时间（JST）</TableHead>
+              <TableHead scope="col">结果</TableHead>
+              <TableHead scope="col">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tasks.length === 0 ? (
+              <TableRow>
+                <TableCell className="text-muted-foreground" colSpan={5}>
+                  暂无报告任务
+                </TableCell>
+              </TableRow>
+            ) : (
+              tasks.slice(0, 10).map((task) => {
+                const canCancel =
+                  (task.executionStatus === "PENDING" ||
+                    task.executionStatus === "RUNNING") &&
+                  task.cancellationRequestedAtMs === null;
+
+                return (
+                  <TableRow key={task.id}>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Link
+                          className="font-medium underline-offset-4 hover:underline"
+                          href={`/reports?task=${encodeURIComponent(task.id)}`}
+                        >
+                          {task.label}
+                        </Link>
+                        <code
+                          className="text-xs text-muted-foreground"
+                          title={task.id}
+                        >
+                          {task.id.slice(0, 8)}
+                        </code>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {task.cancellationRequestedAtMs !== null &&
+                        task.executionStatus === "RUNNING"
+                          ? "停止请求中"
+                          : taskStatusLabels[task.executionStatus]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {formatTime(task.createdAtMs, "Asia/Tokyo")}
+                    </TableCell>
+                    <TableCell>
+                      {(task.errorCode ?? task.resultCode) ? (
+                        <code>{task.errorCode ?? task.resultCode}</code>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {canCancel ? (
+                        <CancelTaskButton label={task.label} taskId={task.id} />
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </section>
 
       <section
         aria-labelledby="report-filters-heading"
