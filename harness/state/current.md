@@ -1,6 +1,8 @@
 # 当前执行状态
 
-- **当前进行：P08-04 follow-up / #92**：让已持久化的 BLS CPI/就业与 BOJ USD/JPY 观察在报告页可读，Codex 调用失败也保留有来源的历史事实；不接入未授权股票行情，缺少美日 OHLCV 时仍不生成策略候选。格式、lint、typecheck、49 files / 292 tests、Next.js build、Playwright 7/7 和文档索引/链接审计均通过；提交/push 和匹配 Quality CI 待完成。六字段交接：[P08-04-FU-92](../handoffs/P08-04-FU-92.md)。
+- **P08-04 follow-up / #92 验收中**：实现提交 [`dd298e9`](https://github.com/OYLPY/stock-monitor/commit/dd298e9b6ae98059986fa005943cf667c56dc450) 已推送，匹配 [Quality CI 44503264770](https://github.com/OYLPY/stock-monitor/actions/runs/44503264770) 全部成功（含 E2E）；代码与报告契约通过。当前补齐索引、追踪和交接，文档提交 CI 通过后关闭 Issue。无美日 OHLCV 时仍不生成策略候选。六字段交接：[P08-04-FU-92](../handoffs/P08-04-FU-92.md)。
+
+- **紧接任务：P07-05 / #52**：#49/#50 的外部行情许可与历史范围仍未满足。继续推进与实时行情无关的事件识别、去重和来源质量门禁；缺少可核验行情时只标记不可验证，不生成实时信号。开工前把 #52 的依赖和验收边界收窄到可独立完成的部分，并在 Issue 里记录变更与剩余阻断。
 
 - **最近完成项：P11-06 / #91，已关闭**：报告 Worker 在研究前自动采集 BLS CPI/就业、BOJ USD/JPY 参考汇率和 Fed/BOJ RSS，并把持久 sourceRecord 引用与逐源状态交给报告工作流。实现提交 [`62c63d3`](https://github.com/OYLPY/stock-monitor/commit/62c63d37ed0e1cd1a683fe9ec3915ad232fd7552) 与验收记录提交 [`6ae4fc6`](https://github.com/OYLPY/stock-monitor/commit/6ae4fc6a0255fae9cf70dc9a1dba19ddc8cd2b05) 已推送；Quality CI [44472642104](https://github.com/OYLPY/stock-monitor/actions/runs/44472642104) 和 [44473530137](https://github.com/OYLPY/stock-monitor/actions/runs/44473530137) 均成功。本地 format、lint、typecheck、48 files / 283 tests、build、Playwright E2E 6/6 全通过。公开官方端点实测见[验收记录](../evidence/P11-06-followup-91.md)，六字段交接见[交接记录](../handoffs/P11-06-FU-91.md)。未运行本机 Worker/Codex 报告、回测或纸面成交；美日股票 OHLCV 仍未接入，因此策略候选保持零。
 
