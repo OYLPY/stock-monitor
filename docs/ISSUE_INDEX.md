@@ -186,7 +186,7 @@
 - [x] [P11-01 — Worker 任务队列与调度器](https://github.com/OYLPY/stock-monitor/issues/69) · 依赖：P04-04, P05-01
 - [x] [P11-02 — 美日市场时段扫描与假日异常](https://github.com/OYLPY/stock-monitor/issues/70) · 交付：[market-watch 门禁](../src/features/market-watch/market-watch.ts)、[六字段交接](../harness/handoffs/P11-02.md) · 开市但行情 Provider 未配置时为 `BLOCKED_EXTERNAL/SOURCE_UNAVAILABLE`，信号评估保持 `NOT_RUN` · 依赖：P11-01, P07-01
 - [ ] [P11-03 — 重大新事件规则、去重与告警](https://github.com/OYLPY/stock-monitor/issues/71) · 依赖：P07-05, P08-03, P11-02
-- [ ] [P11-04 — 晨报、日审计和周审计任务编排](https://github.com/OYLPY/stock-monitor/issues/72) · 依赖：P08-04, P11-01；盘中扫描/异常告警仍由 P11-03 负责
+- [ ] [P11-04 — 晨报、日审计和周审计任务编排](https://github.com/OYLPY/stock-monitor/issues/72) · 实现：[定时报告](../src/features/reports/jobs.ts)、[报告任务](../src/features/reports/task.ts)；Asia/Tokyo 晨报 07:00、日审计 16:00、周审计周一 07:30，缺少证据时归档 `NOT_VERIFIED` 且零候选 · 实现提交 [54a3181](https://github.com/OYLPY/stock-monitor/commit/54a3181fde684209211c8c71194efd7a8491e69c) / Quality CI [44433188280](https://github.com/OYLPY/stock-monitor/actions/runs/44433188280) success · [六字段交接](../harness/handoffs/P11-04.md) · 等待本次验收记录 CI 后关闭；依赖：P08-04, P11-01；盘中扫描/异常告警仍由 P11-03 负责
 - [ ] [P11-05 — 本地通知渠道与持续运行指南](https://github.com/OYLPY/stock-monitor/issues/73) · 依赖：P11-03, P11-04
 
 ### [P12 完整测试与安全质量审计](https://github.com/OYLPY/stock-monitor/issues/13)
