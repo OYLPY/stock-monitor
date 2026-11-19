@@ -52,4 +52,13 @@ test("archives and displays a local fixture report without implying market data 
     path: screenshotPath,
     contentType: "image/png",
   });
+
+  await page.setViewportSize({ width: 320, height: 800 });
+  const reportQueue = page.getByRole("region", { name: "报告任务" });
+  await expect(reportQueue.getByRole("table")).toBeVisible();
+  const widths = await page.evaluate(() => ({
+    document: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+  }));
+  expect(widths.document).toBeLessThanOrEqual(widths.viewport);
 });
