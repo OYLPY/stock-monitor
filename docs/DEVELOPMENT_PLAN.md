@@ -163,7 +163,7 @@
 | [`P08-02`](https://github.com/OYLPY/stock-monitor/issues/54) | **六角色结构化研究工作流**：实现统筹→情报→市场结构→策略研究→独立风控→模拟员的单进程可分步骤执行；定义角色输入/输出、独立否决点。 | src/features/research/workflows、Zod 契约 | AI角色不能写账本；角色未完成时报告显式不完整；否决阻止后续提案；行情证据缺失时归档未核验输出且候选为空；依赖：P08-01, P07-04 |
 | [`P08-03`](https://github.com/OYLPY/stock-monitor/issues/55) | **研究证据引用与反幻觉校验**：实现引文映射到实际采集证据、时间戳验证、事实/推论/假设区分、数字单位交叉检查与无来源降级；拒绝伪造 TradingView 实时读取。 | src/features/research/evidence-checker、测试 | 伪造URL、错误时间、过期数字、缺失资料不会通过 VERIFIED；依赖：P08-02, P07-04 |
 | [`P08-04`](https://github.com/OYLPY/stock-monitor/issues/56) | **晨报/异常报告/每日与每周审计生成**：按需求输出美日最新完成交易日、五行摘要、未来24小时事件、≤3策略及五维验证状态、风控裁决、账本状态；支持报告归档与再次生成。 | src/features/reports、报告模板、测试 | 休市正确说明；未完成的美股交易日不可写成已完成；资料不足只归档 NOT_VERIFIED 且无候选；依赖：P08-02, P08-03 |
-| [`P08-05`](https://github.com/OYLPY/stock-monitor/issues/57) | **AI研究回归评估和上下文交接**：建立固定证据集、语义状态压缩实验、重复运行评估、事实引用准确率及预算统计；验证 EoCC 优先、SAC 作为可选对照。 | tests/ai-evals、harness/handoffs、评估报告 | 跨新会话不丢 Issue 验收/风控；短上下文和长上下文任务结果可核查比较；依赖：P08-03, P00-04 |
+| [`P08-05`](https://github.com/OYLPY/stock-monitor/issues/57) | **AI 研究固定样本回归与上下文交接**：对 FIXTURE 长历史、现有 task/restart context builder 与 SAC 离线 checkpoint 进行可复现比较；三次重复检查关键上下文标记和来源 ID 规则；预算只记录 UTF-8 bytes，不测量模型准确率、token 或费用，也不调用模型/行情。 | tests/ai-evals、harness/evidence、harness/handoffs | 保留验收、风险和来源 ID；未知来源被拒绝；至少三次结果确定；SAC 只作 fixture 对照，项目 task/restart 不宣称为生产 EoCC；依赖：P08-03, P00-04 |
 
 ### P09 — 指标、回测与量化验证
 
