@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table";
 import { CancelTaskButton } from "@/components/tasks/cancel-task-button";
+import { LocalDesktopNotifications } from "@/components/tasks/local-desktop-notifications";
 import {
   listNotificationDecisions,
   listNotifications,
@@ -178,6 +179,16 @@ export default async function TasksPage({
               市场提醒
             </h2>
             <div className="flex items-center gap-3">
+              <LocalDesktopNotifications
+                latestNotification={
+                  notifications[0]
+                    ? {
+                        createdAtMs: notifications[0].created_at_ms,
+                        id: notifications[0].id,
+                      }
+                    : null
+                }
+              />
               <Badge variant="outline">{notifications.length} 条本机提醒</Badge>
               <form action="/api/v1/market-watch" method="post">
                 <input name="requestId" type="hidden" value={randomUUID()} />

@@ -7,6 +7,7 @@ import { listMarketEvents } from "../evidence/repository.ts";
 
 const RULE_VERSION = "p11-03-v1";
 const NOTIFICATION_LIMIT = 3;
+const CLIENT_NOTIFICATION_BATCH_LIMIT = 20;
 const IMPORTANCE_RULE_PATTERN = /^P11-03:([A-Z][A-Z0-9_]{0,63}):\s*(.+)$/;
 const TRUSTED_PRIMARY_ROLES = new Set([
   "EXCHANGE_PRIMARY",
@@ -383,6 +384,37 @@ export function listNotifications(database: AppDatabase, limit = 50) {
       row.supporting_source_count as bigint | number,
     ),
     sources: evidenceByRevision.get(row.revision_id) ?? [],
+  }));
+}
+
+export function listNotificationsAfter(
+  database: AppDatabase,
+  cursor: { createdAtMs: number; id: string },
+) {
+  const rows = database.client
+    .prepare(
+      `SELECT n.id, n.created_at_ms, r.summary, r.market_code
+       FROM notifications n
+       INNER JOIN market_event_revisions r ON r.id = n.revision_id
+       WHERE n.created_at_ms > ? OR (n.created_at_ms = ? AND n.id > ?)
+       ORDER BY n.created_at_ms ASC, n.id ASC
+       LIMIT ?`,
+    )
+    .all(
+      cursor.createdAtMs,
+      cursor.createdAtMs,
+      cursor.id,
+      CLIENT_NOTIFICATION_BATCH_LIMIT,
+    ) as {
+    id: string;
+    created_at_ms: bigint | number;
+    summary: string;
+    market_code: string | null;
+  }[];
+
+  return rows.map((row) => ({
+    ...row,
+    created_at_ms: safeNumber(row.created_at_ms),
   }));
 }
 

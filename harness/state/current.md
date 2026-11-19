@@ -1,8 +1,10 @@
 # 当前执行状态
 
-- **当前任务：P11-03 / #71**：实现提交 [`56c289f`](https://github.com/OYLPY/stock-monitor/commit/56c289fbbaec0561a7a8659c73511801b39795e1) 已推送；匹配 [Quality CI 44522557415](https://github.com/OYLPY/stock-monitor/actions/runs/44522557415) 的 format/lint/typecheck/unit/build/E2E 均成功。正在推送六字段交接、Issue 索引和状态记录；该记录的 CI 成功后关闭 #71。
+- **当前任务：P11-05 / #73**：本机通知适配器、显式授权/静默开关和 Windows/macOS 持续运行指南已实现；本地 format/lint/typecheck/unit/build/E2E 均通过，正在补齐验收记录并推送。数据库迁移 v14 兼容修复和 v15 通知约束已应用于本机数据库，未删除用户记录。
 
-- **下一任务：P11-05 / #73**：#71 关闭后立即开始本机通知渠道与持续运行指南；先将 Issue 中遗留 PR 要求更新为授权的 main 直推/no-PR。依赖 #72 已关闭。
+- **产品主线**：本机量化模拟投资闭环是目标：可信美日行情 → 策略研究与历史验证 → 确定性风控 → 持久纸面账本。回测/撮合/风控/账本已有代码，但未接入行情 Provider，因此现实市场策略仍无候选、回测与纸面交易未核验。通知、报告队列和运行指南是配套能力，不应取代行情链路优先级。
+
+- **下一任务**：完成 #73 的远端 Quality CI 并关闭后，回到 P07-02 / #49 与 P07-03 / #50，优先落实可授权的美日历史行情接入。EODHD 个人历史日线方案当前官方价格为 $19.99/月，个人量化研究/本机保存允许；美国覆盖 30+ 年、亚洲多数市场 15–20 年，尚不能证明日本满足数十年要求。尚未注册、调用 API 或付费；任何云端数据请求和订阅都须先满足用户授权。
 
 - **已完成依赖：P07-05 / #52、P08-03 / #55、P11-02 / #70**：均已关闭。行情源不足时不能推断“无异常”，也不能虚构重大性或通知。
 
@@ -12,7 +14,7 @@
 
 - **最近完成项：P08-04 follow-up / #92，已关闭**：实现提交 [`dd298e9`](https://github.com/OYLPY/stock-monitor/commit/dd298e9b6ae98059986fa005943cf667c56dc450) 与验收记录提交 [`feb8355`](https://github.com/OYLPY/stock-monitor/commit/feb83556f8dbaae60b2d12ec70e2f90bf40d9ddc) 均已推送；Quality CI [44503264770](https://github.com/OYLPY/stock-monitor/actions/runs/44503264770) 与 [44505058159](https://github.com/OYLPY/stock-monitor/actions/runs/44505058159) 均成功。无美日 OHLCV 时仍不生成策略候选。六字段交接：[P08-04-FU-92](../handoffs/P08-04-FU-92.md)。
 
-- **行情来源调查**：2026-11-19 复核 JPX J-Quants 官方说明，Free 计划需注册、股票 OHLCV 仅有 2 年历史并延迟 12 周，不能满足数十年历史验证；NYSE 官方历史行情产品列有订阅与额外历史数据费用。没有接入需注册、授权不明或付费来源。#49/#50 保持 `BLOCKED_EXTERNAL`，不因此停止其他可独立验收的任务。
+- **行情来源调查**：2026-11-19 复核 JPX J-Quants 官方说明，Free 计划需注册、股票 OHLCV 仅有 2 年历史并延迟 12 周，不能满足数十年历史验证；NYSE 官方历史行情产品列有订阅与额外历史数据费用。另核对 EODHD 官方个人方案：可用于个人量化研究、回测、纸面交易和本机保存；US 日线标注 30+ 年、亚洲多数市场 15–20 年，免费层仅 1 年且 20 次/日。数据为供应商聚合且不保证准确性；未注册、调用 API 或付费。#49/#50 仍等待满足用户数据跨度、质量和授权边界的实施方案。
 
 - **P13-02 / #81 已完成并关闭 / 2026-11-19**：产品使用指南 [DOC-0040](../../docs/USER_GUIDE.md)、文档入口、目录、追踪矩阵和 [验收记录](../evidence/P13-02-documentation.md) 已提交至 main：[`2c910a9`](https://github.com/OYLPY/stock-monitor/commit/2c910a93e846cde6685c17007f9fa937346c162d)；Quality CI [44445047507](https://github.com/OYLPY/stock-monitor/actions/runs/44445047507) success，format/lint/typecheck/unit/build/E2E 均通过，#81 评论 [6997939084](https://github.com/OYLPY/stock-monitor/issues/81#issuecomment-6997939084) 已记录。用户确认 Asia/Tokyo 晨报 07:00、日审计 16:00、周审计周一 07:30；代码计划与手册一致。没有运行 Worker、Codex CLI、行情采集、回测或纸面成交。六字段交接：[P13-02](../handoffs/P13-02.md)。该历史记录当时没有可安全启动的下游 Issue：美股 Provider #49 与日股 Provider #50 均按历史覆盖/持久化许可/凭据条件标为 `BLOCKED_EXTERNAL` 并保持 Open；没有注册、申请 API key 或调用行情服务。#52 依赖 #49/#50，#71 又依赖 #52，随后 #75/#78/#79 与 P13-01/03/04 均被依赖链阻塞。当时记录的行情工作需先取得某一明确数据源的许可与使用授权，或调整历史覆盖验收后再启动 Provider 工作。
 - **P08-04 / #56 已完成并关闭**：实现提交 [7a769c0](https://github.com/OYLPY/stock-monitor/commit/7a769c0c3dee1f9256e5249f6df3b3be0f7d8c0d)、交接/索引提交 [2af09b9](https://github.com/OYLPY/stock-monitor/commit/2af09b9800587dfc3c57e8675a8263d8477d8022) 均已推送；Quality CI [44350769588](https://github.com/OYLPY/stock-monitor/actions/runs/44350769588) 与 [44352544646](https://github.com/OYLPY/stock-monitor/actions/runs/44352544646) success，#56 已关闭。版本化 SQLite 归档、幂等重试、只读报告页和缺数据时 NOT_VERIFIED/零候选均已实现；本地 43 files / 268 tests、E2E 5/5。未运行报告 Worker、Codex、行情采集或纸面成交。交接：[P08-04](../handoffs/P08-04.md)。

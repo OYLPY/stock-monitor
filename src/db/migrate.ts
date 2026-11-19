@@ -27,6 +27,13 @@ const legacyMigrationChecksums = new Map([
       "c1dfd1e72f415b332ff6e3b8599787f47f70ed6c1ed51e35a2958b35495b62a5",
     ]),
   ],
+  [
+    14,
+    new Set([
+      // This local database applied P11-03 before its immutability triggers were added; migration 15 repairs them.
+      "4e21a73e680618ad384305dfda6065ee28c155e72a06ce2cfe4f89ebdadf715b",
+    ]),
+  ],
 ]);
 
 export async function migrateDatabase(

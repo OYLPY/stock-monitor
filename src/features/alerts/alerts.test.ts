@@ -14,6 +14,7 @@ import { enqueueScheduledTask } from "../task-queue/queue.ts";
 import {
   listNotificationDecisions,
   listNotifications,
+  listNotificationsAfter,
   processMarketWatchAlerts,
   readMarketWatchSourceWatermarks,
 } from "./alerts.ts";
@@ -235,6 +236,26 @@ describe("market watch alerts", () => {
         ],
       });
       expect(listNotifications(fixture.database)).toHaveLength(1);
+      const notification = listNotifications(fixture.database)[0]!;
+      expect(
+        listNotificationsAfter(fixture.database, {
+          createdAtMs: notification.created_at_ms - 1,
+          id: "",
+        }),
+      ).toMatchObject([
+        {
+          id: notification.id,
+          created_at_ms: nowMs,
+          market_code: "US",
+          summary: "Federal Reserve policy decision",
+        },
+      ]);
+      expect(
+        listNotificationsAfter(fixture.database, {
+          createdAtMs: notification.created_at_ms,
+          id: notification.id,
+        }),
+      ).toEqual([]);
       expect(listNotifications(fixture.database)[0]).toMatchObject({
         confidence_level: "HIGH",
         supporting_source_count: 2,

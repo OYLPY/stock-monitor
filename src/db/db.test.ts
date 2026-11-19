@@ -58,7 +58,7 @@ describe("local SQLite database", () => {
       const { client, orm } = fixture.database;
       expect(client.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(client.pragma("foreign_keys", { simple: true })).toBe(BigInt(1));
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(14));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(15));
       expect(
         (
           client
@@ -83,13 +83,13 @@ describe("local SQLite database", () => {
           .prepare("SELECT COUNT(*) AS count FROM schema_migrations")
           .pluck()
           .get(),
-      ).toBe(BigInt(14));
+      ).toBe(BigInt(15));
 
       client.close();
       const restarted = await openDatabase(fixture.filePath);
       try {
         expect(restarted.client.pragma("user_version", { simple: true })).toBe(
-          BigInt(14),
+          BigInt(15),
         );
         expect(
           restarted.orm.select().from(initialCapitalConfigs).all(),
@@ -99,7 +99,7 @@ describe("local SQLite database", () => {
             .prepare("SELECT COUNT(*) FROM schema_migrations")
             .pluck()
             .get(),
-        ).toBe(BigInt(14));
+        ).toBe(BigInt(15));
       } finally {
         restarted.client.close();
       }
@@ -200,7 +200,7 @@ describe("local SQLite database", () => {
       ).toBe("account-opening-v1");
       expect(
         client.prepare("SELECT COUNT(*) FROM schema_migrations").pluck().get(),
-      ).toBe(BigInt(14));
+      ).toBe(BigInt(15));
       expect(
         client
           .prepare(
@@ -250,7 +250,7 @@ describe("local SQLite database", () => {
         join(process.cwd(), "src", "db", "migrations"),
       );
 
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(14));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(15));
       expect(
         client
           .prepare(
@@ -355,7 +355,7 @@ describe("local SQLite database", () => {
 
       await migrateDatabase(client);
 
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(14));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(15));
       expect(
         client
           .prepare("SELECT strict FROM pragma_table_list WHERE name = ?")
@@ -374,6 +374,66 @@ describe("local SQLite database", () => {
         close_mantissa: BigInt(105),
       });
       expect(client.pragma("foreign_key_check")).toEqual([]);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("repairs the observed P11-03 checksum without dropping local alert data", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      const { client } = fixture.database;
+      const legacyChecksum =
+        "4e21a73e680618ad384305dfda6065ee28c155e72a06ce2cfe4f89ebdadf715b";
+      const triggerNames = [
+        "notification_decisions_no_update",
+        "notification_decisions_no_delete",
+        "notifications_no_update",
+        "notifications_no_delete",
+      ];
+      client
+        .prepare(
+          "INSERT INTO market_watch_source_watermarks (source_key, last_success_at_ms) VALUES (?, ?)",
+        )
+        .run("boj.rss", BigInt(123));
+      for (const triggerName of triggerNames) {
+        client.exec(`DROP TRIGGER ${triggerName}`);
+      }
+      client
+        .prepare(
+          "UPDATE schema_migrations SET checksum_sha256 = ? WHERE version = 14",
+        )
+        .run(legacyChecksum);
+      client.prepare("DELETE FROM schema_migrations WHERE version = 15").run();
+      client.pragma("user_version = 14");
+
+      await migrateDatabase(client);
+
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(15));
+      expect(
+        client
+          .prepare(
+            "SELECT checksum_sha256 FROM schema_migrations WHERE version = 14",
+          )
+          .pluck()
+          .get(),
+      ).toBe(legacyChecksum);
+      expect(
+        client
+          .prepare(
+            "SELECT last_success_at_ms FROM market_watch_source_watermarks WHERE source_key = ?",
+          )
+          .pluck()
+          .get("boj.rss"),
+      ).toBe(BigInt(123));
+      expect(
+        client
+          .prepare(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name IN (?, ?, ?, ?)",
+          )
+          .pluck()
+          .get(...triggerNames),
+      ).toBe(BigInt(4));
     } finally {
       await fixture.cleanup();
     }
