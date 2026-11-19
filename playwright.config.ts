@@ -9,6 +9,7 @@ const testDataDirectory = mkdtempSync(
 const secretSentinel = "P06_06_PLAYWRIGHT_SECRET_SENTINEL";
 
 process.env.STOCK_MONITOR_E2E_DATA_DIR = testDataDirectory;
+process.env.STOCK_MONITOR_DATA_DIR = testDataDirectory;
 process.env.PLAYWRIGHT_SECRET_SENTINEL = secretSentinel;
 
 export default defineConfig({
@@ -21,9 +22,12 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:3003",
     browserName: "chromium",
     headless: true,
+    screenshot: "only-on-failure",
+    trace: "retain-on-failure",
   },
   webServer: {
-    command: "pnpm start --port 3003",
+    command:
+      "node --experimental-strip-types tests/e2e/seed-fixture.mts && pnpm start --port 3003",
     url: "http://127.0.0.1:3003/settings",
     timeout: 60_000,
     reuseExistingServer: false,

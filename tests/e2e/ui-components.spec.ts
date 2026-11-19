@@ -99,6 +99,30 @@ test("backtest date picker and account tab use their shadcn interactions", async
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/backtests");
 
+  await page.getByRole("combobox", { name: "市场" }).click();
+  await page.getByRole("option", { name: "日本" }).click();
+  await page.getByLabel("证券标识").fill("7203");
+  await page.getByRole("combobox", { name: "周期" }).click();
+  await page.getByRole("option", { name: "日线" }).click();
+  await page.getByRole("textbox", { name: "开始日期" }).fill("2020-01-02");
+  await page.getByRole("textbox", { name: "结束日期" }).fill("2024-12-31");
+  await Promise.all([
+    page.waitForURL(
+      (url) =>
+        url.pathname === "/backtests" &&
+        url.searchParams.get("instrument") === "7203" &&
+        url.searchParams.get("market") === "JP" &&
+        url.searchParams.get("interval") === "86400",
+    ),
+    page.getByRole("button", { name: "应用参数草稿" }).click(),
+  ]);
+  await expect(page.getByLabel("证券标识")).toHaveValue("7203");
+  await expect(page.getByRole("textbox", { name: "开始日期" })).toHaveValue(
+    "2020-01-02",
+  );
+  await expect(page.getByRole("button", { name: "开始回测" })).toBeDisabled();
+  await expect(page.getByText("暂无可核验的回测")).toBeVisible();
+
   const startDateButton = page.getByRole("button", { name: "选择开始日期" });
   await startDateButton.click();
   await expect(page.getByRole("grid")).toBeVisible();
@@ -112,6 +136,15 @@ test("backtest date picker and account tab use their shadcn interactions", async
   await expect(
     page.getByRole("heading", { name: "纸面账户与账本" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "纸面账本未建立" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/不显示推算本金、余额、持仓、权益/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "创建模拟订单" }),
+  ).toBeDisabled();
 });
 
 test("keeps the app header sticky while page content scrolls", async ({
