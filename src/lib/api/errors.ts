@@ -47,9 +47,9 @@ function jsonResponse(body: unknown, status: number, requestId: string) {
   });
 }
 
-export function successResponse(data: unknown): Response {
+export function successResponse(data: unknown, status = 200): Response {
   const requestId = randomUUID();
-  return jsonResponse({ data, meta: { requestId } }, 200, requestId);
+  return jsonResponse({ data, meta: { requestId } }, status, requestId);
 }
 
 export function errorResponse(cause: unknown): Response {

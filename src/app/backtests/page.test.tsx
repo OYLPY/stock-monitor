@@ -7,6 +7,10 @@ vi.mock("@/features/paper-account/paper-account-center", () => ({
   loadPaperAccountLedger: loadLedger,
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 import BacktestsPage from "@/app/backtests/page";
 
 describe("BacktestsPage", () => {
@@ -51,6 +55,63 @@ describe("BacktestsPage", () => {
     expect(html).toContain('value="2020-01-01"');
     expect(html).toContain('value="2025-12-31"');
     expect(html).toContain("不会写入数据库或启动实验");
+  });
+
+  it("opens the account tab and exposes the fixed one-time initializer", async () => {
+    const html = renderToStaticMarkup(
+      await BacktestsPage({
+        searchParams: Promise.resolve({ tab: "account" }),
+      }),
+    );
+
+    expect(html).toContain("纸面账本未建立");
+    expect(html).toContain("建立纸面账户");
+    expect(html).toContain("1,000,000 日元初始现金");
+    expect(html).toMatch(/aria-selected="true"[^>]*>纸面账户<\/button>/);
+  });
+
+  it("shows fixed opening cash and its initial risk cap from the verified ledger", async () => {
+    loadLedger.mockResolvedValue({
+      state: "INITIALIZED",
+      audit: {
+        ledger: { status: "VERIFIED", issueCodes: [] },
+        trades: [],
+        equity: {
+          status: "NOT_VERIFIED",
+          issueCodes: ["EQUITY_HISTORY_NOT_ESTABLISHED"],
+          curve: [],
+          maximumDrawdown: null,
+        },
+      },
+      baseCurrency: "JPY",
+      initializedAtMs: "1794816000000",
+      entries: [
+        {
+          eventId: "event-1",
+          sequenceNo: "1",
+          eventType: "ACCOUNT_OPENED",
+          effectiveAtMs: "1794816000000",
+          recordedAtMs: "1794816000000",
+          cashEntryId: "cash-1",
+          bucket: "SETTLED",
+          currencyCode: "JPY",
+          currencyScale: 0,
+          amountMinor: "1000000",
+        },
+      ],
+    });
+
+    const html = renderToStaticMarkup(
+      await BacktestsPage({
+        searchParams: Promise.resolve({ tab: "account" }),
+      }),
+    );
+
+    expect(html).toContain("JPY 1,000,000");
+    expect(html).toContain("JPY 20,000");
+    expect(html).toContain("开户时单笔风险上限（2%）");
+    expect(html).toContain("估值引擎未接入");
+    expect(html).not.toContain("确认开户");
   });
 
   it("rejects invalid dates and reports reversed valid dates", async () => {

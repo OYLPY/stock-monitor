@@ -9,6 +9,7 @@ import {
 
 import { BacktestDatePicker } from "@/components/backtests/backtest-date-picker";
 import { EquityChart } from "@/components/backtests/equity-chart";
+import { InitializePaperAccount } from "@/components/backtests/initialize-paper-account";
 import { Badge } from "@/components/shadcn/badge";
 import { Button } from "@/components/shadcn/button";
 import { Alert, AlertDescription } from "@/components/shadcn/alert";
@@ -240,15 +241,30 @@ function LedgerRows({
 export function BacktestPaperLedger({
   draft,
   ledger,
+  defaultTab,
 }: {
   draft: BacktestDraft;
   ledger: PaperLedgerSnapshot;
+  defaultTab: "research" | "account";
 }) {
   const equityAudit = ledger.state === "INITIALIZED" ? ledger.audit : null;
   const equityVerified =
     equityAudit?.ledger.status === "VERIFIED" &&
     equityAudit.equity.status === "VERIFIED" &&
     equityAudit.equity.maximumDrawdown !== null;
+  const openingCash =
+    ledger.state === "INITIALIZED" && ledger.audit.ledger.status === "VERIFIED"
+      ? ledger.entries.find(
+          (entry) =>
+            entry.eventType === "ACCOUNT_OPENED" &&
+            entry.bucket === "SETTLED" &&
+            entry.currencyCode === ledger.baseCurrency,
+        )
+      : undefined;
+  const openingRiskBudgetMinor =
+    openingCash?.amountMinor === null || openingCash === undefined
+      ? null
+      : String(BigInt(openingCash.amountMinor) / BigInt(50));
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -260,7 +276,7 @@ export function BacktestPaperLedger({
         </p>
       </header>
 
-      <Tabs aria-label="回测与纸面账户内容" defaultValue="research">
+      <Tabs aria-label="回测与纸面账户内容" defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="research">回测研究</TabsTrigger>
           <TabsTrigger value="account">纸面账户</TabsTrigger>
@@ -508,10 +524,12 @@ export function BacktestPaperLedger({
                     </EmptyTitle>
                     <EmptyDescription>
                       <p>
-                        本机数据库中没有已初始化的账户；不显示推算本金、余额、持仓、权益、风险预算或历史收益。
+                        建立后只记录固定的 1,000,000
+                        日元初始现金，不会生成持仓或成交。没有可核验行情时，权益、回撤、回测和订单仍不可用。
                       </p>
                     </EmptyDescription>
                   </EmptyHeader>
+                  <InitializePaperAccount />
                 </Empty>
               ) : ledger.state === "UNAVAILABLE" ? (
                 <Alert>
@@ -522,6 +540,32 @@ export function BacktestPaperLedger({
               ) : (
                 <>
                   <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                    {openingCash && openingRiskBudgetMinor !== null && (
+                      <>
+                        <div>
+                          <dt className="text-muted-foreground">开户现金</dt>
+                          <dd className="mt-1">
+                            {formatCashEntry(
+                              openingCash.amountMinor,
+                              openingCash.currencyCode,
+                              openingCash.currencyScale,
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">
+                            开户时单笔风险上限（2%）
+                          </dt>
+                          <dd className="mt-1">
+                            {formatCashEntry(
+                              openingRiskBudgetMinor,
+                              openingCash.currencyCode,
+                              openingCash.currencyScale,
+                            )}
+                          </dd>
+                        </div>
+                      </>
+                    )}
                     <div>
                       <dt className="text-muted-foreground">基准币种</dt>
                       <dd className="mt-1">{ledger.baseCurrency}</dd>

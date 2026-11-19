@@ -34,6 +34,8 @@ export default async function BacktestsPage({
   const rawMarket = firstValue(params.market);
   const rawInterval = firstValue(params.interval);
   const market = rawMarket === "JP" || rawMarket === "US" ? rawMarket : "";
+  const defaultTab =
+    firstValue(params.tab) === "account" ? "account" : "research";
   const interval =
     rawInterval === "3600" || rawInterval === "86400" ? rawInterval : "";
   const from = validDate(firstValue(params.from));
@@ -51,6 +53,7 @@ export default async function BacktestsPage({
         dateRangeInvalid: Boolean(from && to && from > to),
       }}
       ledger={ledger}
+      defaultTab={defaultTab}
     />
   );
 }
