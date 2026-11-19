@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0013 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 
-> 状态：P03-01 设计基线已由 P05 接入本地 SQLite 核心账户、账本、来源与证据表，并由 P11-01 / #69 接入持久任务队列、尝试日志、Worker 锁和迁移；P05-05 / #41 已实现 CLI 在线快照、校验及新路径恢复。任务步骤检查点、市场数据供应商适配和完整产品流程仍由后续任务完成。驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
+> 状态：P03-01 设计基线已由 P05 接入本地 SQLite 核心账户、账本、来源与证据表，并由 P11-01 / #69 接入持久任务队列、尝试日志、Worker 锁和迁移；P05-05 / #41 已实现 CLI 在线快照、校验及新路径恢复。P11-03 / #71 增加来源水位、提醒决策与本机提醒持久化；现有 Fed/BOJ RSS 来源许可未核验，标题事件仍为 `PARTIAL`，所以生产通知保持关闭。驱动精度依据见 [DOC-0035](../research/p04-02-sqlite-drizzle-findings.md)。
 >
 > P08-04 / #56 当前将每个报告作为 `task_run_id` 对应的一行 `research_reports.report_json` 归档，并记录 `content_schema_version`。角色审计、来源覆盖和证据 ID 保留在经过结构校验的 JSON 中；ER 图中的 `research_items` 和 `report_source_coverage` 是尚未物化的规范化目标表。
 >
@@ -84,10 +84,12 @@ erDiagram
     MARKET_QUOTES ||--o{ EQUITY_VALUATION_EVIDENCE : supports
     FX_OBSERVATIONS ||--o{ EQUITY_VALUATION_EVIDENCE : supports
     TASK_RUNS ||--o{ NOTIFICATION_DECISIONS : evaluates
+    MARKET_EVENTS ||--o{ NOTIFICATION_DECISIONS : evaluated
     MARKET_EVENT_REVISIONS ||--o{ NOTIFICATION_DECISIONS : considered
     NOTIFICATION_DECISIONS ||--o| NOTIFICATIONS : may_emit
     TASK_RUNS ||--o{ NOTIFICATIONS : emits
-    RESEARCH_REPORTS ||--o{ NOTIFICATIONS : emits
+    MARKET_EVENTS ||--o{ NOTIFICATIONS : alerts
+    MARKET_EVENT_REVISIONS ||--o{ NOTIFICATIONS : alerts
 ```
 
 `PAPER_PLAN_VERSIONS` 属于下述稳定计划版本记录；ER 图省略仅为避免拥挤。所有来源引用均保留 `source_record_id` 或对应的市场证据 ID。
@@ -153,18 +155,18 @@ P10-05 的审计摘要是只读派生结果，不新增存储表：重放账本�
 
 ### 调度和通知
 
-| 表                       | 关键字段与约束                                                                                                                                                                                                                                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `task_runs`              | P11-01 实现稳定任务 ID、唯一幂等键、规范化输入 JSON/hash、run type、IANA 时区/当地计划时刻/UTC 到期点、timeout、执行状态、总尝试数、租约 owner/expiry/fencing generation、取消请求、结果码和错误。相同幂等键与相同输入重放原任务；过期租约最多恢复到 3 次总认领。市场窗口与日历/规则版本在具体市场任务接入时追加。 |
-| `task_run_attempts`      | P11-01 按 `(task_run_id, attempt_no)` 保存 worker、每次认领起止时间、状态和错误码；进程崩溃后未结束的尝试记为 `ABANDONED`，不覆写过去的事件记录。                                                                                                                                                                  |
-| `task_run_events`        | P11-01 追加任务入队、认领、恢复、取消、超时、结束及 Worker 锁事件；详情仅保留小型结构化运行元数据，不保存凭据、提示词或模型隐藏推理。                                                                                                                                                                              |
-| `worker_state`           | 单行 SQLite 租约，保存本机 Worker owner、PID、心跳和过期时刻；租约有效时拒绝第二个 Worker，进程异常结束后允许到期恢复。                                                                                                                                                                                            |
-| `task_run_steps`         | 后续工作流实现：`task_run_id`、稳定 step key/顺序、attempt、状态、输入 hash、输出 schema version/hash、经验证结构化输出或领域产物引用、错误码和时间；`UNIQUE(task_run_id, step_key, attempt_no)`。成功检查点不可覆写；不存隐藏推理、秘密或完整模型对话。                                                           |
-| `source_scan_watermarks` | 来源、市场、事件类别、scope/config hash、游标或最后成功可见时刻及 task 引用。仅记录完整成功来源；使用追加历史行并按自然键取最新值。事件证据和 step checkpoint 与水位在同一短事务提交。                                                                                                                             |
-| `notification_decisions` | task、事件 revision、决策码、稳定排序位置、规则版本和原因；追加记录 `NOTIFIED`、`DEFERRED_LIMIT`、`EXPIRED_UNNOTIFIED` 或 `NOT_SIGNIFICANT`。仍新鲜的 deferred 和无决策候选可在后续扫描重新评估。                                                                                                                  |
-| `notifications`          | 唯一事件 revision dedupe key、选中 decision、生成时刻和本机阅读状态。只保存已选中的本机 UI 通知，不提前建云推送用户/设备模型。                                                                                                                                                                                     |
+| 表                               | 关键字段与约束                                                                                                                                                                                                                                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `task_runs`                      | P11-01 实现稳定任务 ID、唯一幂等键、规范化输入 JSON/hash、run type、IANA 时区/当地计划时刻/UTC 到期点、timeout、执行状态、总尝试数、租约 owner/expiry/fencing generation、取消请求、结果码和错误。相同幂等键与相同输入重放原任务；过期租约最多恢复到 3 次总认领。市场窗口与日历/规则版本在具体市场任务接入时追加。 |
+| `task_run_attempts`              | P11-01 按 `(task_run_id, attempt_no)` 保存 worker、每次认领起止时间、状态和错误码；进程崩溃后未结束的尝试记为 `ABANDONED`，不覆写过去的事件记录。                                                                                                                                                                  |
+| `task_run_events`                | P11-01 追加任务入队、认领、恢复、取消、超时、结束及 Worker 锁事件；详情仅保留小型结构化运行元数据，不保存凭据、提示词或模型隐藏推理。                                                                                                                                                                              |
+| `worker_state`                   | 单行 SQLite 租约，保存本机 Worker owner、PID、心跳和过期时刻；租约有效时拒绝第二个 Worker，进程异常结束后允许到期恢复。                                                                                                                                                                                            |
+| `task_run_steps`                 | 后续工作流实现：`task_run_id`、稳定 step key/顺序、attempt、状态、输入 hash、输出 schema version/hash、经验证结构化输出或领域产物引用、错误码和时间；`UNIQUE(task_run_id, step_key, attempt_no)`。成功检查点不可覆写；不存隐藏推理、秘密或完整模型对话。                                                           |
+| `market_watch_source_watermarks` | P11-03 当前实现：按固定来源 key 保存最近一次成功扫描时刻；现有来源分别固定对应 Fed/BOJ RSS，因此市场与类别隐含在来源 key 中。来源请求失败时不推进；当前尚未保存配置版本、游标或历史水位。                                                                                                                          |
+| `notification_decisions`         | P11-03 按 task 与事件 revision 追加保存筛选结果、原因、规则版本、来源置信级、排序位置和排序依据；每个 task/revision 唯一。当前结果为 `BASELINED`、`SUPPRESSED`、`ALREADY_NOTIFIED`、`SELECTED` 或 `DEFERRED_LIMIT`。缺来源 SLA 时不会把超额项当作后续仍新鲜的候选。                                                |
+| `notifications`                  | 唯一事件 revision 去重键、被选中的 decision、任务及生成时刻；提醒与决策均有 no-update/no-delete 触发器。当前只保存本机 UI 提醒，无已读状态、云推送用户或设备模型。                                                                                                                                                 |
 
-任务/报告状态用 `CHECK` 限制到需求枚举。无网络或无可选凭据不阻止本地记录读取；来源尝试在任务/来源覆盖中记为 `BLOCKED_EXTERNAL`、`UNAVAILABLE` 或具体错误。只有显式 resume 命令能在外部前置条件恢复后重开 `BLOCKED_EXTERNAL` 任务；失败预算耗尽后的 `FAILED` 不原地重试。最终通知、通知决策、任务最后检查点与 `DONE` 状态同事务提交。来源水位可能先提交，但未决的重大事件 revision 必须能独立于水位查询，避免崩溃后漏通知。若有合法历史数据，可以产出带 `HISTORICAL` 的回测；没有数据则 `NOT_VERIFIED`。Fixture 结果保留隔离标记，且无到正式 `paper_fills` / ledger 的写入路径。
+任务/报告状态用 `CHECK` 限制到需求枚举。无网络或无可选凭据不阻止本地记录读取；来源尝试在任务/来源覆盖中记为 `BLOCKED_EXTERNAL`、`UNAVAILABLE` 或具体错误。只有显式 resume 命令能在外部前置条件恢复后重开 `BLOCKED_EXTERNAL` 任务；失败预算耗尽后的 `FAILED` 不原地重试。当前 P11-03 在同一短事务提交提醒决策、选中提醒和可用来源水位；事件收集/正规化先行持久化，Worker 任务终态在处理器返回后另行记录，重试通过任务/revision 唯一约束和通知去重恢复。若有合法历史数据，可以产出带 `HISTORICAL` 的回测；没有数据则 `NOT_VERIFIED`。Fixture 结果保留隔离标记，且无到正式 `paper_fills` / ledger 的写入路径。
 
 ## 不变量与最小 SQL 草案
 

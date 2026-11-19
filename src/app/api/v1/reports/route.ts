@@ -5,6 +5,7 @@ import {
   enqueueScheduledTask,
   readTaskRunByIdempotencyKey,
 } from "@/features/task-queue/queue";
+import { localDateTimeAt } from "@/features/task-queue/time";
 import { ApiError } from "@/lib/api/errors";
 import { assertLocalRequest } from "@/lib/security/local-request";
 import { reportTypeSchema } from "@/features/reports/contract";
@@ -55,25 +56,6 @@ async function readFormBody(request: Request) {
   return new URLSearchParams(new TextDecoder().decode(body));
 }
 
-function scheduledLocalAt(nowMs: number) {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA-u-ca-iso8601-nu-latn", {
-      timeZone: "Asia/Tokyo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(nowMs)
-      .filter(({ type }) => type !== "literal")
-      .map(({ type, value }) => [type, value]),
-  );
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;
-}
-
 export async function POST(request: Request) {
   try {
     assertLocalRequest(request);
@@ -116,7 +98,7 @@ export async function POST(request: Request) {
             runType: "RESEARCH_REPORT",
             input: { type: input.data.type },
             timeZone: "Asia/Tokyo",
-            scheduledLocalAt: scheduledLocalAt(nowMs),
+            scheduledLocalAt: localDateTimeAt(nowMs, "Asia/Tokyo"),
             timeoutMs: 900_000,
             createdAtMs: nowMs,
           }).task.id;

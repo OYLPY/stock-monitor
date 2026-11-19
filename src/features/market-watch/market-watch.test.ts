@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { marketWatchSourceWatermarks } from "@/db/schema";
 import { createTestDatabase } from "@/db/test-database";
-import { marketWatchDecisionAt } from "./market-watch";
-import { enqueueScheduledTask, readTaskRun } from "../task-queue/queue.ts";
-import { runWorker } from "../task-queue/worker.ts";
+import { enqueueScheduledTask } from "@/features/task-queue/queue";
+import { marketWatchDecisionAt, runMarketWatchTask } from "./market-watch";
 
 function instant(value: string) {
   return Date.parse(value);
@@ -97,45 +97,140 @@ describe("market watch session gate", () => {
     });
   });
 
-  it("runs through the registered Worker handler and persists calendar evidence", async () => {
+  it("collects official feeds only during an open session and preserves the quote blocker", async () => {
     const fixture = await createTestDatabase();
+    const scanAtMs = instant("2026-11-02T14:30:00Z");
+    const fetcher = vi.fn<typeof fetch>(async () => {
+      throw new Error("offline_test_source");
+    });
     try {
-      const { task } = enqueueScheduledTask(fixture.database, {
-        idempotencyKey: randomUUID(),
-        runType: "MARKET_WATCH",
-        input: {},
-        timeZone: "Asia/Tokyo",
-        scheduledLocalAt: "2000-01-01T00:00",
-        timeoutMs: 5_000,
-      });
+      const result = await runMarketWatchTask(
+        fixture.database,
+        { taskRunId: randomUUID(), signal: new AbortController().signal },
+        fetcher,
+        scanAtMs,
+      );
 
-      await runWorker(fixture.database, {
-        maxTasks: 1,
-        heartbeatIntervalMs: 10,
-        lockDurationMs: 1_000,
-      });
-
-      expect(readTaskRun(fixture.database, task.id)).toMatchObject({
-        executionStatus: expect.stringMatching(/^(SKIPPED|BLOCKED_EXTERNAL)$/),
-        resultCode: expect.stringMatching(
-          /^(SKIPPED_CLOSED|SOURCE_UNAVAILABLE|CALENDAR_UNAVAILABLE)$/,
-        ),
-      });
-      const event = fixture.database.client
-        .prepare(
-          `SELECT details_json FROM task_run_events
-           WHERE task_run_id = ? AND event_type IN ('TASK_SKIPPED', 'TASK_BLOCKED_EXTERNAL')`,
-        )
-        .get(task.id) as { details_json: string } | undefined;
-
-      expect(JSON.parse(event!.details_json)).toMatchObject({
-        handler: {
+      expect(result).toMatchObject({
+        executionStatus: "BLOCKED_EXTERNAL",
+        resultCode: "SOURCE_UNAVAILABLE",
+        details: {
+          openExchanges: ["NYSE", "NASDAQ"],
           signalEvaluation: "NOT_RUN",
-          calendars: expect.arrayContaining([
-            expect.objectContaining({ calendarVersion: expect.any(String) }),
-          ]),
+          marketDataFreshness: "NOT_VERIFIED",
+          rssSources: {
+            federalReserve: { status: "NOT_VERIFIED" },
+            bankOfJapan: { status: "NOT_VERIFIED" },
+          },
+          alerts: {
+            notificationCount: 0,
+            allConfiguredFeedsAvailable: false,
+          },
         },
       });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(
+        fixture.database.orm.select().from(marketWatchSourceWatermarks).all(),
+      ).toHaveLength(0);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("stores fetched headlines as partial evidence without creating live alerts", async () => {
+    const fixture = await createTestDatabase();
+    const scanAtMs = instant("2026-11-02T14:30:00Z");
+    const dateNow = vi.spyOn(Date, "now").mockReturnValue(scanAtMs);
+    fixture.database.orm
+      .insert(marketWatchSourceWatermarks)
+      .values([
+        {
+          sourceKey: "federalreserve.rss",
+          lastSuccessAtMs: BigInt(scanAtMs - 60_000),
+        },
+        {
+          sourceKey: "boj.rss",
+          lastSuccessAtMs: BigInt(scanAtMs - 60_000),
+        },
+      ])
+      .run();
+    const taskRunId = enqueueScheduledTask(fixture.database, {
+      idempotencyKey: randomUUID(),
+      runType: "MARKET_WATCH",
+      input: {},
+      timeZone: "America/New_York",
+      scheduledLocalAt: "2026-11-02T09:30:00",
+      timeoutMs: 60_000,
+    }).task.id;
+    const fetcher = vi.fn<typeof fetch>(async (input) => {
+      const isFed = String(input).includes("federalreserve.gov");
+      const hostname = isFed ? "www.federalreserve.gov" : "www.boj.or.jp";
+      const path = isFed
+        ? "/newsevents/pressreleases/policy.htm"
+        : "/en/whatsnew/2026/notice.htm";
+      const title = isFed ? "Policy announcement" : "Policy notice";
+      const publishedAt = "Mon, 02 Nov 2026 14:29:30 GMT";
+      return new Response(
+        `<rss><channel><item><title>${title}</title><link>https://${hostname}${path}</link><guid>${isFed ? "fed" : "boj"}-notice-1</guid><pubDate>${publishedAt}</pubDate></item></channel></rss>`,
+        { status: 200, headers: { "Content-Type": "application/rss+xml" } },
+      );
+    });
+
+    try {
+      const result = await runMarketWatchTask(
+        fixture.database,
+        { taskRunId, signal: new AbortController().signal },
+        fetcher,
+        scanAtMs,
+      );
+
+      expect(result).toMatchObject({
+        executionStatus: "BLOCKED_EXTERNAL",
+        resultCode: "SOURCE_UNAVAILABLE",
+        details: {
+          eventNormalization: { created: 2, rejected: 0 },
+          alerts: {
+            notificationCount: 0,
+            allConfiguredFeedsAvailable: true,
+            decisions: expect.arrayContaining([
+              expect.objectContaining({ reasonCode: "EVENT_NOT_VERIFIED" }),
+            ]),
+          },
+          rssSources: {
+            federalReserve: { status: "AVAILABLE", records: 1 },
+            bankOfJapan: { status: "AVAILABLE", records: 1 },
+          },
+        },
+      });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(
+        fixture.database.client
+          .prepare("SELECT COUNT(*) FROM notifications")
+          .pluck()
+          .get(),
+      ).toBe(BigInt(0));
+    } finally {
+      dateNow.mockRestore();
+      await fixture.cleanup();
+    }
+  });
+
+  it("does not request official feeds while every target exchange is closed", async () => {
+    const fixture = await createTestDatabase();
+    const fetcher = vi.fn<typeof fetch>();
+    try {
+      const result = await runMarketWatchTask(
+        fixture.database,
+        { taskRunId: randomUUID(), signal: new AbortController().signal },
+        fetcher,
+        instant("2026-11-14T01:00:00Z"),
+      );
+
+      expect(result).toMatchObject({
+        executionStatus: "SKIPPED",
+        resultCode: "SKIPPED_CLOSED",
+      });
+      expect(fetcher).not.toHaveBeenCalled();
     } finally {
       await fixture.cleanup();
     }

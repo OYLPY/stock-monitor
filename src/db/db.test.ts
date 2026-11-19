@@ -58,7 +58,7 @@ describe("local SQLite database", () => {
       const { client, orm } = fixture.database;
       expect(client.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(client.pragma("foreign_keys", { simple: true })).toBe(BigInt(1));
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(13));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(14));
       expect(
         (
           client
@@ -83,13 +83,13 @@ describe("local SQLite database", () => {
           .prepare("SELECT COUNT(*) AS count FROM schema_migrations")
           .pluck()
           .get(),
-      ).toBe(BigInt(13));
+      ).toBe(BigInt(14));
 
       client.close();
       const restarted = await openDatabase(fixture.filePath);
       try {
         expect(restarted.client.pragma("user_version", { simple: true })).toBe(
-          BigInt(13),
+          BigInt(14),
         );
         expect(
           restarted.orm.select().from(initialCapitalConfigs).all(),
@@ -99,7 +99,7 @@ describe("local SQLite database", () => {
             .prepare("SELECT COUNT(*) FROM schema_migrations")
             .pluck()
             .get(),
-        ).toBe(BigInt(13));
+        ).toBe(BigInt(14));
       } finally {
         restarted.client.close();
       }
@@ -200,7 +200,7 @@ describe("local SQLite database", () => {
       ).toBe("account-opening-v1");
       expect(
         client.prepare("SELECT COUNT(*) FROM schema_migrations").pluck().get(),
-      ).toBe(BigInt(13));
+      ).toBe(BigInt(14));
       expect(
         client
           .prepare(
@@ -234,7 +234,7 @@ describe("local SQLite database", () => {
         )
         .run(legacyChecksum);
       client.exec(
-        "DROP TABLE research_reports; DROP TABLE market_price_bars; DROP TABLE paper_fills; DROP TABLE paper_order_events; DROP TABLE paper_orders; DROP TABLE equity_valuation_market_evidence; DROP TABLE plan_approvals; DROP TABLE plan_input_evidence; DROP TABLE risk_decisions; DROP TABLE paper_plan_versions; DROP TABLE paper_plans",
+        "DROP TABLE notifications; DROP TABLE notification_decisions; DROP TABLE market_watch_source_watermarks; DROP TABLE research_reports; DROP TABLE market_price_bars; DROP TABLE paper_fills; DROP TABLE paper_order_events; DROP TABLE paper_orders; DROP TABLE equity_valuation_market_evidence; DROP TABLE plan_approvals; DROP TABLE plan_input_evidence; DROP TABLE risk_decisions; DROP TABLE paper_plan_versions; DROP TABLE paper_plans",
       );
       client.prepare("DELETE FROM schema_migrations WHERE version >= 5").run();
       client.pragma("user_version = 4");
@@ -250,7 +250,7 @@ describe("local SQLite database", () => {
         join(process.cwd(), "src", "db", "migrations"),
       );
 
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(13));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(14));
       expect(
         client
           .prepare(
@@ -347,12 +347,15 @@ describe("local SQLite database", () => {
           "c1dfd1e72f415b332ff6e3b8599787f47f70ed6c1ed51e35a2958b35495b62a5",
         );
       client.exec("DROP TABLE research_reports");
+      client.exec(
+        "DROP TABLE notifications; DROP TABLE notification_decisions; DROP TABLE market_watch_source_watermarks",
+      );
       client.prepare("DELETE FROM schema_migrations WHERE version >= 11").run();
       client.pragma("user_version = 10");
 
       await migrateDatabase(client);
 
-      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(13));
+      expect(client.pragma("user_version", { simple: true })).toBe(BigInt(14));
       expect(
         client
           .prepare("SELECT strict FROM pragma_table_list WHERE name = ?")

@@ -14,7 +14,7 @@ import {
   readWorkerStatus,
   renewTaskLease,
 } from "./queue.ts";
-import { resolveScheduledAt } from "./time.ts";
+import { localDateTimeAt, resolveScheduledAt } from "./time.ts";
 import { runWorker } from "./worker.ts";
 
 const pastSchedule = {
@@ -37,6 +37,14 @@ function enqueue(
 }
 
 describe("task queue", () => {
+  it("formats an instant in the requested market timezone", () => {
+    const instant = Date.parse("2026-11-02T14:30:00Z");
+    expect(localDateTimeAt(instant, "America/New_York")).toBe(
+      "2026-11-02T09:30:00",
+    );
+    expect(localDateTimeAt(instant, "Asia/Tokyo")).toBe("2026-11-02T23:30:00");
+  });
+
   it("resolves unambiguous IANA local times and rejects DST gaps and folds", () => {
     expect(
       new Date(

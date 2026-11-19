@@ -2,7 +2,7 @@
 
 > Doc ID: DOC-0032 · 目录：[DOCUMENT_INDEX](../pmo/DOCUMENT_INDEX.md)
 >
-> 状态：P03-05 设计基线；P07-01 本地交易日历解析器、P11-01 持久任务队列、P11-02 市场时段门禁及 P11-04 周期报告任务已实现。市场行情连接器、研究信号和事件通知仍未接入；本文细化 [FR-Research-001–009](../requirements/FR_RESEARCH.md)，不声明实时行情或新闻已接入。
+> 状态：P03-05 设计基线；P07-01 本地交易日历解析器、P11-01 持久任务队列、P11-02 市场时段门禁、P11-03 本机事件提醒链路及 P11-04 周期报告任务已实现。行情/成交量 Provider 未接入；Fed/BOJ RSS 许可与新闻影响未核验，因此不声明实时信号或生产提醒可用。
 >
 > 相关设计：[DB Schema](DB_SCHEMA.md)、[API/DTO 契约](API_CONTRACTS.md)、[数据溯源](DATA_PROVENANCE.md)、[失败与恢复](FAILURE_MODES.md)、[工作流状态](WORKFLOW_STATE.md)。
 
@@ -21,13 +21,21 @@
 - 队列保存 `scheduled_local_at`、IANA `time_zone` 和解析后的 UTC `scheduled_at_ms`。DST 不存在或重复的当地时间拒绝入队，不按运行机器时区猜测；P11-01 提供一次性计划时刻，周期报告计划由 P11-04 接入。
 - SQLite `worker_state` 使用带期限的本机单实例锁；`task_runs` 以短事务认领，到期租约恢复时使用 fencing generation。任务尝试和事件日志持久化到 `task_run_attempts` / `task_run_events`。
 - 待运行任务取消时立即成为 `SKIPPED/CANCELLED`；运行中取消会中止 Worker Thread，再记录同一状态。超时会终止 Thread 并记录 `FAILED/TASK_TIMEOUT`。允许最多 3 次认领尝试；工作进程异常退出时仅在租约到期后重试。
-- `MARKET_WATCH` 执行交易时段与日历门禁；`RESEARCH_REPORT` 负责生成并归档已有证据报告。市场行情和事件通知处理器尚未接入。未知 `runType` 以 `FAILED/HANDLER_NOT_REGISTERED` 结束，绝不把空工作报告为成功。休眠、关机期间不承诺继续运行。
+- `MARKET_WATCH` 执行交易时段门禁、抓取 Fed/BOJ 官方 RSS、正规化标题、记录本机提醒筛选决策；`RESEARCH_REPORT` 负责生成并归档已有证据报告。`/tasks` 可手动入队市场扫描；当前没有自动盘中扫描节拍。未知 `runType` 以 `FAILED/HANDLER_NOT_REGISTERED` 结束，绝不把空工作报告为成功。休眠、关机期间不承诺继续运行。
 
 ### P11-02 市场时段门禁
 
 - Worker 在实际开始执行时读取当前 UTC instant，并分别检查 NYSE、Nasdaq、TSE；不使用计划入队时间推断当前是否开市。任一目标交易所的日历不可用时，任务以 `BLOCKED_EXTERNAL/CALENDAR_UNAVAILABLE` 失败关闭；所有目标市场关闭时返回 `SKIPPED/SKIPPED_CLOSED`，不请求行情；任一市场开放时只允许进入开放交易所范围。
-- 当前未注册真实市场行情 Provider，开放时段任务返回 `BLOCKED_EXTERNAL/SOURCE_UNAVAILABLE`。明细在 `task_run_events` 完成事件中保存各交易所日期、时区、开闭状态、日历版本、核查时间与有效会话边界；行情新鲜度为 `UNKNOWN`，信号评估为 `NOT_RUN`。不会将未知、陈旧或 Fixture 行情变成信号，也不会报告 `NO_NEW_EVENTS`。
+- 当前未注册真实市场行情 Provider，开放时段任务仍返回 `BLOCKED_EXTERNAL/SOURCE_UNAVAILABLE`。明细在 `task_run_events` 完成事件中保存各交易所日期、时区、开闭状态、日历版本、核查时间与有效会话边界；行情新鲜度为 `NOT_VERIFIED`，信号评估为 `NOT_RUN`。不会将未知、陈旧或 Fixture 行情变成信号，也不会报告 `NO_NEW_EVENTS`。
 - P07-02/P07-03 提供者和对应数据类别的 SLA 通过核验前，实时信号保持禁用。接入后须使用来源/数据类别的已验证 SLA 判断时效；`STALE`、`UNKNOWN` 或不能满足实时门槛的 `DELAYED` 不得触发信号。
+
+### P11-03 本机事件提醒
+
+- `/tasks` 上的“运行市场扫描”按钮按本机 loopback POST 创建 `MARKET_WATCH` 任务；同一 request ID 重放原任务。Worker 仍按实际运行时刻执行交易日历门禁，休市时保存 `SKIPPED_CLOSED`，不会抓取来源或写入“无新事件”。本机队列表刷新后继续读取 SQLite 中的任务记录。
+- 开市时只请求已配置的 Fed/BOJ 官方 RSS。行情、成交量及公司公告 Provider 尚未接入；当前两个 RSS 来源许可均为 `UNKNOWN`，标题正规化结果为 `PARTIAL`，因此会记录来源状态和筛选原因，不会触发生产提醒。`AVAILABLE` 只表示本轮 RSS 请求与结构解析成功，不代表新闻许可、市场覆盖或时效 SLA 已核验。
+- 首次成功扫描仅建立来源基线。后续事件须有扫描前水位之后的发布时间、已核验权威来源/许可、`REAL` 数据、`VERIFIED` 事件和带 `P11-03:<RULE_ID>:` 前缀的重大性理由；冲突、迟到、未核验与重复修订均被抑制。相同事件/revision 只写一条本机提醒；不会按标题相似或指纹单独合并不同事件。
+- 当前 watermarks 按固定 source key 保存最近成功扫描时刻；Fed/BOJ 各自固定对应一个市场类别，但尚无可变 scope/config 版本、来源游标或已核验 SLA。筛选、最多三条的稳定排序、原因、规则版本、任务 ID 与来源证据（来源 URL、许可、角色、发布时间和收录时间）以及选中提醒均在本机 SQLite 保存，并在 `/tasks` 表格呈现。单轮超额项写为 `DEFERRED_LIMIT`；因为 freshness SLA 未验证，不会在后续任务冒充仍新鲜的候选。
+- 当前排序按开放市场、已核验支持来源数、来源发布时间和事件 ID；纸面计划与事件失效条件没有持久化关联，因此无法应用设计优先级中的直接纸面风险触发排序。市场行情缺失时任务不返回 `NO_NEW_EVENTS`。
 
 ### P11-04 周期报告任务
 
@@ -37,7 +45,7 @@
 - `DAILY_AUDIT` 还调用确定性只读 `auditPaperLedger`，把账本/权益核验状态、问题代码和可核验的最大回撤写入报告摘要；不会改变模拟账本。没有账户或有效权益历史时明确保持 `NOT_VERIFIED`。
 - Worker 重启后，队列中已持久化的逾期任务按原槽位恢复；报告以实际生成时刻作为 `asOf`。延迟达到 60 秒时，归档限制与完成事件都记录原计划时间和延迟时长，并明确这不是该计划时段的盘中扫描。没有持久化的历史槽位不伪造补跑。
 - Codex/Worker Thread 失败继续使用任务队列的 `BLOCKED_EXTERNAL`、`FAILED`、`SKIPPED` 与尝试事件；报告归档状态与任务执行状态分开保留，不因归档成功而掩盖失败。
-- P07-02/P07-03（#49/#50）不是归档报告的前置依赖；来源未接入时仍须保存 `NOT_VERIFIED` 报告。盘中扫描和自动提醒仍归 P11-03（#71）。
+- P07-02/P07-03（#49/#50）不是归档报告的前置依赖；来源未接入时仍须保存 `NOT_VERIFIED` 报告。事件去重和本机提醒归 P11-03（#71）；行情/成交量异常信号仍由 #49/#50 阻断。
 
 ## 市场时间与触发窗口
 

@@ -390,6 +390,106 @@ export const researchReports = sqliteTable(
   ],
 );
 
+export const marketWatchSourceWatermarks = sqliteTable(
+  "market_watch_source_watermarks",
+  {
+    sourceKey: text("source_key").primaryKey(),
+    lastSuccessAtMs: sqliteInt64("last_success_at_ms").notNull(),
+  },
+  (table) => [
+    check(
+      "market_watch_source_watermarks_source",
+      sql`${table.sourceKey} IN ('boj.rss', 'federalreserve.rss')`,
+    ),
+    check(
+      "market_watch_source_watermarks_time",
+      sql`${table.lastSuccessAtMs} >= 0`,
+    ),
+  ],
+);
+
+export const notificationDecisions = sqliteTable(
+  "notification_decisions",
+  {
+    id: text("id").primaryKey(),
+    taskRunId: text("task_run_id")
+      .notNull()
+      .references(() => taskRuns.id, { onDelete: "restrict" }),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => marketEvents.id, { onDelete: "restrict" }),
+    revisionId: text("revision_id")
+      .notNull()
+      .references(() => marketEventRevisions.id, { onDelete: "restrict" }),
+    outcome: text("outcome").notNull(),
+    reasonCode: text("reason_code").notNull(),
+    ruleVersion: text("rule_version").notNull(),
+    importanceRuleId: text("importance_rule_id"),
+    confidenceLevel: text("confidence_level"),
+    supportingSourceCount: sqliteSmallInteger("supporting_source_count"),
+    priorityRank: sqliteSmallInteger("priority_rank"),
+    priorityDetailsJson: text("priority_details_json").notNull(),
+    decidedAtMs: sqliteInt64("decided_at_ms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("notification_decisions_task_revision").on(
+      table.taskRunId,
+      table.revisionId,
+    ),
+    index("notification_decisions_time").on(table.decidedAtMs),
+    check(
+      "notification_decisions_outcome",
+      sql`${table.outcome} IN ('BASELINED', 'SUPPRESSED', 'ALREADY_NOTIFIED', 'SELECTED', 'DEFERRED_LIMIT')`,
+    ),
+    check(
+      "notification_decisions_confidence",
+      sql`${table.confidenceLevel} IS NULL OR ${table.confidenceLevel} IN ('LOW', 'MEDIUM', 'HIGH')`,
+    ),
+    check(
+      "notification_decisions_source_count",
+      sql`${table.supportingSourceCount} IS NULL OR ${table.supportingSourceCount} >= 0`,
+    ),
+    check(
+      "notification_decisions_priority_rank",
+      sql`${table.priorityRank} IS NULL OR ${table.priorityRank} > 0`,
+    ),
+    check(
+      "notification_decisions_priority_details",
+      sql`json_valid(${table.priorityDetailsJson})`,
+    ),
+    check("notification_decisions_time", sql`${table.decidedAtMs} >= 0`),
+  ],
+);
+
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    decisionId: text("decision_id")
+      .notNull()
+      .unique()
+      .references(() => notificationDecisions.id, { onDelete: "restrict" }),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => marketEvents.id, { onDelete: "restrict" }),
+    revisionId: text("revision_id")
+      .notNull()
+      .references(() => marketEventRevisions.id, { onDelete: "restrict" }),
+    taskRunId: text("task_run_id")
+      .notNull()
+      .references(() => taskRuns.id, { onDelete: "restrict" }),
+    createdAtMs: sqliteInt64("created_at_ms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("notifications_event_revision").on(
+      table.eventId,
+      table.revisionId,
+    ),
+    index("notifications_created_at").on(table.createdAtMs),
+    check("notifications_created_at_ms", sql`${table.createdAtMs} >= 0`),
+  ],
+);
+
 export const taskRunAttempts = sqliteTable(
   "task_run_attempts",
   {

@@ -92,6 +92,13 @@
       "when": 1795018677948,
       "tag": "0012_p08_04_report_content_schema_version",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1795087707073,
+      "tag": "0013_p11_03_alerts",
+      "breakpoints": true
     }
   ]
 }
