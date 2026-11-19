@@ -405,16 +405,8 @@ export async function runCodexTask(
             (event.type === "item.started" ||
               event.type === "item.updated" ||
               event.type === "item.completed") &&
-            event.item.type === "error"
-          ) {
-            failure = failureCode(event.item.message);
-            stopController.abort();
-            break;
-          } else if (
-            (event.type === "item.started" ||
-              event.type === "item.updated" ||
-              event.type === "item.completed") &&
-            event.item.type !== "reasoning"
+            event.item.type !== "reasoning" &&
+            event.item.type !== "error"
           ) {
             failure = "TOOL_ACCESS_DENIED";
             stopController.abort();
@@ -460,7 +452,12 @@ export async function runCodexTask(
   } finally {
     if (tempDirectory) {
       try {
-        await rm(tempDirectory, { recursive: true, force: true });
+        await rm(tempDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 100,
+        });
       } catch {
         status = "FAILED";
         code = "TEMP_CLEANUP_FAILED";

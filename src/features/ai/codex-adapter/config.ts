@@ -1,5 +1,7 @@
 export const CODEX_CONFIG_OVERRIDES = [
   // The built-in provider rejects retry overrides; this named provider keeps local OpenAI auth.
+  // Pin the model verified with this account instead of inheriting an unsupported global alias.
+  'model="gpt-5.6-sol"',
   'model_provider="stock_monitor_openai"',
   'model_providers.stock_monitor_openai.name="OpenAI"',
   'model_providers.stock_monitor_openai.wire_api="responses"',
@@ -24,7 +26,8 @@ export const CODEX_CONFIG_OVERRIDES = [
   "features.hooks=false",
   "features.in_app_browser=false",
   "features.memories=false",
-  "features.multi_agent=false",
+  "agents.enabled=false",
+  "features.multi_agent_v2=false",
   "features.plugins=false",
   "features.remote_plugin=false",
   "features.plugin_sharing=false",

@@ -182,6 +182,7 @@ describe("Codex task adapter", () => {
       ).toBe(true);
       expect(sdkMocks.codexOptions?.configOverrides).toEqual(
         expect.arrayContaining([
+          'model="gpt-5.6-sol"',
           'model_provider="stock_monitor_openai"',
           'model_providers.stock_monitor_openai.name="OpenAI"',
           'model_providers.stock_monitor_openai.wire_api="responses"',
@@ -197,7 +198,8 @@ describe("Codex task adapter", () => {
           "features.computer_use=false",
           "features.hooks=false",
           "features.memories=false",
-          "features.multi_agent=false",
+          "agents.enabled=false",
+          "features.multi_agent_v2=false",
           "mcp_servers={}",
         ]),
       );
@@ -326,6 +328,37 @@ describe("Codex task adapter", () => {
       });
       expect(JSON.stringify(result)).not.toContain("secret response");
       expect(sdkMocks.turnOptions?.signal.aborted).toBe(true);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("continues after non-fatal SDK error items", async () => {
+    const fixture = await createTestDatabase();
+    sdkMocks.runStreamed.mockImplementation(async () => ({
+      events: eventStream([
+        {
+          type: "item.completed",
+          item: {
+            id: "config-notice",
+            type: "error",
+            message: "A disabled optional feature is unavailable.",
+          },
+        },
+        ...successfulEvents(),
+      ]),
+    }));
+
+    try {
+      await expect(
+        runCodexTask(fixture.database, {
+          prompt: "safe prompt",
+          sourceRecordIds: [],
+        }),
+      ).resolves.toMatchObject({
+        status: "DONE",
+        output: "candidate response",
+      });
     } finally {
       await fixture.cleanup();
     }
