@@ -144,6 +144,14 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 
 集成测试覆盖 SQLite 关闭重开后的 sourceRecord 可追溯、重复采集不新增事实记录、BOJ 空值/未完成日期过滤，以及各来源请求失败时降级为 `NOT_VERIFIED`。以上 smoke 只证明本次公开端点和响应结构可访问；没有运行本机 Worker、Codex 报告、实时市场扫描或行情回测。未接入美日股票 OHLCV，报告仍必须零策略候选并对市场结论标为 `NOT_VERIFIED`。
 
+## P08-04 后续 / #92：报告展示官方宏观观察（2026-11-19）
+
+官方许可说明已核对：[BLS 版权说明](https://www.bls.gov/opub/copyright-information.htm)将 BLS 发布的数据列为公共领域（第三方图片等内容除外），并请求注明来源；[日本银行时间序列使用说明](https://www.stat-search.boj.or.jp/info/notice_en.html)允许非商业复制/转载，要求注明出处且不得改动内容，商业用途需联系日本银行。本项目仅在本机非商业研究中引用和展示这些数值，不向外分发。
+
+报告来源策略将 BLS 与日本银行时间序列标为 `VERIFIED` 并保留许可页面链接。来源注册记录为不可变；既有记录不会被回写，报告采集引用按当前已核对的提供方策略标注许可状态。报告只从已保存的、官方主机、许可已核验、时间有效且非 Fixture 的规范化记录提取最新完整观察期：BLS CPI-U 与季调失业率，以及 BOJ FXERD04/FXERD05 每日 USD/JPY 参考值。事实和摘要保留观察期、单位/币种、sourceRecord ID；来源覆盖保留采集时间与链接。Codex 调用失败时仍可归档这些事实，报告标为 `PARTIAL`。
+
+这些来源不提供美日股票 OHLCV。USD/JPY 是日银参考值而非可成交报价；BLS 观测期不是发布日期或实时数据。没有两地合格股票行情时，策略候选仍为零，不做回测、收益评分或模拟成交。来源失败、许可未核验、日期无效或 Fixture 记录均不能被这条确定性提取逻辑升级为官方事实。
+
 ## 发现、相反证据与结论
 
 ### 已由官方材料支持的事实

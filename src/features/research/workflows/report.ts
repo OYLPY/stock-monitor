@@ -425,11 +425,130 @@ function sourceCoverage(
           ? "来源记录标记为延迟；具体延迟时长未核实。"
           : null,
       limitation: storedEvidenceUrl(reference)
-        ? "来源记录仅保存元数据与内容哈希；公司披露只使用已归一化摘要，未读取原始正文。"
+        ? "来源记录保存归一化摘要与内容哈希；公司披露只使用摘要，未读取原始正文。"
         : "来源记录没有可核验网页 URL；引用仅能回链本机来源编号。",
       evidenceIds: [reference.id],
     };
   });
+}
+
+function officialMacroFacts(
+  references: Map<string, ResearchEvidenceReference>,
+  nowMs: number,
+) {
+  const tokyoParts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .formatToParts(nowMs)
+      .map(({ type, value }) => [type, value]),
+  );
+  const tokyoDate = `${tokyoParts.year}-${tokyoParts.month}-${tokyoParts.day}`;
+  const tokyoMonth = Number(tokyoParts.year) * 100 + Number(tokyoParts.month);
+  const latest = new Map<
+    string,
+    { period: number; text: string; evidenceId: string }
+  >();
+  const remember = (
+    key: string,
+    period: number,
+    text: string,
+    evidenceId: string,
+  ) => {
+    const previous = latest.get(key);
+    if (!previous || period > previous.period) {
+      latest.set(key, { period, text, evidenceId });
+    }
+  };
+
+  for (const reference of references.values()) {
+    if (
+      reference.authorityRole !== "REGULATORY_PRIMARY" ||
+      reference.licenseStatus !== "VERIFIED" ||
+      reference.dataClass !== "HISTORICAL" ||
+      !isUsableEvidenceReference(reference, nowMs)
+    ) {
+      continue;
+    }
+
+    const url = storedEvidenceUrl(reference);
+    if (!url) continue;
+    const host = new URL(url).hostname;
+    for (const sourceText of reference.text) {
+      if (
+        reference.publisher === "U.S. Bureau of Labor Statistics" &&
+        host === "api.bls.gov"
+      ) {
+        const cpi = sourceText.match(
+          /^(\d{4} M(?:0[1-9]|1[0-2])): U\.S\. CPI-U all items index, not seasonally adjusted, base 1982-84=100: ([+-]?\d+(?:\.\d+)?)$/,
+        );
+        if (cpi) {
+          const observationPeriod = cpi[1]!;
+          const [, year, month] =
+            observationPeriod.match(/^(\d{4}) M(\d{2})$/)!;
+          const period = Number(year) * 100 + Number(month);
+          if (period >= tokyoMonth) continue;
+          remember(
+            "bls.cpi",
+            period,
+            `美国 CPI-U（${observationPeriod}，未季调，1982–84=100）：${cpi[2]}。`,
+            reference.id,
+          );
+        }
+
+        const unemployment = sourceText.match(
+          /^(\d{4} M(?:0[1-9]|1[0-2])): U\.S\. seasonally adjusted unemployment rate: ([+-]?\d+(?:\.\d+)?)%$/,
+        );
+        if (unemployment) {
+          const observationPeriod = unemployment[1]!;
+          const [, year, month] =
+            observationPeriod.match(/^(\d{4}) M(\d{2})$/)!;
+          const period = Number(year) * 100 + Number(month);
+          if (period >= tokyoMonth) continue;
+          remember(
+            "bls.unemployment",
+            period,
+            `美国失业率（${observationPeriod}，季调）：${unemployment[2]}%。`,
+            reference.id,
+          );
+        }
+      }
+
+      if (
+        reference.publisher === "Bank of Japan Time-Series Data Search" &&
+        host === "www.stat-search.boj.or.jp"
+      ) {
+        const fx = sourceText.match(
+          /^(\d{8}) Asia\/Tokyo observation date: (FXERD04|FXERD05) .*? Spot Rate at (\d{2}:\d{2}) \(Yen per U\.S\. Dollar\) \1: ([+-]?\d+(?:\.\d+)?)$/,
+        );
+        if (!fx) continue;
+        const compactDate = fx[1]!;
+        const isoDate = `${compactDate.slice(0, 4)}-${compactDate.slice(4, 6)}-${compactDate.slice(6, 8)}`;
+        const observedAt = Date.parse(`${isoDate}T00:00:00.000Z`);
+        if (
+          !Number.isFinite(observedAt) ||
+          new Date(observedAt).toISOString().slice(0, 10) !== isoDate ||
+          isoDate >= tokyoDate
+        ) {
+          continue;
+        }
+        remember(
+          `boj.${fx[2]}`,
+          observedAt,
+          `日本银行 USD/JPY ${fx[3]} 参考值（${isoDate} JST，JPY/USD）：${fx[4]}。`,
+          reference.id,
+        );
+      }
+    }
+  }
+
+  return [...latest.values()].map(({ text, evidenceId }) => ({
+    text,
+    evidenceIds: [evidenceId],
+  }));
 }
 
 function marketSummary(
@@ -438,6 +557,7 @@ function marketSummary(
   ledgerState: ResearchReport["ledgerState"],
   calendars: ResearchReport["marketCalendars"],
   sourceCollectionAttempted: boolean,
+  macroFacts: ResearchReport["facts"],
 ) {
   const nyse = calendars.find(({ exchange }) => exchange === "NYSE");
   const nasdaq = calendars.find(({ exchange }) => exchange === "NASDAQ");
@@ -471,10 +591,12 @@ function marketSummary(
       evidenceIds: eventIds,
     },
     {
-      text: sourceCollectionAttempted
-        ? "报告任务已尝试采集 BLS 宏观数据、日银 USD/JPY 参考汇率与 Fed/日银公告；具体来源状态和观测期见事实与来源覆盖。未接入完整宏观与财报日历。"
-        : "未提供本次报告的宏观来源采集记录；完整 FX、利率和财报日历覆盖无法核实。",
-      evidenceIds: [],
+      text: macroFacts.length
+        ? `本机已保存的官方历史观察：${macroFacts.map(({ text }) => text).join(" ")}它们不是可成交报价；完整利率、财报和经济日历仍未核实。`
+        : sourceCollectionAttempted
+          ? "报告任务已尝试采集 BLS 宏观数据、日银 USD/JPY 参考汇率与 Fed/日银公告；具体来源状态和观测期见来源覆盖。未接入完整宏观与财报日历。"
+          : "未提供本次报告的宏观来源采集记录；完整 FX、利率和财报日历覆盖无法核实。",
+      evidenceIds: macroFacts.flatMap(({ evidenceIds }) => evidenceIds),
     },
     {
       text:
@@ -509,11 +631,13 @@ function baseReport(input: {
   events: ReturnType<typeof collectEvidence>["events"];
   bars: StoredBar[];
   references: Map<string, ResearchEvidenceReference>;
+  macroFacts: ResearchReport["facts"];
   ledgerState: ResearchReport["ledgerState"];
   ledgerSummary: string | null;
   calendars: ResearchReport["marketCalendars"];
   sourceCollectionStatuses: string[];
 }) {
+  const macroFacts = input.macroFacts;
   const dataClass = [...input.references.values()].some(
     (reference) => reference.dataClass === "FIXTURE",
   )
@@ -539,6 +663,11 @@ function baseReport(input: {
     "不进行回测、收益评分、纸面成交或真实交易；策略候选必须引用有效证据。",
   ];
   limitations.push(...input.sourceCollectionStatuses);
+  if (macroFacts.length) {
+    limitations.push(
+      "报告中的 BLS/日本银行数值是已保存的官方历史观察摘要，不是实时行情；美日股票 OHLCV 与回测证据仍未核验。",
+    );
+  }
   if (!input.marketDataReady) {
     limitations.push("美股与日股的联合行情门槛未满足；候选列表强制为空。");
   }
@@ -557,7 +686,12 @@ function baseReport(input: {
     asOfMs: input.generatedAtMs,
     timeZone,
     executionStatus: input.executionStatus,
-    verificationLevel: dataClass === "FIXTURE" ? "DEMO_ONLY" : "NOT_VERIFIED",
+    verificationLevel:
+      dataClass === "FIXTURE"
+        ? "DEMO_ONLY"
+        : macroFacts.length
+          ? "PARTIAL"
+          : "NOT_VERIFIED",
     dataClass,
     resultCode: input.resultCode,
     marketSummary: marketSummary(
@@ -566,10 +700,11 @@ function baseReport(input: {
       input.ledgerState,
       input.calendars,
       input.sourceCollectionStatuses.length > 0,
+      macroFacts,
     ),
     marketCalendars: input.calendars,
     eventTimeline: reportEventTimeline(input.events, input.generatedAtMs),
-    facts: [],
+    facts: macroFacts,
     inferences: [],
     hypotheses: [],
     candidates: [],
@@ -669,6 +804,7 @@ export async function runResearchReportWorkflow(input: {
     evidence.references.set(reference.id, reference);
   }
   const sourceCollectionStatuses = input.sourceCollectionStatuses ?? [];
+  const macroFacts = officialMacroFacts(evidence.references, generatedAtMs);
   const calendars = marketCalendarSnapshots(generatedAtMs);
   const qualifiedInstruments = new Map([
     ...qualifiedPriceInstruments(evidence.bars, "US", generatedAtMs),
@@ -700,6 +836,7 @@ export async function runResearchReportWorkflow(input: {
     events: evidence.events,
     bars: evidence.bars,
     references: evidence.references,
+    macroFacts,
     ledgerState,
     ledgerSummary,
     calendars,
@@ -742,7 +879,8 @@ export async function runResearchReportWorkflow(input: {
         ...base.limitations,
         `Codex 研究调用未完成：${result.errorCode}。`,
       ],
-      finalDecision: "研究调用未完成；报告保持未核验，不生成候选。",
+      finalDecision:
+        "研究调用未完成；保留官方历史观察，策略仍未核验且不生成候选。",
     });
   }
 
@@ -771,13 +909,21 @@ export async function runResearchReportWorkflow(input: {
     nowMs: generatedAtMs,
   });
   const {
-    facts,
+    facts: modelFacts,
     inferences,
     hypotheses,
     roleAudit,
     riskOfficerReview,
     evidenceValidation,
   } = checked;
+  const factsByTextAndEvidence = new Map<string, (typeof modelFacts)[number]>();
+  for (const fact of [...macroFacts, ...modelFacts]) {
+    factsByTextAndEvidence.set(
+      JSON.stringify([fact.text, fact.evidenceIds]),
+      fact,
+    );
+  }
+  const facts = [...factsByTextAndEvidence.values()].slice(0, 30);
   const candidates =
     marketDataReady &&
     riskOfficerReview.opinion !== "VETO" &&

@@ -115,6 +115,248 @@ describe("runResearchReportWorkflow", () => {
     expect(runCodexTask).not.toHaveBeenCalled();
   });
 
+  it("keeps sourced macro observations visible when Codex is unavailable", async () => {
+    const fixture = await createTestDatabase();
+    fixtures.push(fixture);
+    const nowMs = Date.UTC(2026, 10, 19, 2);
+    const sources = new Map<string, ReturnType<typeof registerSource>>();
+    const addReference = (input: {
+      sourceKey: string;
+      publisher: string;
+      sourceUrl: string;
+      licenseUrl: string;
+      recordKey: string;
+      canonicalUrl: string;
+      rawTimeText: string;
+      text: string;
+      currencyCodes: ("USD" | "JPY")[];
+    }) => {
+      let source = sources.get(input.sourceKey);
+      if (!source) {
+        source = registerSource(fixture.database, {
+          sourceKey: input.sourceKey,
+          publisher: input.publisher,
+          sourceType: "REGULATORY",
+          authorityRole: "REGULATORY_PRIMARY",
+          referenceUrl: input.sourceUrl,
+          licenseUrl: input.licenseUrl,
+          licenseStatus: "VERIFIED",
+          credentialRequirement: "NOT_REQUIRED",
+        });
+        sources.set(input.sourceKey, source);
+      }
+      const record = appendSourceRecord(fixture.database, {
+        sourceId: source.id,
+        recordKey: input.recordKey,
+        recordType: "OTHER",
+        recordVersion: 1,
+        supersedesRecordId: null,
+        publishedAtMs: null,
+        occurredAtMs: null,
+        availableAtMs: null,
+        rawTimeText: input.rawTimeText,
+        sourceTimeZone:
+          input.sourceKey === "boj.timeseries" ? "Asia/Tokyo" : null,
+        canonicalUrl: input.canonicalUrl,
+        dataClass: "HISTORICAL",
+        content: input.text,
+      });
+      return {
+        id: record.id,
+        canonicalUrl: record.canonicalUrl,
+        publishedAtMs: null,
+        occurredAtMs: null,
+        availableAtMs: null,
+        collectedAtMs: nowMs - 1_000,
+        timestampInvalid: false,
+        dataClass: record.dataClass,
+        publisher: source.publisher,
+        referenceUrl: record.canonicalUrl,
+        authorityRole: source.authorityRole,
+        licenseStatus: source.licenseStatus,
+        marketCode: null,
+        currencyCodes: input.currencyCodes,
+        units: [],
+        text: [input.text],
+      } satisfies ResearchEvidenceReference;
+    };
+    const cpi = addReference({
+      sourceKey: "bls.api",
+      publisher: "U.S. Bureau of Labor Statistics",
+      sourceUrl: "https://www.bls.gov/developers/api_faqs.htm",
+      licenseUrl: "https://www.bls.gov/opub/copyright-information.htm",
+      recordKey: "disclosure:CUUR0000SA0:2026:M10",
+      canonicalUrl: "https://api.bls.gov/publicAPI/v1/timeseries/data/",
+      rawTimeText: "2026 M10 (October)",
+      text: "2026 M10: U.S. CPI-U all items index, not seasonally adjusted, base 1982-84=100: 325.2",
+      currencyCodes: [],
+    });
+    const unemployment = addReference({
+      sourceKey: "bls.api",
+      publisher: "U.S. Bureau of Labor Statistics",
+      sourceUrl: "https://www.bls.gov/developers/api_faqs.htm",
+      licenseUrl: "https://www.bls.gov/opub/copyright-information.htm",
+      recordKey: "disclosure:LNS14000000:2026:M10",
+      canonicalUrl: "https://api.bls.gov/publicAPI/v1/timeseries/data/",
+      rawTimeText: "2026 M10 (October)",
+      text: "2026 M10: U.S. seasonally adjusted unemployment rate: 4.1%",
+      currencyCodes: [],
+    });
+    addReference({
+      sourceKey: "bls.api",
+      publisher: "U.S. Bureau of Labor Statistics",
+      sourceUrl: "https://www.bls.gov/developers/api_faqs.htm",
+      licenseUrl: "https://www.bls.gov/opub/copyright-information.htm",
+      recordKey: "disclosure:LNS14000000:2026:M11",
+      canonicalUrl: "https://api.bls.gov/publicAPI/v1/timeseries/data/",
+      rawTimeText: "2026 M11 (November)",
+      text: "2026 M11: U.S. seasonally adjusted unemployment rate: 99.0%",
+      currencyCodes: [],
+    });
+    const fx = addReference({
+      sourceKey: "boj.timeseries",
+      publisher: "Bank of Japan Time-Series Data Search",
+      sourceUrl: "https://www.stat-search.boj.or.jp/index_en.html",
+      licenseUrl: "https://www.stat-search.boj.or.jp/info/notice_en.html",
+      recordKey: "disclosure:FXERD04:20261118",
+      canonicalUrl: "https://www.stat-search.boj.or.jp/api/v1/getDataCode",
+      rawTimeText: "20261118",
+      text: "20261118 Asia/Tokyo observation date: FXERD04 U.S.Dollar/Yen Spot Rate at 17:00 (Yen per U.S. Dollar) 20261118: 154.4",
+      currencyCodes: ["JPY", "USD"],
+    });
+    const fx15 = addReference({
+      sourceKey: "boj.timeseries",
+      publisher: "Bank of Japan Time-Series Data Search",
+      sourceUrl: "https://www.stat-search.boj.or.jp/index_en.html",
+      licenseUrl: "https://www.stat-search.boj.or.jp/info/notice_en.html",
+      recordKey: "disclosure:FXERD05:20261118",
+      canonicalUrl: "https://www.stat-search.boj.or.jp/api/v1/getDataCode",
+      rawTimeText: "20261118",
+      text: "20261118 Asia/Tokyo observation date: FXERD05 U.S.Dollar/Yen Spot Rate at 15:00 (Yen per U.S. Dollar) 20261118: 154.2",
+      currencyCodes: ["JPY", "USD"],
+    });
+    addReference({
+      sourceKey: "boj.timeseries",
+      publisher: "Bank of Japan Time-Series Data Search",
+      sourceUrl: "https://www.stat-search.boj.or.jp/index_en.html",
+      licenseUrl: "https://www.stat-search.boj.or.jp/info/notice_en.html",
+      recordKey: "disclosure:FXERD04:20261119",
+      canonicalUrl: "https://www.stat-search.boj.or.jp/api/v1/getDataCode",
+      rawTimeText: "20261119",
+      text: "20261119 Asia/Tokyo observation date: FXERD04 U.S.Dollar/Yen Spot Rate at 17:00 (Yen per U.S. Dollar) 20261119: 999.0",
+      currencyCodes: ["JPY", "USD"],
+    });
+    vi.mocked(runCodexTask).mockResolvedValue({
+      callId: "codex-call",
+      startedAtMs: nowMs,
+      completedAtMs: nowMs,
+      sourceReferences: [],
+      dataClass: "NOT_VERIFIED",
+      status: "BLOCKED_EXTERNAL",
+      errorCode: "CODEX_UNAVAILABLE",
+      verificationStatus: "NOT_VERIFIED",
+    });
+
+    const report = await runResearchReportWorkflow({
+      database: fixture.database,
+      taskRunId: "b0e9a279-793c-48f7-a7e1-616158e2268a",
+      type: "MORNING",
+      signal: new AbortController().signal,
+      nowMs,
+      sourceReferences: [cpi, unemployment, fx, fx15],
+    });
+
+    expect(report.executionStatus).toBe("BLOCKED_EXTERNAL");
+    expect(report.verificationLevel).toBe("PARTIAL");
+    expect(report.facts).toEqual([
+      {
+        text: "美国 CPI-U（2026 M10，未季调，1982–84=100）：325.2。",
+        evidenceIds: [cpi.id],
+      },
+      {
+        text: "美国失业率（2026 M10，季调）：4.1%。",
+        evidenceIds: [unemployment.id],
+      },
+      {
+        text: "日本银行 USD/JPY 17:00 参考值（2026-11-18 JST，JPY/USD）：154.4。",
+        evidenceIds: [fx.id],
+      },
+      {
+        text: "日本银行 USD/JPY 15:00 参考值（2026-11-18 JST，JPY/USD）：154.2。",
+        evidenceIds: [fx15.id],
+      },
+    ]);
+    expect(report.marketSummary[3]?.text).toContain("325.2");
+    expect(report.marketSummary[3]?.text).toContain("154.4");
+    expect(report.marketSummary[3]?.evidenceIds).toEqual([
+      cpi.id,
+      unemployment.id,
+      fx.id,
+      fx15.id,
+    ]);
+    expect(report.candidates).toEqual([]);
+    expect(report.roleAudit.paperPlanner.status).toBe("BLOCKED_EXTERNAL");
+
+    const fixtureSource = registerSource(fixture.database, {
+      sourceKey: "test-macro-fixture",
+      publisher: "Test fixture",
+      sourceType: "OTHER",
+      authorityRole: "FIXTURE",
+      referenceUrl: "https://example.test/fixture",
+      licenseUrl: null,
+      licenseStatus: "VERIFIED",
+      credentialRequirement: "NOT_REQUIRED",
+    });
+    const fixtureRecord = appendSourceRecord(fixture.database, {
+      sourceId: fixtureSource.id,
+      recordKey: "fixture:macro",
+      recordType: "OTHER",
+      recordVersion: 1,
+      supersedesRecordId: null,
+      publishedAtMs: null,
+      occurredAtMs: null,
+      availableAtMs: null,
+      rawTimeText: null,
+      sourceTimeZone: null,
+      canonicalUrl: "https://example.test/fixture",
+      dataClass: "FIXTURE",
+      content: "fixture",
+    });
+    const demo = await runResearchReportWorkflow({
+      database: fixture.database,
+      taskRunId: "9ad0e598-9f53-4a0c-a4af-a69842a413f1",
+      type: "MORNING",
+      signal: new AbortController().signal,
+      nowMs,
+      sourceReferences: [
+        cpi,
+        unemployment,
+        fx,
+        fx15,
+        {
+          id: fixtureRecord.id,
+          canonicalUrl: fixtureRecord.canonicalUrl,
+          publishedAtMs: null,
+          occurredAtMs: null,
+          availableAtMs: null,
+          collectedAtMs: nowMs - 1_000,
+          timestampInvalid: false,
+          dataClass: "FIXTURE",
+          publisher: fixtureSource.publisher,
+          referenceUrl: fixtureRecord.canonicalUrl,
+          authorityRole: fixtureSource.authorityRole,
+          licenseStatus: fixtureSource.licenseStatus,
+          marketCode: null,
+          currencyCodes: [],
+          units: [],
+          text: ["fixture"],
+        },
+      ],
+    });
+    expect(demo.verificationLevel).toBe("DEMO_ONLY");
+    expect(demo.candidates).toEqual([]);
+  });
+
   it("keeps a cancelled report out of the completed state", async () => {
     const fixture = await createTestDatabase();
     fixtures.push(fixture);
@@ -261,6 +503,7 @@ describe("runResearchReportWorkflow", () => {
       }),
     );
     expect(report.verificationLevel).toBe("NOT_VERIFIED");
+    expect(report.marketSummary[3]?.text).not.toContain("154.4");
     expect(report.candidates).toEqual([]);
     expect(report.facts[0]?.evidenceIds).toEqual([record.id]);
     expect(report.limitations).toContain(

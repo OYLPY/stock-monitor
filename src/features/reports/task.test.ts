@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { openDatabase } from "@/db";
-import { sourceRecords } from "@/db/schema";
+import { sourceRecords, sources } from "@/db/schema";
 import { createTestDatabase } from "@/db/test-database";
+import { registerSource } from "@/features/evidence/repository";
 import { collectReportSources } from "./task";
 
 function blsObservations(offset: number) {
@@ -77,6 +78,27 @@ describe("report source collection", () => {
 
   it("persists official macro and central-bank evidence before report analysis", async () => {
     const fixture = await createTestDatabase();
+    for (const source of [
+      {
+        sourceKey: "bls.api",
+        publisher: "U.S. Bureau of Labor Statistics",
+        referenceUrl: "https://www.bls.gov/developers/api_faqs.htm",
+      },
+      {
+        sourceKey: "boj.timeseries",
+        publisher: "Bank of Japan Time-Series Data Search",
+        referenceUrl: "https://www.stat-search.boj.or.jp/index_en.html",
+      },
+    ]) {
+      registerSource(fixture.database, {
+        ...source,
+        sourceType: "REGULATORY",
+        authorityRole: "REGULATORY_PRIMARY",
+        licenseUrl: null,
+        licenseStatus: "UNKNOWN",
+        credentialRequirement: "NOT_REQUIRED",
+      });
+    }
     const collectionTime = Date.UTC(2026, 10, 19, 2);
     const dateNow = vi.spyOn(Date, "now").mockReturnValue(collectionTime);
     const fetcher = vi.fn<typeof fetch>(async (input) => {
@@ -141,6 +163,30 @@ describe("report source collection", () => {
         .from(sourceRecords)
         .all();
       expect(first.sourceReferences).toHaveLength(46);
+      expect(
+        fixture.database.orm
+          .select()
+          .from(sources)
+          .all()
+          .filter(({ sourceKey }) =>
+            ["bls.api", "boj.timeseries"].includes(sourceKey),
+          )
+          .every(({ licenseStatus }) => licenseStatus === "UNKNOWN"),
+      ).toBe(true);
+      expect(
+        first.sourceReferences.find((reference) =>
+          reference.text[0]?.includes("CPI-U all items index"),
+        ),
+      ).toMatchObject({
+        publisher: "U.S. Bureau of Labor Statistics",
+        licenseStatus: "VERIFIED",
+      });
+      expect(
+        first.sourceReferences.find(
+          (reference) =>
+            reference.publisher === "Bank of Japan Time-Series Data Search",
+        ),
+      ).toMatchObject({ licenseStatus: "VERIFIED" });
       expect(
         first.sourceReferences.filter((reference) =>
           reference.text[0]?.includes("CPI-U all items index"),

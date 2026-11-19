@@ -5,6 +5,7 @@ import {
   collectBojRss,
   collectBojSeries,
   collectFederalReserveRss,
+  disclosureSourcePolicies,
 } from "../../providers/disclosures/index.ts";
 import type { ResearchEvidenceReference } from "../research/evidence-checker.ts";
 import type {
@@ -164,7 +165,10 @@ export async function collectReportSources(
       publisher: source.publisher,
       referenceUrl: record.canonicalUrl,
       authorityRole: source.authorityRole,
-      licenseStatus: source.licenseStatus,
+      licenseStatus:
+        provider === "issuer.ir"
+          ? "UNKNOWN"
+          : disclosureSourcePolicies[provider].licenseStatus,
       marketCode: null,
       currencyCodes: provider === "boj.timeseries" ? ["JPY", "USD"] : [],
       units: [],
