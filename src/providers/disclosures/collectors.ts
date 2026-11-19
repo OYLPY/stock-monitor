@@ -6,7 +6,7 @@ import type { AppDatabase } from "../../db";
 import { withTransaction } from "../../db";
 import { auditEvents, sourceRecords, sources } from "../../db/schema";
 import { recordAuditEvent } from "../../features/evidence/repository";
-import { recordDisclosureCitation } from "./index";
+import { normalizeDisclosureCitation, recordDisclosureCitation } from "./index";
 import type { DisclosureCitationInput, DisclosureProvider } from "./index";
 
 const MAX_RESPONSE_BYTES = 4_000_000;
@@ -339,10 +339,11 @@ function persistCitation(
     ) {
       throw error;
     }
+    const citation = normalizeDisclosureCitation(input);
     const source = database.orm
-      .select({ id: sources.id })
+      .select()
       .from(sources)
-      .where(eq(sources.sourceKey, input.provider))
+      .where(eq(sources.sourceKey, citation.source.sourceKey))
       .get();
     if (!source) throw error;
     const previous = database.orm
@@ -358,6 +359,12 @@ function persistCitation(
       .limit(1)
       .get();
     if (!previous) throw error;
+    if (
+      previous.contentHashSha256 ===
+      createHash("sha256").update(citation.record.content).digest("hex")
+    ) {
+      return { duplicate: true, record: previous, source };
+    }
     return recordDisclosureCitation(database, {
       ...input,
       recordVersion: previous.recordVersion + 1,
@@ -680,6 +687,7 @@ async function collectOfficialRss(
     requestLimit: number;
     requestWindowMs: number;
     publisher: string;
+    timeZone: string;
   },
   fetcher: Fetcher = fetch,
 ): Promise<DisclosureCollectionResult> {
@@ -784,7 +792,7 @@ async function collectOfficialRss(
         dataClass: "REAL",
         publishedAtMs: Number.isFinite(publishedAtMs) ? publishedAtMs : null,
         rawTimeText,
-        sourceTimeZone: null,
+        sourceTimeZone: config.timeZone,
       };
     });
   } catch (error) {
@@ -815,6 +823,7 @@ export function collectFederalReserveRss(
       requestLimit: FED_REQUEST_LIMIT,
       requestWindowMs: FED_REQUEST_WINDOW_MS,
       publisher: "Federal Reserve",
+      timeZone: "America/New_York",
     },
     fetcher,
   );
@@ -835,6 +844,7 @@ export function collectBojRss(
       requestLimit: BOJ_RSS_REQUEST_LIMIT,
       requestWindowMs: BOJ_RSS_REQUEST_WINDOW_MS,
       publisher: "Bank of Japan",
+      timeZone: "Asia/Tokyo",
     },
     fetcher,
   );

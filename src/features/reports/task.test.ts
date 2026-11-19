@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { openDatabase } from "@/db";
 import { sourceRecords, sources } from "@/db/schema";
 import { createTestDatabase } from "@/db/test-database";
-import { registerSource } from "@/features/evidence/repository";
+import {
+  listMarketEvents,
+  registerSource,
+} from "@/features/evidence/repository";
 import { collectReportSources } from "./task";
 
 function blsObservations(offset: number) {
@@ -229,8 +232,48 @@ describe("report source collection", () => {
           expect.stringContaining("BOJ USD/JPY daily series: AVAILABLE"),
           expect.stringContaining("Federal Reserve RSS: AVAILABLE"),
           expect.stringContaining("BOJ RSS: AVAILABLE"),
+          expect.stringContaining("Official RSS events: 10 created"),
+          expect.stringContaining("Market-price signals: NOT_VERIFIED"),
         ]),
       );
+      const eventsAfterFirst = listMarketEvents(fixture.database);
+      expect(eventsAfterFirst).toHaveLength(10);
+      expect(
+        eventsAfterFirst
+          .find(
+            ({ revisions }) =>
+              revisions.at(-1)?.summary === "Federal Reserve policy update 1",
+          )
+          ?.revisions.at(-1),
+      ).toMatchObject({
+        category: "FEDERAL_RESERVE_NOTICE",
+        marketCode: "US",
+        verificationLevel: "PARTIAL",
+        evidence: [
+          {
+            sourceKey: "federalreserve.rss",
+            sourceTimeZone: "America/New_York",
+          },
+        ],
+      });
+      expect(
+        eventsAfterFirst
+          .find(
+            ({ revisions }) =>
+              revisions.at(-1)?.summary === "BOJ policy update 1",
+          )
+          ?.revisions.at(-1),
+      ).toMatchObject({
+        category: "BANK_OF_JAPAN_NOTICE",
+        marketCode: "JP",
+        verificationLevel: "PARTIAL",
+        evidence: [
+          {
+            sourceKey: "boj.rss",
+            sourceTimeZone: "Asia/Tokyo",
+          },
+        ],
+      });
       expect(recordsAfterFirst).toHaveLength(48);
 
       fixture.database.client.close();
@@ -257,6 +300,15 @@ describe("report source collection", () => {
         );
         expect(second.sourceReferences.map(({ id }) => id)).toEqual(
           first.sourceReferences.map(({ id }) => id),
+        );
+        expect(listMarketEvents(reopened)).toHaveLength(10);
+        expect(
+          listMarketEvents(reopened).every(
+            (event) => event.revisions.length === 1,
+          ),
+        ).toBe(true);
+        expect(second.sourceCollectionStatuses).toContain(
+          "Official RSS events: 0 created, 0 revised, 10 unchanged, 0 rejected; headline significance is not scored.",
         );
         expect(reopened.orm.select().from(sourceRecords).all()).toHaveLength(
           recordsAfterFirst.length,

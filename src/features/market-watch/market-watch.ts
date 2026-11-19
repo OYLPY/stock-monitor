@@ -36,7 +36,7 @@ export function marketWatchDecisionAt(asOfMs: number) {
       openExchanges,
       signalEvaluation: "NOT_RUN",
       marketDataFreshness:
-        openExchanges.length > 0 ? "UNKNOWN" : "NOT_REQUESTED",
+        openExchanges.length > 0 ? "NOT_VERIFIED" : "NOT_REQUESTED",
       calendars: calendars.map((calendar) => ({
         exchange: calendar.exchange,
         market: calendar.market,

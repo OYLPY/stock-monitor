@@ -58,7 +58,7 @@ describe("market watch session gate", () => {
       details: {
         openExchanges: ["NYSE", "NASDAQ"],
         signalEvaluation: "NOT_RUN",
-        marketDataFreshness: "UNKNOWN",
+        marketDataFreshness: "NOT_VERIFIED",
         calendars: expect.arrayContaining([
           expect.objectContaining({
             exchange: "NYSE",

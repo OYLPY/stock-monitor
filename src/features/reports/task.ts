@@ -17,6 +17,7 @@ import { auditPaperLedger } from "../paper/audit.ts";
 import { runResearchReportWorkflow } from "../research/workflows/report.ts";
 import { archiveResearchReport, getArchivedResearchReport } from "./archive.ts";
 import { reportTypeSchema } from "./contract.ts";
+import { normalizeOfficialRssEvents } from "../events/normalizer.ts";
 
 const reportTaskInputSchema = z.strictObject({ type: reportTypeSchema });
 const BLS_SERIES = ["CUUR0000SA0", "LNS14000000"] as const;
@@ -99,6 +100,11 @@ export async function collectReportSources(
       fetcher,
     ),
   ]);
+  const normalizedEvents = normalizeOfficialRssEvents(
+    database,
+    [...fedRss.records, ...bojRss.records],
+    nowMs,
+  );
   const latestBlsBySeries = new Map<string, typeof bls.records>();
   for (const record of bls.records) {
     const seriesId = record.title.split(" ", 1)[0];
@@ -187,6 +193,8 @@ export async function collectReportSources(
     `BOJ USD/JPY daily series: ${bojFx.status}; ${bojFx.records.length} observations stored; ${bojFx.reason}`,
     `Federal Reserve RSS: ${fedRss.status}; ${fedRss.records.length} references stored; ${fedRss.reason}`,
     `BOJ RSS: ${bojRss.status}; ${bojRss.records.length} references stored; ${bojRss.reason}`,
+    `Official RSS events: ${normalizedEvents.created} created, ${normalizedEvents.revised} revised, ${normalizedEvents.unchanged} unchanged, ${normalizedEvents.rejected} rejected; headline significance is not scored.`,
+    "Market-price signals: NOT_VERIFIED; without verified US/JP quotes or volume, real-time signal evaluation did not run.",
   ];
   return { sourceReferences, sourceCollectionStatuses };
 }

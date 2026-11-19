@@ -150,7 +150,7 @@
 | [`P07-02`](https://github.com/OYLPY/stock-monitor/issues/49) | **美股行情/历史数据适配器**：建立 Provider 统一接口、时间戳、币种、数据延时和权限限制；支持来源替换、限流、缓存、失败降级与样本回放。 | src/providers/us-market、Mock/Fixture、集成测试 | 不能把缓存当实时；价格及OHLCV校验；缺 API 凭据时标注不可用；依赖：P07-01, P05-04 |
 | [`P07-03`](https://github.com/OYLPY/stock-monitor/issues/50) | **日股行情/历史数据适配器**：调研并实现 JPX / J-Quants / 合规数据源的可用接口；日元、100股单位与 ETF 交易单位按证券元信息确定；不得宣称 J-Quants 实时。 | src/providers/jp-market、数据源说明 | 能够区分历史/延迟/Fixture，数据缺失不编造；交易日期转换准确；依赖：P07-01, P05-04 |
 | [`P07-04`](https://github.com/OYLPY/stock-monitor/issues/51) | **公司公告、财报与官方宏观采集**：统一 SEC EDGAR、公司 IR、EDINET、TDnet、BOJ、Fed/BLS/BEA 官方原始材料的引用适配器；合规请求频率、去重、来源时间。 | src/providers/disclosures、docs/research/SOURCES.md | 同一公告多网址不重复；外部源不可用时明确降级；来源可靠性可追查；依赖：P07-01, P05-04 |
-| [`P07-05`](https://github.com/OYLPY/stock-monitor/issues/52) | **事件归一化、新旧判断与数据质量门禁**：建立事件实体识别、证券映射、指纹/内容哈希、时区对齐、重大性候选、采集误差与新鲜度门禁；不凭 AI 断言唯一真实性。 | src/features/events/normalizer、quality gate | 旧新闻和重复报道不升级；不同事件不误合并；过期价量不能触发实时信号；依赖：P07-02, P07-03, P07-04 |
+| [`P07-05`](https://github.com/OYLPY/stock-monitor/issues/52) | **事件归一化与数据质量门禁**：将已持久化的 Fed/BOJ RSS 标题归一为市场级事件，按同源稳定记录键幂等和追加修订；保留来源、发布时间、市场时区和许可状态，不从标题猜证券或重大性。 | src/features/events/normalizer、market-watch quality status | 事件中心可读官方 RSS 标题及证据；重复处理幂等、来源修订追加；未来/无效时间与缺时区拒绝；缺少报价/成交量时 `BLOCKED_EXTERNAL`、`NOT_VERIFIED` 且信号 `NOT_RUN`；依赖：P07-04。P07-02/P07-03 仍是价量信号的硬前置。 |
 
 ### P08 — Codex 六角色研究执行
 

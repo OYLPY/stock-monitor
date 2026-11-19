@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { auditEvents, sourceRecords } from "../../db/schema";
@@ -7,6 +8,7 @@ import {
   collectBojRss,
   collectBojSeries,
   collectFederalReserveRss,
+  recordDisclosureCitation,
   collectSecFilings,
 } from "./index";
 
@@ -485,7 +487,7 @@ describe("official disclosure collectors", () => {
         dataClass: "REAL",
         publishedAtMs: BigInt(Date.parse("Mon, 16 Nov 2026 14:00:00 GMT")),
         rawTimeText: "Mon, 16 Nov 2026 14:00:00 GMT",
-        sourceTimeZone: null,
+        sourceTimeZone: "America/New_York",
       });
       expect(result.records[0]?.record.canonicalUrl).toBe(
         "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261116a.htm",
@@ -495,6 +497,61 @@ describe("official disclosure collectors", () => {
       ).toHaveLength(1);
       expect(result.records[0]?.record.contentHashSha256).not.toBe("");
     } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("versions a previously stored feed record when its source timezone is recovered", async () => {
+    const fixture = await createTestDatabase();
+    const dateNow = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(Date.parse("2026-11-19T18:00:00Z"));
+    const fetcher: typeof fetch = async () =>
+      new Response(
+        `<rss><channel><item><title>Policy notice</title><link>https://www.federalreserve.gov/releases/press-1.htm</link><guid>press-1</guid><pubDate>Thu, 19 Nov 2026 08:13:00 -0500</pubDate></item></channel></rss>`,
+        { status: 200 },
+      );
+
+    try {
+      const input = {
+        feedUrl: "https://www.federalreserve.gov/feeds/example.xml",
+      };
+      const rawTimeText = "Thu, 19 Nov 2026 08:13:00 -0500";
+      const previous = recordDisclosureCitation(fixture.database, {
+        provider: "federalreserve.rss",
+        externalId: "press-1",
+        publisher: "Federal Reserve",
+        referenceUrl: "https://www.federalreserve.gov/releases/press-1.htm",
+        title: "Policy notice",
+        contentFingerprint: createHash("sha256")
+          .update(
+            JSON.stringify({
+              guid: "press-1",
+              title: "Policy notice",
+              rawTimeText,
+            }),
+          )
+          .digest("hex"),
+        publishedAtMs: Date.parse(rawTimeText),
+        rawTimeText,
+        sourceTimeZone: null,
+        dataClass: "REAL",
+      }).record;
+
+      const refreshed = await collectFederalReserveRss(
+        fixture.database,
+        input,
+        fetcher,
+      );
+
+      expect(refreshed.records[0]?.record).toMatchObject({
+        sourceTimeZone: "America/New_York",
+        recordVersion: 2,
+        supersedesRecordId: previous.id,
+      });
+      expect(refreshed.records[0]?.record.id).not.toBe(previous.id);
+    } finally {
+      dateNow.mockRestore();
       await fixture.cleanup();
     }
   });
@@ -529,6 +586,7 @@ describe("official disclosure collectors", () => {
       expect(result.records[0]?.record.canonicalUrl).toBe(
         "https://www.boj.or.jp/en/mopo/mpmdeci/mpr_2026.htm",
       );
+      expect(result.records[0]?.record.sourceTimeZone).toBe("Asia/Tokyo");
       expect(rateLimited.status).toBe("BLOCKED_EXTERNAL");
       expect(fetcher).toHaveBeenCalledTimes(1);
     } finally {
