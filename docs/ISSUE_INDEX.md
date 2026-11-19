@@ -189,6 +189,7 @@
 - [ ] [P11-03 — 重大新事件规则、去重与告警](https://github.com/OYLPY/stock-monitor/issues/71) · 依赖：P07-05, P08-03, P11-02
 - [x] [P11-04 — 晨报、日审计和周审计任务编排](https://github.com/OYLPY/stock-monitor/issues/72) · 实现：[定时报告](../src/features/reports/jobs.ts)、[报告任务](../src/features/reports/task.ts)；Asia/Tokyo 晨报 07:00、日审计 16:00、周审计周一 07:30，缺少证据时归档 `NOT_VERIFIED` 且零候选 · 实现提交 [54a3181](https://github.com/OYLPY/stock-monitor/commit/54a3181fde684209211c8c71194efd7a8491e69c) / Quality CI [44433188280](https://github.com/OYLPY/stock-monitor/actions/runs/44433188280) success；验收记录 [c5c173a](https://github.com/OYLPY/stock-monitor/commit/c5c173aa1b5ab986ad8e88032096123407a12d1e) / Quality CI [44434740313](https://github.com/OYLPY/stock-monitor/actions/runs/44434740313) success；#72 已关闭 · [六字段交接](../harness/handoffs/P11-04.md) · 依赖：P08-04, P11-01；盘中扫描/异常告警仍由 P11-03 负责
 - [ ] [P11-05 — 本地通知渠道与持续运行指南](https://github.com/OYLPY/stock-monitor/issues/73) · 依赖：P11-03, P11-04
+- [x] [P11-06 — 报告任务自动采集官方宏观与央行公告](https://github.com/OYLPY/stock-monitor/issues/91) · 实现 [`62c63d3`](https://github.com/OYLPY/stock-monitor/commit/62c63d37ed0e1cd1a683fe9ec3915ad232fd7552) / Quality CI [44472642104](https://github.com/OYLPY/stock-monitor/actions/runs/44472642104) success；本地 48 files / 283 tests、build、Playwright 6/6 均通过；公开来源只读 smoke 与限制见 [验收记录](../harness/evidence/P11-06-followup-91.md)；[六字段交接](../harness/handoffs/P11-06-FU-91.md) · 无股票 OHLCV 时仍零策略候选
 
 ### [P12 完整测试与安全质量审计](https://github.com/OYLPY/stock-monitor/issues/13)
 
