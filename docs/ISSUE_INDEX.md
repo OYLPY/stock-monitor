@@ -196,7 +196,7 @@
 ### [P12 完整测试与安全质量审计](https://github.com/OYLPY/stock-monitor/issues/13)
 
 - [x] [P12-01 — 单元测试覆盖风险、时间、价量与计算](https://github.com/OYLPY/stock-monitor/issues/74) · 依赖：P07-01, P09-01, P10-03
-- [ ] [P12-02 — 集成测试覆盖数据库与各数据源故障](https://github.com/OYLPY/stock-monitor/issues/75) · 依赖：P07-05, P10-05, P11-03
+- [x] [P12-02 — 集成测试覆盖数据库与各数据源故障](https://github.com/OYLPY/stock-monitor/issues/75) · [验收证据](../harness/evidence/P12-02-integration.md) · 提交 [`9f0e63d`](https://github.com/OYLPY/stock-monitor/commit/9f0e63dc2fb804dbb679b16457264b4a418d83b1) · Quality CI [44758467681](https://github.com/OYLPY/stock-monitor/actions/runs/44758467681) 已通过 · 依赖：P07-05, P10-05, P11-03
 - [x] [P12-03 — Playwright 完整 E2E 研究与模拟计划](https://github.com/OYLPY/stock-monitor/issues/76) · 实现提交 [f1af657](https://github.com/OYLPY/stock-monitor/commit/f1af657f6094f2a2f80f753d2443ec5ea906c4c9) / Quality CI [44441115531](https://github.com/OYLPY/stock-monitor/actions/runs/44441115531) success；验收记录 [0eaaf45](https://github.com/OYLPY/stock-monitor/commit/0eaaf453f8965531add735871830aa18bed19fa3) / Quality CI [44441657092](https://github.com/OYLPY/stock-monitor/actions/runs/44441657092) success；#76 已关闭 · [E2E 证据](../harness/evidence/P12-03-e2e.md) · [六字段交接](../harness/handoffs/P12-03.md) · 依赖：P06-06, P10-05, P11-04
 - [x] [P12-04 — 回测与研究结果可重复性审计](https://github.com/OYLPY/stock-monitor/issues/77) · 依赖：P09-06
 - [ ] [P12-05 — 安全与故障恢复演练](https://github.com/OYLPY/stock-monitor/issues/78) · 依赖：P00-05, P05-05, P08-05, P11-05

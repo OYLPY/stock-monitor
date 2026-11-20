@@ -2,6 +2,8 @@
 
 - Date: 2026-11-20 (Asia/Tokyo)
 - Issue: [P12-02 / #75](https://github.com/OYLPY/stock-monitor/issues/75)
+- Implementation commit: [`9f0e63d`](https://github.com/OYLPY/stock-monitor/commit/9f0e63dc2fb804dbb679b16457264b4a418d83b1)
+- Matching Quality CI: [44758467681](https://github.com/OYLPY/stock-monitor/actions/runs/44758467681) — success at 2026-11-21 00:00 JST; format, lint, typecheck, unit, build, and E2E all passed.
 - Scope: isolated temporary SQLite databases and deterministic local `fetch` responses. No live provider request, user database, Worker, Codex call, market analysis, or paper trade was used.
 
 ## Coverage
@@ -25,8 +27,8 @@ All test quotes and provider responses are local test fixtures. They do not esta
 | `corepack pnpm typecheck`                     | exit 0                       |
 | `corepack pnpm build`                         | exit 0                       |
 
-The production build left the pre-existing `tsconfig.json` bytes unchanged. Local Playwright E2E was not run for this backend integration task; the pushed commit's Quality CI remains the final remote gate.
+The production build left the pre-existing `tsconfig.json` bytes unchanged. Local Playwright E2E was not run for this backend integration task; the matching remote Quality CI completed E2E successfully.
 
 ## Remaining gate
 
-Implementation and documentation are locally verified. Push to `main`, confirm the matching Quality CI succeeds, then post this evidence to #75, update the task index and final handoff, and close the Issue. No live EODHD access is part of this Issue; #49 remains independently blocked until its authorized credential and real-data validation are available.
+Implementation commit `9f0e63d` and its matching Quality CI are successful. Push the acceptance-record update, verify its CI, then post this evidence to #75 and close the Issue. No live EODHD access is part of this Issue; #49 remains independently blocked until its authorized credential and real-data validation are available.
