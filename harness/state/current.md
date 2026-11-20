@@ -2,12 +2,13 @@
 
 ## 2026-11-21 最新状态
 
-- **当前执行：P12-02 / #75**。临时 SQLite 集成测试已推送到 main：报告请求并发去重和重开持久化、美股行情接口输入校验及模拟断连/超时/陈旧/429/恢复、成交重放和过期报价、通知去重、事务回滚与写锁竞争。实现提交 [`9f0e63d`](https://github.com/OYLPY/stock-monitor/commit/9f0e63dc2fb804dbb679b16457264b4a418d83b1) 的 Quality CI [44758467681](https://github.com/OYLPY/stock-monitor/actions/runs/44758467681) 全部通过，包括 E2E。验收记录和索引的后续提交及 Issue 关闭仍待完成；本任务未访问用户数据库、真实行情 API、Worker 或 Codex。证据见 [P12-02 integration](../evidence/P12-02-integration.md)，交接见 [P12-02 handoff](../handoffs/P12-02.md)。
-- **最近关闭：P06-FU-01 / #93**，提交 [`c61593c`](https://github.com/OYLPY/stock-monitor/commit/c61593c0de4e91771aa9cdafd5af9d694fe5dc70)、Quality CI [44751449777](https://github.com/OYLPY/stock-monitor/actions/runs/44751449777) 全部通过，Issue 已关闭。报告结论优先、队列和历史分 tab、详情折叠；市场页按美股/日股切换，将来源、图表、CSV 和明细关系分区。完整证据见 [P06-FU-01 UI/UX 验收](../evidence/P06-FU-01-ui-ux.md) 与[六字段交接](../handoffs/P06-FU-01.md)。
+- **最近完成：P12-02 / #75**，2026-11-21 已关闭。实现 `9f0e63d`、验收 `4d1de77`、边界澄清 `263996a` 均已推送；匹配 Quality CI [44758467681](https://github.com/OYLPY/stock-monitor/actions/runs/44758467681)、[44759357324](https://github.com/OYLPY/stock-monitor/actions/runs/44759357324)、[44759990620](https://github.com/OYLPY/stock-monitor/actions/runs/44759990620) 全部成功。集成 2/2、全量 57 文件 / 325 测试、本机 format/lint/typecheck/build 通过；远端 E2E 通过。证据已发布到 [#75 评论](https://github.com/OYLPY/stock-monitor/issues/75#issuecomment-7043013120)。仅在临时 SQLite 和网络桩中验证，未访问用户数据库、真实行情 API、Worker 或 Codex；合成成交只存在于临时测试库。详情见[验收证据](../evidence/P12-02-integration.md)与[六字段交接](../handoffs/P12-02.md)。
+- **下一项：P12-05 / #78 安全与故障恢复演练**。其前置 #19、#41、#57、#73 均已核实关闭；开始前需按当前仓库规则修正 Issue 中过时的 PR 指令并记录 main 基线。不得访问用户数据库、触发真实交易或更改 Codex 认证/额度状态。
+- **此前关闭：P06-FU-01 / #93**，提交 [`c61593c`](https://github.com/OYLPY/stock-monitor/commit/c61593c0de4e91771aa9cdafd5af9d694fe5dc70)、Quality CI [44751449777](https://github.com/OYLPY/stock-monitor/actions/runs/44751449777) 全部通过，Issue 已关闭。报告结论优先、队列和历史分 tab、详情折叠；市场页按美股/日股切换，将来源、图表、CSV 和明细关系分区。完整证据见 [P06-FU-01 UI/UX 验收](../evidence/P06-FU-01-ui-ux.md) 与[六字段交接](../handoffs/P06-FU-01.md)。
 - **当前阻断：P07-02 / #49**。按用户确认，仅接入免费 EODHD Free；适配器随上述提交推送且 CI 成功，但本机没有 API Key、没有真实行情验证，Issue 必须保持 open / `BLOCKED_EXTERNAL`。
 - **本轮验证**：format、typecheck、321 个单测、生产构建、`eslint src scripts tests`、10 项 Playwright 和远端全仓 Quality CI 均通过。全仓 `pnpm lint` 曾被未跟踪的 `.next-p11-05` 生成文件纳入扫描而失败；该用户目录未修改或暂存，干净检出 CI lint 通过。
 - **运行状态事故**：截图时曾误用未隔离的 `pnpm start`，Worker 领取报告任务 `e6e5afad-bfef-43f1-9c76-dade95d4a756`。服务已停止；只读检查确认无完成事件/已归档报告，任务 attempt 仍 `RUNNING`，租约已过期。Worker 已向本机数据库写入领取/锁记录；没有手工改写或删除数据库行。保留给现有 Worker 的过期租约恢复逻辑处理；重启正常本地 Worker 后会重新领取，不要直接手改数据库状态。
-- **下一步**：推送 #75 的验收索引记录，确认其 Quality CI 成功后在工单留证并关闭，再从[任务索引](../../docs/ISSUE_INDEX.md)选择下一条依赖已满足的工作项。#49 仅在本机配置 API Key 并完成真实行情验收后继续；#50 仍因免费日股数据覆盖不足而保持阻断。
+- **下一步**：从[任务索引](../../docs/ISSUE_INDEX.md)开始 P12-05 / #78，执行隔离的安全与恢复验证。#49 仅在本机配置 API Key 并完成真实行情验收后继续；#50 仍因免费日股数据覆盖不足而保持阻断。
 
 ## 历史执行记录（截至 2026-11-19）
 
