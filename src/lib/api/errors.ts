@@ -12,6 +12,34 @@ const API_ERRORS = {
   REQUEST_TOO_LARGE: { status: 413, message: "请求体超过大小限制" },
   UNSUPPORTED_MEDIA_TYPE: { status: 415, message: "请求类型不受支持" },
   LOCAL_ORIGIN_REQUIRED: { status: 403, message: "请求来源无效" },
+  MARKET_DATA_NOT_CONFIGURED: {
+    status: 503,
+    message: "尚未配置本机行情来源凭据。",
+  },
+  MARKET_DATA_DAILY_LIMIT: {
+    status: 429,
+    message: "本机今日免费行情请求额度已用完。",
+  },
+  MARKET_DATA_CREDENTIAL_REJECTED: {
+    status: 502,
+    message: "行情来源未接受本机凭据。",
+  },
+  MARKET_DATA_ACCESS_NOT_ENTITLED: {
+    status: 403,
+    message: "当前行情凭据或计划无权访问该证券。",
+  },
+  MARKET_DATA_SYMBOL_UNAVAILABLE: {
+    status: 422,
+    message: "行情来源没有返回该证券的可用日线。",
+  },
+  MARKET_DATA_INVALID_RESPONSE: {
+    status: 502,
+    message: "行情来源返回的数据无法通过校验。",
+  },
+  MARKET_DATA_UNAVAILABLE: {
+    status: 503,
+    message: "行情来源暂时不可用；本机保留已有数据。",
+  },
   BACKUP_FAILED: {
     status: 500,
     message: "本机数据库备份失败，请检查磁盘空间和目录权限。",

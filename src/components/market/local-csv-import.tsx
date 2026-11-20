@@ -29,11 +29,9 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldLegend,
-  FieldSet,
 } from "@/components/shadcn/field";
 import { Input } from "@/components/shadcn/input";
-import { RadioGroup, RadioGroupItem } from "@/components/shadcn/radio-group";
+import type { MarketCode } from "@/domain/primitives";
 
 function errorMessage(payload: unknown, status: number) {
   if (status === 413) return "CSV 文件不能超过 4 MiB。";
@@ -82,10 +80,12 @@ function errorMessage(payload: unknown, status: number) {
   }
 }
 
-export function LocalCsvImport() {
+export function LocalCsvImport({ market }: { market: MarketCode }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const marketLabel = market === "US" ? "美股" : "日股";
+  const headingId = `local-market-import-heading-${market.toLowerCase()}`;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -120,7 +120,7 @@ export function LocalCsvImport() {
       const { rowsAdded, rowsInFile } = payload.data;
       toast.success(
         rowsAdded === 0 ? "该文件已导入过" : `已导入 ${rowsAdded} 条日线`,
-        { description: `文件共 ${rowsInFile} 条，来源仍标记为 NOT_VERIFIED。` },
+        { description: `文件共 ${rowsInFile} 条；来源尚未核验。` },
       );
       form.reset();
       router.refresh();
@@ -136,52 +136,36 @@ export function LocalCsvImport() {
       <Card>
         <CardHeader>
           <CardTitle>
-            <h2 id="local-market-import-heading">导入本机行情 CSV</h2>
+            <h2 id={headingId}>导入{marketLabel} CSV</h2>
           </CardTitle>
           <CardDescription>
-            选择本地日线文件；应用不会访问外部数据源。
+            仅导入到本机；应用不会访问外部数据源。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Alert>
             <AlertDescription>
-              导入值和来源许可均标记为
-              NOT_VERIFIED；这里只供人工查看，不会进入回测、策略评分或模拟成交。解析后的行情记录保存在本机数据库，原始
-              CSV 不会留存。
+              来源与许可尚未核验。数据仅供查看，不用于回测、策略评分或模拟交易；原始文件不会留存。
             </AlertDescription>
           </Alert>
           <form
             action="/api/v1/market-data/import"
-            aria-labelledby="local-market-import-heading"
+            aria-labelledby={headingId}
             encType="multipart/form-data"
             method="post"
             onSubmit={submit}
             className="flex flex-col gap-4"
           >
+            <input name="market" type="hidden" value={market} />
             <FieldGroup>
-              <FieldSet>
-                <FieldLegend>市场</FieldLegend>
-                <RadioGroup
-                  className="grid gap-4 sm:grid-cols-2"
-                  defaultValue="US"
-                  name="market"
-                >
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="market-us" value="US" />
-                    <FieldLabel htmlFor="market-us">美国市场 · USD</FieldLabel>
-                  </Field>
-                  <Field orientation="horizontal">
-                    <RadioGroupItem id="market-jp" value="JP" />
-                    <FieldLabel htmlFor="market-jp">日本市场 · JPY</FieldLabel>
-                  </Field>
-                </RadioGroup>
-              </FieldSet>
               <Field>
-                <FieldLabel htmlFor="local-market-symbol">证券代码</FieldLabel>
+                <FieldLabel htmlFor={`local-market-symbol-${market}`}>
+                  证券代码
+                </FieldLabel>
                 <Input
                   autoCapitalize="characters"
                   autoComplete="off"
-                  id="local-market-symbol"
+                  id={`local-market-symbol-${market}`}
                   maxLength={32}
                   name="symbol"
                   pattern="[A-Za-z0-9][A-Za-z0-9.\-]{0,31}"
@@ -189,16 +173,16 @@ export function LocalCsvImport() {
                   spellCheck={false}
                 />
                 <FieldDescription>
-                  例如 AAPL 或 7203；一次导入一个证券。
+                  例如 {market === "US" ? "AAPL" : "7203"}；一次导入一个证券。
                 </FieldDescription>
               </Field>
               <Field>
-                <FieldLabel htmlFor="local-market-file">
+                <FieldLabel htmlFor={`local-market-file-${market}`}>
                   日线 CSV 文件
                 </FieldLabel>
                 <Input
                   accept=".csv,text/csv"
-                  id="local-market-file"
+                  id={`local-market-file-${market}`}
                   name="file"
                   required
                   type="file"
@@ -210,13 +194,13 @@ export function LocalCsvImport() {
               </Field>
               <Field orientation="horizontal">
                 <Checkbox
-                  id="local-market-rights"
+                  id={`local-market-rights-${market}`}
                   name="rightsConfirmed"
                   required
                   value="on"
                 />
                 <FieldContent>
-                  <FieldLabel htmlFor="local-market-rights">
+                  <FieldLabel htmlFor={`local-market-rights-${market}`}>
                     我确认有权将此文件保存在本机
                   </FieldLabel>
                   <FieldDescription>

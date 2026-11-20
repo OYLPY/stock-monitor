@@ -1,21 +1,10 @@
-import { Database } from "lucide-react";
-
 import { MarketDataStatusBadge } from "@/components/market/market-data-status";
+import { Button } from "@/components/shadcn/button";
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/shadcn/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/shadcn/empty";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/shadcn/collapsible";
 import {
   Table,
   TableBody,
@@ -49,48 +38,28 @@ export function LocalPriceHistory({
   bars: readonly LocalMarketBarRow[];
   market: MarketCode;
 }) {
+  if (bars.length === 0) return null;
+
   const { currency, label } = marketDetails[market];
-  const headingId = `local-price-history-${market}`;
 
   return (
-    <Card>
-      <CardHeader>
-        <div>
-          <CardTitle>
-            <h3 id={headingId}>{label}本机导入行情</h3>
-          </CardTitle>
-          <CardDescription>
-            {MARKET_TIME_ZONES[market]} · {currency} · 最多显示最近 100 条
-          </CardDescription>
-        </div>
-        <CardAction>
-          <MarketDataStatusBadge status="NOT_VERIFIED" />
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        {bars.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Database aria-hidden="true" />
-              </EmptyMedia>
-              <EmptyTitle>
-                <h4>尚无本机导入行情</h4>
-              </EmptyTitle>
-              <EmptyDescription>
-                <p>使用上方 CSV 导入后，可在此查看日期、OHLCV 和来源状态。</p>
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <Table
-            aria-labelledby={headingId}
-            className="min-w-[64rem]"
-            tabIndex={0}
-          >
+    <Collapsible>
+      <CollapsibleTrigger
+        render={<Button className="w-full justify-between" variant="outline" />}
+      >
+        查看本机行情明细（{bars.length} 条）
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-3">
+        <div
+          aria-label={`${label}行情明细表`}
+          className="max-w-full overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 [&>[data-slot=table-container]]:w-max [&>[data-slot=table-container]]:overflow-visible"
+          role="region"
+          tabIndex={0}
+        >
+          <Table className="min-w-[64rem]">
             <TableCaption>
-              最近导入的 {bars.length} 条 {label}日线记录。价格单位：{currency}
-              ；来源和许可尚未核验。
+              {label}日线记录，价格单位 {currency}，时区{" "}
+              {MARKET_TIME_ZONES[market]}。 历史行情不代表实时行情或策略验证。
             </TableCaption>
             <TableHeader>
               <TableRow>
@@ -137,8 +106,8 @@ export function LocalPriceHistory({
               ))}
             </TableBody>
           </Table>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

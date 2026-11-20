@@ -231,7 +231,7 @@ const modelRoleSchema = z.strictObject({
 
 export const researchModelOutputSchema = z.strictObject({
   facts: z.array(modelStatementSchema).max(30),
-  inferences: z.array(modelStatementSchema).max(20),
+  inferences: z.array(modelStatementSchema).max(3),
   hypotheses: z.array(modelStatementSchema).max(20),
   candidates: z
     .array(

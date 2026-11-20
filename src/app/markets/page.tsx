@@ -1,32 +1,38 @@
-import { CircleHelp } from "lucide-react";
-
-import {
-  MarketDataStatusBadge,
-  MarketDataStatusLegend,
-} from "@/components/market/market-data-status";
 import { LocalCsvImport } from "@/components/market/local-csv-import";
 import { LocalPriceHistory } from "@/components/market/local-price-history";
 import { PriceHistoryChart } from "@/components/market/price-history-chart";
+import { UsMarketData } from "@/components/market/us-market-data";
+import { ChartNoAxesCombined } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/shadcn/alert";
+import { Button } from "@/components/shadcn/button";
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/shadcn/card";
-import { MARKET_TIME_ZONES } from "@/domain/primitives";
-import type { CurrencyCode } from "@/domain/primitives";
-import type { MarketCode } from "@/domain/primitives";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/shadcn/collapsible";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/shadcn/empty";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/shadcn/tabs";
+import type { CurrencyCode, MarketCode } from "@/domain/primitives";
 import { loadLocalMarketBars } from "@/features/market-data/local-import";
+import { loadEodhdDailyStatus } from "@/features/market-data/us-provider";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const markets = [
-  { code: "US", label: "美国市场", currency: "USD" },
-  { code: "JP", label: "日本市场", currency: "JPY" },
+  { code: "US", label: "美股", currency: "USD" },
+  { code: "JP", label: "日股", currency: "JPY" },
 ] as const satisfies ReadonlyArray<{
   code: MarketCode;
   currency: CurrencyCode;
@@ -38,149 +44,123 @@ export default async function MarketsPage({
 }: {
   searchParams: Promise<{ import?: string }>;
 }) {
-  const [localBars, params] = await Promise.all([
+  const [localBars, providerStatus, params] = await Promise.all([
     loadLocalMarketBars(),
+    loadEodhdDailyStatus(),
     searchParams,
   ]);
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-muted-foreground">美日市场</p>
-        <h1 className="sr-only">市场监测</h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          当前未接入经过核验的行情来源。页面不会推断开市状态或绘制未核验行情；导入的本机文件会单独列出。
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <h1 className="sr-only">市场监测</h1>
 
       {params.import === "success" && (
         <Alert>
-          <AlertDescription>
-            行情已保存在本机记录中，来源与许可仍为 NOT_VERIFIED。
-          </AlertDescription>
+          <AlertDescription>CSV 已导入；来源仍未核验。</AlertDescription>
         </Alert>
       )}
       {params.import === "error" && (
         <Alert variant="destructive">
           <AlertDescription>
-            行情文件未导入，请检查文件、字段和本机保存权限。
+            CSV 未导入；请检查文件格式和数据行。
           </AlertDescription>
         </Alert>
       )}
 
-      <LocalCsvImport />
+      <Tabs defaultValue="US" className="min-w-0">
+        <TabsList activateOnFocus aria-label="选择市场">
+          {markets.map(({ code, label }) => (
+            <TabsTrigger key={code} value={code}>
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      <section
-        aria-labelledby="local-market-history-heading"
-        className="flex flex-col gap-4"
-      >
-        <h2
-          className="text-base font-semibold"
-          id="local-market-history-heading"
-        >
-          本机导入记录
-        </h2>
-        <div className="grid gap-4">
-          <LocalPriceHistory bars={localBars.US} market="US" />
-          <LocalPriceHistory bars={localBars.JP} market="JP" />
-        </div>
-      </section>
+        {markets.map(({ code, currency, label }) => {
+          const marketBars = localBars[code];
+          const latestSnapshot = marketBars.reduce<
+            (typeof marketBars)[number] | null
+          >(
+            (latest, bar) =>
+              latest === null || bar.collectedAtMs > latest.collectedAtMs
+                ? bar
+                : latest,
+            null,
+          );
+          const chartRows = latestSnapshot
+            ? marketBars
+                .filter(
+                  (bar) =>
+                    bar.symbol === latestSnapshot.symbol &&
+                    bar.sourceHash === latestSnapshot.sourceHash,
+                )
+                .sort((left, right) =>
+                  left.tradingDate.localeCompare(right.tradingDate),
+                )
+            : [];
 
-      <section
-        aria-labelledby="market-sessions-heading"
-        className="flex flex-col gap-4"
-      >
-        <div className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold" id="market-sessions-heading">
-            市场时段与行情快照
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            时区按市场所属地区标明；交易日历和行情采集时间尚不可用。
-          </p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {markets.map(({ code, currency, label }) => (
-            <Card className="min-w-0" key={code}>
-              <CardHeader>
-                <div>
-                  <CardTitle>
-                    <h3 id={`market-${code}-heading`}>{label}</h3>
-                  </CardTitle>
-                  <CardDescription>{MARKET_TIME_ZONES[code]}</CardDescription>
-                </div>
-                <CardAction>
-                  <MarketDataStatusBadge status="NOT_VERIFIED" />
-                </CardAction>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <dt className="text-muted-foreground">开闭市状态</dt>
-                    <dd className="flex flex-col items-start gap-1">
-                      <span>无法确认</span>
-                      <span className="text-xs text-muted-foreground">
-                        交易日历未接入
-                      </span>
-                    </dd>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <dt className="text-muted-foreground">
-                      最新行情 / 市场时间
-                    </dt>
-                    <dd>无可核验快照 / 无时间戳</dd>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <dt className="text-muted-foreground">
-                      行情来源 / 采集时间
-                    </dt>
-                    <dd>未接入 / 无采集记录</dd>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <dt className="text-muted-foreground">市场报价币种</dt>
-                    <dd>{currency}</dd>
-                  </div>
-                </dl>
+          return (
+            <TabsContent
+              className="flex min-w-0 flex-col gap-4"
+              key={code}
+              value={code}
+            >
+              <h2 className="sr-only">{label}行情</h2>
+              {code === "US" ? (
+                <UsMarketData {...providerStatus} />
+              ) : (
                 <Alert>
-                  <CircleHelp aria-hidden="true" />
                   <AlertDescription>
-                    市场时段和价格时间须由来源确认；交易日历未接入时不根据开发机时钟推断开闭市。
+                    日股自动行情源尚未接入；可导入本机 CSV，仅供查看。
                   </AlertDescription>
                 </Alert>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+              )}
 
-      <section
-        aria-labelledby="market-history-heading"
-        className="flex flex-col gap-4"
-      >
-        <div className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold" id="market-history-heading">
-            收盘价历史
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            图表使用各市场当地时间；收盘价始终保留原始报价币种。
-          </p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {markets.map(({ code, currency, label }) => (
-            <PriceHistoryChart
-              collectedAtMs={null}
-              currency={currency}
-              dataStatus="NOT_VERIFIED"
-              key={code}
-              market={code}
-              marketLabel={label}
-              points={[]}
-              sourceName="未接入行情来源"
-            />
-          ))}
-        </div>
-      </section>
+              <Collapsible>
+                <CollapsibleTrigger
+                  render={<Button className="self-start" variant="outline" />}
+                >
+                  导入 CSV
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <LocalCsvImport market={code} />
+                </CollapsibleContent>
+              </Collapsible>
 
-      <MarketDataStatusLegend />
+              {chartRows.length > 0 && latestSnapshot ? (
+                <PriceHistoryChart
+                  collectedAtMs={latestSnapshot.collectedAtMs}
+                  currency={currency}
+                  dataStatus={latestSnapshot.dataClass}
+                  market={code}
+                  marketLabel={`${label} · ${latestSnapshot.symbol}`}
+                  points={chartRows.map((bar) => ({
+                    tradingDate: bar.tradingDate,
+                    close: Number(bar.close),
+                  }))}
+                  sourceName={latestSnapshot.publisher}
+                />
+              ) : (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <ChartNoAxesCombined aria-hidden="true" />
+                    </EmptyMedia>
+                    <EmptyTitle>{label}暂无日线</EmptyTitle>
+                    <EmptyDescription>
+                      {code === "US"
+                        ? "获取或导入日线后会显示趋势；导入文件不用于策略验证。"
+                        : "导入日线后会显示趋势；本机文件不用于策略验证。"}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )}
+
+              <LocalPriceHistory bars={marketBars} market={code} />
+            </TabsContent>
+          );
+        })}
+      </Tabs>
     </div>
   );
 }

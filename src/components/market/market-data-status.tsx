@@ -2,15 +2,29 @@ import { Badge } from "@/components/shadcn/badge";
 import { Card, CardContent } from "@/components/shadcn/card";
 
 const statusDetails = [
-  { status: "REAL", description: "来自实际来源，不代表实时、完整或准确。" },
-  { status: "DELAYED", description: "来源明确声明该数据存在延迟。" },
-  { status: "HISTORICAL", description: "数据属于已经结束的市场时段。" },
+  {
+    status: "REAL",
+    label: "来源已记录",
+    description: "来源已记录；不代表实时、完整或准确。",
+  },
+  {
+    status: "DELAYED",
+    label: "延迟行情",
+    description: "来源明确声明该数据存在延迟。",
+  },
+  {
+    status: "HISTORICAL",
+    label: "历史行情",
+    description: "数据属于已经结束的市场时段。",
+  },
   {
     status: "FIXTURE",
-    description: "合成演示数据，验证等级必须为 DEMO_ONLY。",
+    label: "演示数据",
+    description: "合成数据仅用于界面或流程演示，不是市场事实。",
   },
   {
     status: "NOT_VERIFIED",
+    label: "未核验",
     description: "来源或数据性质尚未核验，不能作为行情事实。",
   },
 ] as const;
@@ -22,10 +36,14 @@ export function MarketDataStatusBadge({
 }: {
   status: MarketDataStatus;
 }) {
+  const details = statusDetails.find((item) => item.status === status)!;
+
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
-      <Badge variant="outline">{status}</Badge>
-      {status === "FIXTURE" && <Badge variant="secondary">DEMO_ONLY</Badge>}
+      <Badge data-status={status} variant="outline">
+        {details.label}
+      </Badge>
+      {status === "FIXTURE" && <Badge variant="secondary">仅供演示</Badge>}
     </span>
   );
 }
@@ -41,7 +59,7 @@ export function MarketDataStatusLegend() {
           数据状态说明
         </h2>
         <p className="text-sm text-muted-foreground">
-          当前没有接入行情源；以下是状态含义，不代表已取得对应数据。
+          状态按来源和数据性质逐条标注；历史日线不代表实时行情或策略验证。
         </p>
       </div>
       <Card>

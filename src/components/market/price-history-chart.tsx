@@ -49,7 +49,7 @@ import type { CurrencyCode, MarketCode } from "@/domain/primitives";
 import { MARKET_TIME_ZONES } from "@/domain/primitives";
 
 export interface PriceHistoryPoint {
-  marketAtMs: number;
+  tradingDate: string;
   close: number;
 }
 
@@ -69,17 +69,6 @@ const chartConfig = {
     color: "var(--chart-1)",
   },
 } satisfies ChartConfig;
-
-function formatMarketTimestamp(
-  instantMs: number,
-  market: MarketCode,
-  options: Intl.DateTimeFormatOptions,
-) {
-  const timeZone = MARKET_TIME_ZONES[market];
-  return new Intl.DateTimeFormat("zh-CN", { timeZone, ...options }).format(
-    new Date(instantMs),
-  );
-}
 
 function formatPrice(close: number, currency: CurrencyCode) {
   return new Intl.NumberFormat("zh-CN", {
@@ -114,18 +103,14 @@ export function PriceHistoryChart({
         <dd>{currency} / 股</dd>
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <dt className="text-muted-foreground">市场时间</dt>
+        <dt className="text-muted-foreground">最新交易日</dt>
         <dd>
           {latestPoint ? (
-            <time dateTime={new Date(latestPoint.marketAtMs).toISOString()}>
-              {formatMarketTimestamp(latestPoint.marketAtMs, market, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}{" "}
-              {timeZone}
+            <time dateTime={latestPoint.tradingDate}>
+              {latestPoint.tradingDate} · {timeZone}
             </time>
           ) : (
-            "无行情时间戳"
+            "无历史交易日"
           )}
         </dd>
       </div>
@@ -207,14 +192,9 @@ export function PriceHistoryChart({
                   <CartesianGrid vertical={false} />
                   <XAxis
                     axisLine={false}
-                    dataKey="marketAtMs"
+                    dataKey="tradingDate"
                     minTickGap={24}
-                    tickFormatter={(value: number) =>
-                      formatMarketTimestamp(value, market, {
-                        month: "2-digit",
-                        day: "2-digit",
-                      })
-                    }
+                    tickFormatter={(value: string) => value.slice(5)}
                     tickLine={false}
                     tickMargin={8}
                   />
@@ -233,12 +213,7 @@ export function PriceHistoryChart({
                           formatPrice(Number(value), currency)
                         }
                         labelFormatter={(value) =>
-                          formatMarketTimestamp(Number(value), market, {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          }) +
-                          " " +
-                          timeZone
+                          `${String(value)} · ${timeZone}`
                         }
                       />
                     }
@@ -257,8 +232,8 @@ export function PriceHistoryChart({
                 className="mt-2 text-xs text-muted-foreground"
                 id={descriptionId}
               >
-                收盘价序列；所有时间按 {timeZone}{" "}
-                显示。详细记录可在数据表中查看。
+                EOD 收盘价按供应商交易日期显示；未提供的盘中发布时间不作推断。
+                详细记录可在数据表中查看。
               </figcaption>
             </figure>
 
@@ -286,22 +261,17 @@ export function PriceHistoryChart({
                     </TableCaption>
                     <TableHeader>
                       <TableRow>
-                        <TableHead scope="col">市场时间</TableHead>
+                        <TableHead scope="col">交易日</TableHead>
                         <TableHead className="text-right" scope="col">
                           收盘价（{currency} / 股）
                         </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {points.map(({ marketAtMs, close }) => (
-                        <TableRow key={marketAtMs}>
+                      {points.map(({ tradingDate, close }) => (
+                        <TableRow key={tradingDate}>
                           <TableCell>
-                            <time dateTime={new Date(marketAtMs).toISOString()}>
-                              {formatMarketTimestamp(marketAtMs, market, {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })}
-                            </time>
+                            <time dateTime={tradingDate}>{tradingDate}</time>
                           </TableCell>
                           <TableCell className="text-right font-mono tabular-nums">
                             {formatPrice(close, currency)}

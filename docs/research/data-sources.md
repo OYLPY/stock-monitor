@@ -4,7 +4,7 @@
 
 ## 问题与 as-of 日期
 
-**核验时点：2026-11-18。**调查美国与日本上市股票的数据可行性，重点区分监管披露、交易所行情、免费延迟/历史数据和需要许可的行情产品，并记录数据范围、时效、时间字段、认证、频率限制、价格、使用/再分发条件及本次访问证据。
+**调查基准：2026-11-18；最新实现追记：2026-11-20。**调查美国与日本上市股票的数据可行性，重点区分监管披露、交易所行情、免费延迟/历史数据和需要许可的行情产品，并记录数据范围、时效、时间字段、认证、频率限制、价格、使用/再分发条件及本次访问证据。2026-11-20 的 EODHD Free 官方条款复核与代码接入见文末更新；该更新覆盖先前 #49 “尚无供应商”的历史结论。
 
 本调查始于 GitHub Issue [#35](https://github.com/OYLPY/stock-monitor/issues/35)，并由 P07-02 / [#49](https://github.com/OYLPY/stock-monitor/issues/49)、P07-03 / [#50](https://github.com/OYLPY/stock-monitor/issues/50) 与 P07-04 / [#51](https://github.com/OYLPY/stock-monitor/issues/51) 延续。来源研究和引用归一化不等于生产 API 接入、数据授权或产品验收。
 
@@ -87,7 +87,7 @@ J-Quants 官方[计划数据表](https://jpx-jquants.com/en/spec/data-spec)复�
 
 Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_service/) 将超出个人用途的使用列为商业用途条件，并在该项下列出投资分析、研究、测试和监控等活动。按该条文不能推定本项目的个人投资研究符合免费个人用途；具体适用范围没有书面确认。其 [免费 API key 说明](https://www.alphavantage.co/support/api-key/) 对多数数据集列出每天 25 次请求；无限请求只面向经确认的开源或教育项目，本项目资格未获确认。官方 [日线 API 文档](https://www.alphavantage.co/documentation/) 说明 `TIME_SERIES_DAILY` 的免费 `compact` 只返回最近 100 个数据点，完整 25 年以上日线需要 Premium；复权日线、实时及 15 分钟延迟行情也需 Premium。TOS 没有在本次核验中明确本地长期保存/缓存期限或离线回测保留权。
 
-**P07-02 / #49 当前结论：`BLOCKED_EXTERNAL`。** 当前路线要求跨数十年历史验证，但 Alpha Vantage 免费日线只返回最新 100 条，完整历史、复权日线和实时/延迟行情需要 Premium；其条文也没有确认本项目研究用途符合免费个人许可。Tiingo Starter 虽列出 30 年以上历史，但条款禁止持久保存行情和派生回测结果，不能满足 SQLite 历史仓储。项目没有授权购买服务；没有 API key，也没有注册、发起 API 请求或读取行情载荷。Nasdaq Data Link 与 NYSE 历史产品仍按各自订阅和许可条件处理。
+**P07-02 / #49 来源选择（复核于 2026-11-20）：** Alpha Vantage 免费日线只返回最新 100 条，完整历史、复权日线和实时/延迟行情需要 Premium；其条文未确认本项目研究用途符合免费个人许可。Tiingo Starter 虽列出 30 年以上历史，但条款禁止持久保存行情和派生回测结果，不能满足 SQLite 历史仓储。两者均未选用；EODHD Free 已获用户授权并接入，限制、代码状态及尚未验证的真实端点见下方 2026-11-20 追记。EODHD 一年范围仍不满足多年代策略验证。
 
 #### P07-02 其他美股历史数据候选复核（2026-11-17）
 
@@ -163,7 +163,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - JPX 官方免费月度表覆盖最长 10 年，但月度频率无法替代逐交易日回测；同一目录卡注明外部再分发不可。[JPX 月间相场表目录卡](https://clientportal.jpx.co.jp/ClientPortal/s/datacatalog/a085j00000Ip94b/a037?language=ja)
 - JPX 日线历史可追溯到 1974 年，NYSE Daily TAQ 可追溯到 1993 年；这些支持多年代跨度的官方历史产品都有明确费用或订阅/许可门槛。[JPX Data Cloud 价表](https://db-ec.jpx.co.jp/client_info/JPX_DLSITE/html/price_en.pdf)、[NYSE 历史价表](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)
 - Nasdaq/NYSE 的延迟展示政策仍涉及产品级许可、展示提示或访问条件；“交易所网站可打开”不足以证明应用可建立免费、稳定、可保存的行情通道。
-- Alpha Vantage 服务条款的商业用途条件列出投资分析、研究、测试和监控；本项目的免费个人用途适用性未获确认。免费美股日线 `compact` 仅返回最近 100 条，完整 25 年以上历史及复权日线需要 Premium，因此 P07-02 保持 `BLOCKED_EXTERNAL`。
+- Alpha Vantage 服务条款的商业用途条件列出投资分析、研究、测试和监控；本项目的免费个人用途适用性未获确认。免费美股日线 `compact` 仅返回最近 100 条，完整 25 年以上历史及复权日线需要 Premium，因此未选用。2026-11-20 的 EODHD Free 接入更新见下文。
 - Twelve Data Basic 的日线历史覆盖说明看似满足多年代数据窗口，但免费计划标为非显示用途；其付费 Grow 套餐才列出内部显示权，且本地长期缓存/回测保留期限仍未核实。Alpaca Basic 的历史范围列为 2016 年起，且计划表另列 `latest 15 minutes` 限制（未解释其具体语义）；付费方案移除该限制但历史仍始于 2016 年，也不足数十年。因此这两项候选都不能在当前授权下接入本地价格图表并替代 #49 的阻断。
 
 ### 基于上述材料的推论
@@ -187,12 +187,24 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 1. 将 SEC/EDINET 作为未来候选的**披露证据源**评估；在获取 EDINET API key 及验证合规的数据保管方式前，不声称可运行。
 2. 将 J-Quants Free 仅记录为个人开发/验证或有限近期日线研究的候选；它的数据延迟、窗口和个人使用条款不满足多年代跨市场回测验收。
 3. JPX/TDnet、JPX 延迟行情、NYSE TAQ、Nasdaq Data Link 属于收费或需要进一步许可的候选。本任务没有授权采购，也未尝试访问。
-4. P04-03 仅交付研究文档；没有选定生产供应商、写入配置、创建适配器或把示例/测试数据接入应用。实现前应对当前条款、账户类型、存储与展示范围、具体字段、时间戳、价格调整和实际连接能力重新核验。
-5. P07-02 / #49 保持 `BLOCKED_EXTERNAL`：Alpha Vantage 免费完整历史需 Premium且免费研究用途未获确认；Twelve Data Basic 的显示许可不符；Alpaca 历史起于 2016；Tiingo Starter 禁止持久留存行情及派生回测结果。没有授权购买或 API key，不以 Fixture 替代真实行情适配器验收。
+4. P04-03 的供应商研究不代表生产连接。#49 接入后仍须区分代码与条款核验、用户配置凭据、线上真实可用性及历史策略验证；不能用适配器存在替代真实行情或回测证据。
+5. P07-02 / #49 已获用户授权接入 EODHD Free，具体限制与代码/测试状态见下方 2026-11-20 追记。Alpha Vantage、Twelve Data、Alpaca、Tiingo 仍按各自覆盖和许可限制排除；不以 Fixture 替代真实行情。
 6. P07-03 / #50 的 Free 日线仅 2 年并延迟 12 周；付费数据不在当前授权范围。保持 `BLOCKED_EXTERNAL`，不以短历史或 Fixture 宣称满足数十年回测。
 7. P07-04 / #51 已实现 SEC、BOJ、BLS 与 Fed RSS 的原生响应适配器，并以 mock fetch 和本地 SQLite 验证解析、请求限额、降级及幂等写入；没有请求真实数据，因此线上可用性仍为 `NOT_VERIFIED`。EDINET/BEA 缺少 API key、TDnet 需要未授权的付费服务、公司 IR 仅支持逐站手工引用。完整验收证据见 [P07-04 六字段交接](../../harness/handoffs/P07-04.md)。
 
-## 主要来源（既有来源于 2026-11-16 复核；Twelve Data 与 Alpaca 于 2026-11-17 复核；Alpha Vantage、Tiingo 与 J-Quants 于 2026-11-18 复核）
+## P07-02 / #49：EODHD Free 美股日线接入更新（2026-11-20）
+
+用户明确授权将 EODHD Free 用于本机研究工作台。EODHD 官方 [EOD API 文档](https://eodhd.com/financial-apis/api-for-historical-data-and-volumes)当前列出免费层为最近一年数据、每天 20 次请求及 500 次初始赠送请求；每次请求按单个代码计费 API 额度。该层需要用户自己的 API key，本项目不会代注册或读取/保存他人的凭据。
+
+EODHD 官方 [个人用途说明](https://eodhd.com/help/personal-use)将仅供个人使用的量化研究、回测、筛选与纸面模拟列为个人用途，并允许用户在自己的设备上私下显示；不得为组织或他人使用，也不得分享、再分发数据或输出。[留存说明](https://eodhd.com/help/storage)允许个人用户将下载数据保存在本机数据库，并保留来源值、日期、采集时间和 hash。本项目限定本机单人使用；每位使用者必须使用自己的凭据与数据，不能公开展示当前报价或把数据/报告提交到共享服务。
+
+适配器在 `/markets` 由用户手动请求单只美股日线；token 只从服务端 `EODHD_API_TOKEN` 环境变量读取，不经浏览器或写入 SQLite。每日 20 次限制以 UTC 日期记录在本机审计链，失败请求按保守策略计入；同一代码的成功快照缓存 24 小时。其他程序使用同一 key 的调用不在本机计数内。无凭据、额度用尽、密钥无权访问、供应商不可用或数据格式异常均返回明确错误，不伪造行情。
+
+官方文档列明日线 `open/high/low/close` 为当日未复权成交价，`adjusted_close` 包含拆股和分红调整，`volume` 已按拆股调整；本适配器仅保存未复权 OHLC 与成交量，未接入公司行动或复权历史。供应商还说明其行情来自聚合数据并不保证准确或实时。接口响应没有精确发布时间，本地分别保存交易日期和采集时刻，不推断盘中时效。由此，该一年日线仅用于来源可见性和人工历史浏览，不能验证数十年策略、不能进入回测/策略评分，也不自动形成研究报告候选或模拟成交。
+
+2026-11-20 仅以 Mock `fetch` 和隔离 SQLite 测试验证解析、OHLC 校验、来源/哈希/采集时间、持久化额度、缓存、loopback API 和密钥不泄露；没有注册账号、取得或读取 API key、访问真实行情端点。实际可用性在用户设置自己的 key 并完成运行时请求前为 `NOT_VERIFIED`。验收命令与退出码记录于 [P07-02 证据](../../harness/evidence/P07-02-eodhd-free.md) 和 [六字段交接](../../harness/handoffs/P07-02.md)。
+
+## 主要来源（既有来源于 2026-11-16 复核；Twelve Data 与 Alpaca 于 2026-11-17 复核；Alpha Vantage、Tiingo 与 J-Quants 于 2026-11-18 复核；EODHD 于 2026-11-20 复核）
 
 - [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)（页面列更新日期 2025-04-08）；[SEC Accessing EDGAR Data](https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data)；[SEC Developer Resources](https://www.sec.gov/about/developer-resources)；[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions)（含 1–3 分钟可见延迟、User-Agent 与 EDGAR 重用说明）。
 - [EDINET API v2 Spec PDF](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf)（2026 年 1 月版本）；[EDINET FAQ](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0090_001.html)（2026-11-05 更新）；[EDINET 使用规约](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0030.html)；[EDINET API 功能规约 PDF](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140191.pdf)。
@@ -204,6 +216,7 @@ Alpha Vantage 的 [Terms of Service](https://www.alphavantage.co/terms_of_servic
 - [Tiingo EOD 文档](https://www.tiingo.com/documentation/end-of-day)；[官方价格与额度](https://www.tiingo.com/about/pricing)；[Terms of Use §1.6 数据留存与 §1.7 AI/ML 条款](https://www.tiingo.com/tos/)。
 - [Twelve Data 套餐与用途](https://twelvedata.com/pricing)；[美国市场历史范围](https://twelvedata.com/exchanges/stocks)；[历史价格获取方式与单次记录限制](https://support.twelvedata.com/en/articles/5656039-how-to-get-historical-prices)；[个人用途及显示边界](https://support.twelvedata.com/en/articles/5332349-commercial-and-personal-usage)；[服务条款](https://twelvedata.com/terms)。
 - [Alpaca 市场数据计划与历史范围](https://docs.alpaca.markets/us/docs/about-market-data-api)；[历史 API 说明](https://alpaca.markets/learn/fetch-historical-data)。
+- [EODHD EOD 历史日线 API](https://eodhd.com/financial-apis/api-for-historical-data-and-volumes)；[个人使用及私密展示许可](https://eodhd.com/help/personal-use)；[本机留存/来源审计说明](https://eodhd.com/help/storage)；[免费计划 API 限额与 UTC 重置](https://eodhd.com/help/limits)。
 - [NYSE Market Data Pricing](https://www.nyse.com/market-data/pricing)；[NYSE Proprietary Market Data Policies PDF](https://www.nyse.com/publicdocs/nyse/data/NYSE_Proprietary_Market_Data_Comprehensive_Policy_Package.pdf)；[NYSE Historical Market Data Pricing PDF（2026-10）](https://www.nyse.com/publicdocs/nyse/data/NYSE_Historical_Market_Data_Pricing.pdf)。
 
 [^sec]: [SEC API 说明](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)；[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions)。

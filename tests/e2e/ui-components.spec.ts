@@ -10,6 +10,52 @@ const routes = [
   "/tasks",
 ];
 
+test("market monitoring keeps market selection, import, and history in one flow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1365, height: 900 });
+  await page.goto("/markets");
+
+  const marketTabs = page.getByRole("tablist", { name: "选择市场" });
+  const usTab = marketTabs.getByRole("tab", { name: "美股" });
+  const jpTab = marketTabs.getByRole("tab", { name: "日股" });
+  await expect(marketTabs.getByRole("tab")).toHaveCount(2);
+  await expect(usTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("美股暂无日线")).toBeVisible();
+  const eodhdSymbol = page.getByRole("textbox", { name: "美股代码" });
+  if ((await eodhdSymbol.count()) === 0) {
+    await expect(page.getByText(/未配置 EODHD Free 凭据/)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "获取近一年日线" }),
+    ).toHaveCount(0);
+  } else {
+    await expect(eodhdSymbol).toBeEnabled();
+  }
+
+  await usTab.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(jpTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText(/日股自动行情源尚未接入/)).toBeVisible();
+  await expect(page.getByText("日股暂无日线")).toBeVisible();
+
+  const importTrigger = page.getByRole("button", { name: "导入 CSV" });
+  await importTrigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(importTrigger).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page.getByRole("heading", { name: "导入日股 CSV" }),
+  ).toBeVisible();
+  await expect(page.locator('input[name="market"]')).toHaveValue("JP");
+  await expect(page.getByRole("radio")).toHaveCount(0);
+
+  await page.setViewportSize({ width: 320, height: 812 });
+  const widths = await page.evaluate(() => ({
+    document: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+  }));
+  expect(widths.document).toBeLessThanOrEqual(widths.viewport);
+});
+
 test("all workbench pages retain a heading and fit desktop and narrow screens", async ({
   page,
 }) => {
@@ -54,21 +100,21 @@ test("shadcn Select controls support keyboard use and preserve GET filters", asy
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/reports");
 
-  const reportType = page.getByRole("combobox", { name: "报告类型" });
+  const reportType = page.getByRole("combobox", { name: "历史类型" });
   await reportType.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("option", { name: "全部类型" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "全部" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("option", { name: "全部类型" })).toBeHidden();
+  await expect(page.getByRole("option", { name: "全部" })).toBeHidden();
 
   await reportType.click();
   await page.getByRole("option", { name: "异常报告" }).click();
   await page
-    .getByRole("searchbox", { name: "搜索报告、候选或证据编号" })
+    .getByRole("searchbox", { name: "搜索报告、策略或证据" })
     .fill("ui-comp-01-empty-result");
   await Promise.all([
     page.waitForURL((url) => url.searchParams.get("type") === "ANOMALY"),
-    page.getByRole("button", { name: "应用筛选" }).click(),
+    page.getByRole("button", { name: "筛选" }).click(),
   ]);
   expect(new URL(page.url()).searchParams.get("q")).toBe(
     "ui-comp-01-empty-result",
@@ -83,18 +129,28 @@ test("shadcn Select controls support keyboard use and preserve GET filters", asy
   ]);
 
   await page.goto("/reports");
-  const generateMorningButton = page.getByRole("button", { name: "生成晨报" });
-  await generateMorningButton.focus();
+  const enqueueReportButton = page.getByRole("button", { name: "加入队列" });
+  await enqueueReportButton.focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/reports\?task=/);
-  await expect(page.getByRole("status")).toContainText(
-    /报告任务(排队中|运行中)/,
-  );
+  const taskId = new URL(page.url()).searchParams.get("task");
+  if (!taskId) throw new Error("report_task_id_missing");
+  const taskLink = page.locator(`a[href="/reports?task=${taskId}"]`);
   await expect(
-    page.getByText(
-      /任务已在本机队列中等待 Worker 处理；报告尚未生成。|本机 Worker 正在处理；报告完成后刷新本页查看归档。/,
-    ),
+    page.getByRole("heading", { name: "报告任务队列" }),
   ).toBeVisible();
+  await expect(taskLink).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "报告任务队列" }),
+  ).toBeVisible();
+  await expect(taskLink).toBeVisible();
+  await page.goto("/reports");
+  await page.getByRole("tab", { name: /任务队列/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "报告任务队列" }),
+  ).toBeVisible();
+  await expect(taskLink).toBeVisible();
 });
 
 test("backtest date picker and account tab use their shadcn interactions", async ({

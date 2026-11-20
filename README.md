@@ -2,7 +2,7 @@
 
 ## Quant Research Workbench
 
-Local-first research workspace for US and Japanese equities. The current P00 scaffold does not provide market data or trading features yet.
+Local-first research workspace for US and Japanese equities. It stores research records in local SQLite and does not connect brokerage accounts or submit real orders.
 
 ## Requirements
 
@@ -16,9 +16,9 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open <http://localhost:3000>. Check the scaffold with `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
+Open <http://127.0.0.1:3000>. Check the application with `pnpm lint`, `pnpm typecheck`, and `pnpm build`.
 
-The P00 scaffold is static and works without credentials or market data. Copy `.env.example` only when a later task documents required variables. Quality checks are `pnpm format:check` and `pnpm test`.
+The application works offline without market-data credentials. The optional US EOD integration uses EODHD Free after you set your own `EODHD_API_TOKEN` in a server-side `.env.local` and restart the app; never use a `NEXT_PUBLIC_` variable or commit the key. Free access is limited to one year of daily history and 20 requests per day. It is not sufficient for multi-decade strategy validation or backtests. See [the research and risk guide](docs/USER_GUIDE.md) before using imported or provider data.
 
 The application is an immediately usable local tool with no login or user management. The separate Autopilot developer runner requires a local Codex CLI login; that does not add authentication to the application.
 

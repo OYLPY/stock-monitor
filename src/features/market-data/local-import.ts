@@ -190,8 +190,10 @@ function listMarketBars(
       volumeShares: marketPriceBars.volumeShares,
       collectedAtMs: marketPriceBars.collectedAtMs,
       contentHash: sourceRecords.contentHashSha256,
+      sourceKey: sources.sourceKey,
       publisher: sources.publisher,
       licenseStatus: sources.licenseStatus,
+      dataClass: sourceRecords.dataClass,
     })
     .from(marketPriceBars)
     .innerJoin(
@@ -205,11 +207,18 @@ function listMarketBars(
       desc(marketPriceBars.collectedAtMs),
       desc(marketPriceBars.id),
     )
-    // shortcut: show the latest 100 rows per market, add pagination when users need older imports.
-    .limit(100)
+    .limit(500)
     .all();
 
-  return rows.map((row) => ({
+  const latestBySourceSymbolDate = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) {
+    const key = `${row.sourceKey}:${row.symbol}:${row.tradingDate}`;
+    if (!latestBySourceSymbolDate.has(key)) {
+      latestBySourceSymbolDate.set(key, row);
+    }
+  }
+
+  return [...latestBySourceSymbolDate.values()].slice(0, 100).map((row) => ({
     symbol: row.symbol,
     tradingDate: row.tradingDate,
     open: formatMantissa(row.openMantissa, row.priceScale),
@@ -221,7 +230,8 @@ function listMarketBars(
     sourceHash: row.contentHash,
     publisher: row.publisher,
     licenseStatus: row.licenseStatus,
-    dataClass: "NOT_VERIFIED" as const,
+    dataClass: row.dataClass as
+      "HISTORICAL" | "NOT_VERIFIED" | "REAL" | "DELAYED" | "FIXTURE",
   }));
 }
 

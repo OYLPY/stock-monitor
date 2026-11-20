@@ -18,8 +18,9 @@ describe("PriceHistoryChart", () => {
       }),
     );
 
-    expect(html).toContain("NOT_VERIFIED");
-    expect(html).toContain("无行情时间戳");
+    expect(html).toContain('data-status="NOT_VERIFIED"');
+    expect(html).toContain(">未核验</span>");
+    expect(html).toContain("无历史交易日");
     expect(html).toContain("无采集记录");
     expect(html).toContain("没有价格序列时不绘制趋势线");
     expect(html).not.toContain('role="img"');
@@ -35,8 +36,8 @@ describe("PriceHistoryChart", () => {
         market: "US",
         marketLabel: "美国市场",
         points: [
-          { marketAtMs: Date.parse("2025-01-02T21:00:00.000Z"), close: 100 },
-          { marketAtMs: Date.parse("2025-01-03T21:00:00.000Z"), close: 102.5 },
+          { tradingDate: "2025-01-02", close: 100 },
+          { tradingDate: "2025-01-03", close: 102.5 },
         ],
         sourceName: "核验后的历史来源",
       }),
@@ -50,14 +51,10 @@ describe("PriceHistoryChart", () => {
     expect(html).toContain("查看图表数据表（2 条）");
     expect(html).toContain("历史来源");
     expect(html).toContain("America/New_York");
-    expect(html).toContain("HISTORICAL");
-    expect(html).toContain(
-      new Intl.DateTimeFormat("zh-CN", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "America/New_York",
-      }).format(new Date(Date.parse("2025-01-03T21:00:00.000Z"))),
-    );
+    expect(html).toContain('data-status="HISTORICAL"');
+    expect(html).toContain(">历史行情</span>");
+    expect(html).toContain("2025-01-03 · America/New_York");
+    expect(html).toContain("EOD 收盘价按供应商交易日期显示");
   });
 
   it("handles a constant single-point fixture and marks it demo-only", () => {
@@ -68,15 +65,14 @@ describe("PriceHistoryChart", () => {
         dataStatus: "FIXTURE",
         market: "JP",
         marketLabel: "日本市场",
-        points: [
-          { marketAtMs: Date.parse("2025-01-03T06:30:00.000Z"), close: 100 },
-        ],
+        points: [{ tradingDate: "2025-01-03", close: 100 }],
         sourceName: "仅供测试的合成来源",
       }),
     );
 
-    expect(html).toContain("FIXTURE");
-    expect(html).toContain("DEMO_ONLY");
+    expect(html).toContain('data-status="FIXTURE"');
+    expect(html).toContain("仅供演示");
+    expect(html).not.toContain("DEMO_ONLY");
     expect(html).toContain("Asia/Tokyo");
     expect(html).toContain("日本市场收盘价历史");
     expect(html).toContain('role="img"');

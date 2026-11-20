@@ -220,10 +220,10 @@ describe("reports page", () => {
     const page = await ReportsPage({ searchParams: Promise.resolve({}) });
     const html = renderToStaticMarkup(createElement(() => page));
 
-    expect(html).toContain("暂无已保存的报告");
-    expect(html).toContain("生成研究报告");
-    expect(html).toContain("生成晨报");
-    expect(html).toContain("只归档 NOT_VERIFIED 报告，不生成策略候选");
+    expect(html).toContain("暂无报告");
+    expect(html).toContain("加入队列");
+    expect(html).toContain("晨报");
+    expect(html).toContain("结论只依据本机已保存证据");
     expect(html).toContain('action="/api/v1/reports" method="post"');
     expect(html).not.toContain("胜率");
     expect(html).not.toContain("Sharpe");
@@ -236,6 +236,21 @@ describe("reports page", () => {
       executionStatus: "PENDING",
       resultCode: null,
     });
+    pageMocks.listTaskRuns.mockReturnValue([
+      {
+        id: "0c72b1db-1577-4828-9e25-82af2eadd323",
+        kind: "REPORT",
+        label: "晨报",
+        executionStatus: "PENDING",
+        attemptCount: 0,
+        cancellationRequestedAtMs: null,
+        resultCode: null,
+        errorCode: null,
+        createdAtMs: Date.UTC(2026, 10, 18, 22),
+        startedAtMs: null,
+        finishedAtMs: null,
+      },
+    ]);
     const page = await ReportsPage({
       searchParams: Promise.resolve({
         task: "0c72b1db-1577-4828-9e25-82af2eadd323",
@@ -243,8 +258,8 @@ describe("reports page", () => {
     });
     const html = renderToStaticMarkup(createElement(() => page));
 
-    expect(html).toContain("报告任务排队中");
-    expect(html).toContain("报告尚未生成");
+    expect(html).toContain("报告任务队列");
+    expect(html).toContain("排队中");
   });
 
   it("shows persisted report tasks after loading the page without a task query", async () => {
@@ -266,12 +281,8 @@ describe("reports page", () => {
     const page = await ReportsPage({ searchParams: Promise.resolve({}) });
     const html = renderToStaticMarkup(createElement(() => page));
 
-    expect(html).toContain("报告任务");
-    expect(html).toContain("晨报");
-    expect(html).toContain("排队中");
-    expect(html).toContain("管理全部任务");
-    expect(html).toContain("0c72b1db");
-    expect(html).toContain("取消晨报");
+    expect(html).toContain("任务队列（1 项活动）");
+    expect(html).not.toContain("0c72b1db");
   });
 
   it("shows distinct evidence, inference, hypothesis, risk, and six-role audit", () => {
@@ -283,7 +294,7 @@ describe("reports page", () => {
     expect(html).toContain("本机事件记录不构成完整日历。");
     expect(html).toContain("基于事实的推论");
     expect(html).toContain("待验证的研究假设");
-    expect(html).toContain("REJECTED");
+    expect(html).toContain("拒绝");
     expect(html).toContain("缺少可核验的当前权益输入");
     expect(html).toContain("未提出模型否决也不代表风险通过");
     expect(html).toContain("统筹 Coordinator");
@@ -308,7 +319,8 @@ describe("reports page", () => {
     };
     const html = renderReports([blockedReport]);
 
-    expect(html).toContain("外部阻断 · BLOCKED_EXTERNAL");
+    expect(html).toContain("外部阻断");
+    expect(html).not.toContain("BLOCKED_EXTERNAL");
     expect(html).toContain("未记录确定性裁决；裁决缺失不等于通过。");
     expect(html).not.toContain("APPROVED_FOR_PAPER_REVIEW");
   });
@@ -334,9 +346,10 @@ describe("reports page", () => {
     expect(html).toContain("日本市场晨报");
     expect(html).toContain("五维验证状态");
     expect(html).toContain("跨环境稳健性");
-    expect(html).toContain("未验证 · NOT_VERIFIED");
+    expect(html).toContain("未验证");
+    expect(html).not.toContain("NOT_VERIFIED");
     expect(html).not.toMatch(/<h3[^>]*>日度审计<\/h3>/);
-    expect(html).toContain("显示 1 / 2 份");
+    expect(html).toContain("1 / 2 份");
     expect(reportTitles.slice(0, 2)).toEqual(["日度审计", "日本市场晨报"]);
   });
 
@@ -356,11 +369,52 @@ describe("reports page", () => {
     };
     const html = renderReports([fixtureReport]);
 
-    expect(html).toContain("仅演示 · DEMO_ONLY");
-    expect(html).toContain("按规则隔离为 DEMO_ONLY");
+    expect(html).toContain("仅演示");
+    expect(html).toContain("已隔离为仅演示");
     expect(html).toContain("超过 3 个上限");
     expect(html).toContain("策略候选（4 / 3）");
     expect(html).not.toContain("候选 1");
+  });
+
+  it("shows only evidence-linked events under a research inference", () => {
+    const linkedReport = {
+      ...reportFixture,
+      inferences: [
+        {
+          text: "两项官方事件可能共同影响市场预期。",
+          evidenceIds: ["event-source-a", "event-source-b"],
+        },
+      ],
+      eventTimeline: {
+        ...reportFixture.eventTimeline,
+        recentEvents: [
+          {
+            category: "MACRO",
+            summary: "央行维持政策利率。",
+            marketCode: "JP" as const,
+            occurredAtMs: Date.UTC(2026, 10, 15),
+            dataClass: "HISTORICAL" as const,
+            verificationLevel: "PARTIAL" as const,
+            evidenceIds: ["event-source-a"],
+          },
+          {
+            category: "MACRO",
+            summary: "就业数据超预期。",
+            marketCode: "US" as const,
+            occurredAtMs: Date.UTC(2026, 10, 16),
+            dataClass: "HISTORICAL" as const,
+            verificationLevel: "PARTIAL" as const,
+            evidenceIds: ["event-source-b"],
+          },
+        ],
+      },
+    };
+    const html = renderReports([linkedReport]);
+
+    expect(html).toContain("两项官方事件可能共同影响市场预期。");
+    expect(html).toContain("引用事件（按证据编号关联，不代表因果）");
+    expect(html).toContain("央行维持政策利率。");
+    expect(html).toContain("就业数据超预期。");
   });
 
   it("does not create a link from an unsafe source URL", () => {

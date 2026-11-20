@@ -10,17 +10,15 @@ test("archives and displays a local fixture report without implying market data 
     name: "P12-03 E2E Fixture：风控否决与证据展示",
   });
   await expect(title).toBeVisible();
-  const archivedTask = page.getByRole("row").filter({ hasText: "E2E_FIXTURE" });
-  await expect(archivedTask).toContainText("晨报");
   await page.reload();
-  await expect(
-    page.getByRole("row").filter({ hasText: "E2E_FIXTURE" }),
-  ).toContainText("完成");
+  await expect(title).toBeVisible();
 
   const reportCard = page.locator('[data-slot="card"]').filter({ has: title });
-  await expect(reportCard).toContainText("仅演示 · DEMO_ONLY");
+  await expect(reportCard).toContainText("仅演示");
+  await expect(reportCard).toContainText("演示数据");
   await expect(reportCard).toContainText("Fixture");
-  await expect(reportCard).toContainText("REJECTED");
+  await expect(reportCard).toContainText("拒绝");
+  await reportCard.getByRole("button", { name: "完整报告与审计详情" }).click();
   await expect(reportCard).toContainText(
     "E2E Fixture 风险否决展示；不是实际交易风险裁决。",
   );
@@ -54,8 +52,11 @@ test("archives and displays a local fixture report without implying market data 
   });
 
   await page.setViewportSize({ width: 320, height: 800 });
-  const reportQueue = page.getByRole("region", { name: "报告任务" });
-  await expect(reportQueue.getByRole("table")).toBeVisible();
+  await page.getByRole("tab", { name: /任务队列/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "报告任务队列" }),
+  ).toBeVisible();
+  await expect(page.getByRole("table")).toBeVisible();
   const widths = await page.evaluate(() => ({
     document: document.documentElement.scrollWidth,
     viewport: window.innerWidth,

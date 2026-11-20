@@ -47,9 +47,7 @@ export default async function ReportsPage({
         taskNotice={
           task
             ? {
-                id: task.id,
                 status: task.executionStatus,
-                resultCode: task.resultCode,
               }
             : null
         }
