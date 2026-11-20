@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 import { createTestDatabase } from "@/db/test-database";
+import { openDatabase } from "@/db";
 import { initializeDefaultPaperAccount } from "@/db/paper-account-repository";
 import {
   instruments,
@@ -26,6 +27,7 @@ import {
 const openAt = Date.parse("2026-11-18T01:00:00.000Z");
 
 async function createFixture() {
+  // Trusted-class records here are local test doubles in a disposable SQLite file.
   const fixture = await createTestDatabase();
   const instrumentId = randomUUID();
 
@@ -173,6 +175,8 @@ async function createFixture() {
       price?: string;
       volumeShares?: string;
       marketAtMs?: number;
+      validFromMs?: number;
+      validUntilMs?: number;
       dataClass?: "REAL" | "FIXTURE";
     } = {},
   ) {
@@ -184,8 +188,8 @@ async function createFixture() {
       price: input.price ?? "100",
       volumeShares: input.volumeShares ?? "1000",
       marketAtMs,
-      validFromMs: openAt,
-      validUntilMs: openAt + 86_400_000,
+      validFromMs: input.validFromMs ?? openAt,
+      validUntilMs: input.validUntilMs ?? openAt + 86_400_000,
     });
     const record = addRecord({
       content,
@@ -297,6 +301,46 @@ describe("paper fill engine", () => {
     }
   });
 
+  it("does not duplicate a persisted fill when replayed after SQLite restart", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const fixture = await createFixture();
+    let restartedDatabase: Awaited<ReturnType<typeof openDatabase>> | undefined;
+    try {
+      const quoteEvidence = fixture.addExecutionQuote({ volumeShares: "200" });
+      const first = executePaperOrder(fixture.database, {
+        orderId: fixture.order.id,
+        quoteEvidence,
+      });
+      const ledgerAfterFirstFill = fixture.database.orm
+        .select()
+        .from(ledgerEvents)
+        .all();
+      fixture.database.client.close();
+      restartedDatabase = await openDatabase(fixture.filePath);
+
+      const replay = executePaperOrder(restartedDatabase, {
+        orderId: fixture.order.id,
+        quoteEvidence,
+      });
+
+      expect(first.status).toBe("PARTIALLY_FILLED");
+      expect(replay).toMatchObject({
+        replayed: true,
+        status: "PARTIALLY_FILLED",
+      });
+      expect(
+        restartedDatabase.orm.select().from(paperFills).all(),
+      ).toHaveLength(1);
+      expect(restartedDatabase.orm.select().from(ledgerEvents).all()).toEqual(
+        ledgerAfterFirstFill,
+      );
+    } finally {
+      restartedDatabase?.client.close();
+      vi.useRealTimers();
+      await fixture.cleanup();
+    }
+  });
+
   it("rejects fixture quotes without touching the ledger", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const fixture = await createFixture();
@@ -349,6 +393,42 @@ describe("paper fill engine", () => {
       expect(belowStop.order.status).toBe("PENDING");
       expect(fixture.database.orm.select().from(paperFills).all()).toHaveLength(
         0,
+      );
+    } finally {
+      vi.useRealTimers();
+      await fixture.cleanup();
+    }
+  });
+
+  it("rejects an expired quote without creating a paper fill or ledger entry", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const fixture = await createFixture();
+    try {
+      const ledgerEventsBefore = fixture.database.orm
+        .select()
+        .from(ledgerEvents)
+        .all();
+      const staleQuote = fixture.addExecutionQuote({
+        marketAtMs: openAt - 1,
+        validFromMs: openAt - 60_000,
+        validUntilMs: openAt - 1,
+      });
+
+      const result = executePaperOrder(fixture.database, {
+        orderId: fixture.order.id,
+        quoteEvidence: staleQuote,
+      });
+
+      expect(result).toMatchObject({
+        status: "REJECTED",
+        reasonCode: "QUOTE_UNAVAILABLE",
+        resultClass: "NOT_VERIFIED",
+      });
+      expect(fixture.database.orm.select().from(paperFills).all()).toHaveLength(
+        0,
+      );
+      expect(fixture.database.orm.select().from(ledgerEvents).all()).toEqual(
+        ledgerEventsBefore,
       );
     } finally {
       vi.useRealTimers();

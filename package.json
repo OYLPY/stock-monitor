@@ -10,6 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration": "vitest run tests/integration",
     "test:coverage": "vitest run tests/unit --coverage.enabled",
     "test:quant-audit": "vitest run tests/quant-audit",
     "test:e2e": "playwright test",

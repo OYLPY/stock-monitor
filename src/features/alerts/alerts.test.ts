@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { openDatabase } from "@/db";
 import { createTestDatabase } from "../../db/test-database.ts";
 import { marketWatchSourceWatermarks } from "../../db/schema.ts";
 import {
@@ -174,10 +175,12 @@ describe("market watch alerts", () => {
     }
   });
 
-  it("notifies one verified cross-source event once and suppresses an unchanged revision", async () => {
+  it("notifies one cross-source event once across database restart", async () => {
+    // The synthetic records exercise persisted notification rules only; no live feeds are read.
     const { fixture, source, nowMs } = await preparedDatabase();
     const bojSource = registerTestSource(fixture.database, "boj.rss");
     const dateNow = vi.spyOn(Date, "now").mockReturnValue(nowMs);
+    let restartedDatabase: Awaited<ReturnType<typeof openDatabase>> | undefined;
 
     try {
       const fedRecord = record(
@@ -281,7 +284,11 @@ describe("market watch alerts", () => {
           expect.objectContaining({ source_record_id: bojRecord.id }),
         ]),
       });
-      const retry = processMarketWatchAlerts(fixture.database, {
+      fixture.database.client.close();
+      const activeDatabase = await openDatabase(fixture.filePath);
+      restartedDatabase = activeDatabase;
+
+      const retry = processMarketWatchAlerts(activeDatabase, {
         taskRunId: id,
         asOfMs: nowMs,
         openMarkets: ["US", "JP"],
@@ -294,8 +301,8 @@ describe("market watch alerts", () => {
       expect(retry.notificationCount).toBe(0);
       expect(retry.decisionCount).toBe(0);
 
-      const replay = processMarketWatchAlerts(fixture.database, {
-        taskRunId: taskRunId(fixture.database),
+      const replay = processMarketWatchAlerts(activeDatabase, {
+        taskRunId: taskRunId(activeDatabase),
         asOfMs: nowMs + 1,
         openMarkets: ["US", "JP"],
         previousWatermarks,
@@ -309,28 +316,29 @@ describe("market watch alerts", () => {
         outcome: "ALREADY_NOTIFIED",
         reasonCode: "ALREADY_NOTIFIED",
       });
-      expect(listNotifications(fixture.database)).toHaveLength(1);
+      expect(listNotifications(activeDatabase)).toHaveLength(1);
       expect(() =>
-        fixture.database.client
+        activeDatabase.client
           .prepare("UPDATE notification_decisions SET reason_code = 'changed'")
           .run(),
       ).toThrow("notification_decisions are append-only");
       expect(() =>
-        fixture.database.client
+        activeDatabase.client
           .prepare("DELETE FROM notification_decisions WHERE id = ?")
-          .run(listNotificationDecisions(fixture.database)[0]!.id),
+          .run(listNotificationDecisions(activeDatabase)[0]!.id),
       ).toThrow("notification_decisions are append-only");
       expect(() =>
-        fixture.database.client
+        activeDatabase.client
           .prepare("UPDATE notifications SET created_at_ms = 0")
           .run(),
       ).toThrow("notifications are append-only");
       expect(() =>
-        fixture.database.client
+        activeDatabase.client
           .prepare("DELETE FROM notifications WHERE id = ?")
-          .run(listNotifications(fixture.database)[0]!.id),
+          .run(listNotifications(activeDatabase)[0]!.id),
       ).toThrow("notifications are append-only");
     } finally {
+      restartedDatabase?.client.close();
       dateNow.mockRestore();
       await fixture.cleanup();
     }
