@@ -18,7 +18,8 @@ Issue：[P07-02 / #49](https://github.com/OYLPY/stock-monitor/issues/49)
 - `corepack pnpm build` — exit 0。
 - `corepack pnpm exec eslint src scripts tests` — exit 0。
 - `corepack pnpm exec playwright test --reporter=dot` — exit 0，10 tests passed；隔离数据库下检查市场 tab 键盘操作、CSV disclosure、320px 窄屏、报告队列持久化和报告摘要/审计页面。
-- `corepack pnpm lint` — exit 1：全仓扫描误纳入未跟踪 `.next-p11-05/` 生成文件；该目录未修改或暂存。完整源码、脚本和测试目录的 lint 通过，远端干净检出的全仓 lint 结果待 CI 确认。
+- `corepack pnpm lint` — exit 1：全仓扫描误纳入未跟踪 `.next-p11-05/` 生成文件；该目录未修改或暂存。完整源码、脚本和测试目录的 lint 通过；干净检出中的全仓 lint 已由 Quality CI 44751449777 验证通过。
+- 提交 [`c61593c0de4e91771aa9cdafd5af9d694fe5dc70`](https://github.com/OYLPY/stock-monitor/commit/c61593c0de4e91771aa9cdafd5af9d694fe5dc70) 已推送 `main`；匹配 [Quality CI 44751449777](https://github.com/OYLPY/stock-monitor/actions/runs/44751449777) 的全仓 lint 与其它检查全部成功。
 
 ## 数据授权与阻断
 

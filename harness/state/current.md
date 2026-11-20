@@ -2,11 +2,11 @@
 
 ## 2026-11-20 最新状态
 
-- **当前任务：P06-FU-01 / #93**，已完成本机实现和验收，待提交推送、确认 Quality CI 后关闭。报告结论优先、队列和历史分 tab、详情折叠；市场页按美股/日股切换，把来源、图表、CSV 和明细关系分开。完整证据见 [P06-FU-01 UI/UX 验收](../evidence/P06-FU-01-ui-ux.md) 与[六字段交接](../handoffs/P06-FU-01.md)。
-- **数据依赖：P07-02 / #49**。按用户确认，仅接入免费 EODHD Free；适配器已实现，但本机没有 API Key、没有真实行情验证，Issue 必须保持 open / `BLOCKED_EXTERNAL`。
-- **本轮验证**：format、typecheck、321 个单测、生产构建、`eslint src scripts tests`、10 项 Playwright 均通过。全仓 `pnpm lint` 被未跟踪的 `.next-p11-05` 生成文件纳入扫描而失败；该用户目录未修改或暂存。远端 Quality CI 和 Issue 记录须在推送后更新。
+- **最新完成：P06-FU-01 / #93**，提交 [`c61593c`](https://github.com/OYLPY/stock-monitor/commit/c61593c0de4e91771aa9cdafd5af9d694fe5dc70)、Quality CI [44751449777](https://github.com/OYLPY/stock-monitor/actions/runs/44751449777) 全部通过，Issue 已关闭。报告结论优先、队列和历史分 tab、详情折叠；市场页按美股/日股切换，将来源、图表、CSV 和明细关系分区。完整证据见 [P06-FU-01 UI/UX 验收](../evidence/P06-FU-01-ui-ux.md) 与[六字段交接](../handoffs/P06-FU-01.md)。
+- **当前阻断：P07-02 / #49**。按用户确认，仅接入免费 EODHD Free；适配器随上述提交推送且 CI 成功，但本机没有 API Key、没有真实行情验证，Issue 必须保持 open / `BLOCKED_EXTERNAL`。
+- **本轮验证**：format、typecheck、321 个单测、生产构建、`eslint src scripts tests`、10 项 Playwright 和远端全仓 Quality CI 均通过。全仓 `pnpm lint` 曾被未跟踪的 `.next-p11-05` 生成文件纳入扫描而失败；该用户目录未修改或暂存，干净检出 CI lint 通过。
 - **运行状态事故**：截图时曾误用未隔离的 `pnpm start`，Worker 领取报告任务 `e6e5afad-bfef-43f1-9c76-dade95d4a756`。服务已停止；只读检查确认无完成事件/已归档报告，任务 attempt 仍 `RUNNING`，租约已过期。Worker 已向本机数据库写入领取/锁记录；没有手工改写或删除数据库行。保留给现有 Worker 的过期租约恢复逻辑处理；重启正常本地 Worker 后会重新领取，不要直接手改数据库状态。
-- **下一步**：提交推送 #93/#49 相关改动并查询匹配 Quality CI；CI 成功后关闭 #93。#49 不关闭，除非用户配置密钥后完成真实调用验收。#50 仍因免费日股数据覆盖不足而阻断。
+- **下一步**：#93 已完成；#49 仅在本机配置 API Key 并完成真实行情验收后继续，否则保留阻断。#50 仍因免费日股数据覆盖不足而阻断；从 [Issue 索引](../../docs/ISSUE_INDEX.md) 选择其它依赖已满足的工作项继续。
 
 ## 历史执行记录（截至 2026-11-19）
 
