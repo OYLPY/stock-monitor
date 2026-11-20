@@ -16,6 +16,7 @@
 - 查 UI token、shadcn 组件和可访问性约定：用 [UI 设计规范](design/UI_DESIGN.md)。
 - 查市场日历、交易时段和调度通知契约：读 [调度与事件通知契约](design/SCHEDULER.md)。
 - 查本地 SQLite 快照、预检与安全恢复步骤：用 [备份与恢复手册](operations/backup.md)。
+- 查本机 API、凭据、Codex 权限、提示注入和隔离恢复演练：用 [安全审计与故障恢复演练](testing/SECURITY_AUDIT.md)。
 - 查本机应用持续运行、浏览器通知授权和静默方式：用 [本机运行与通知指南](operations/local-runtime-notifications.md)。
 
 ## 检索顺序
