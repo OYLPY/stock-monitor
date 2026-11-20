@@ -3,10 +3,10 @@
 ## 2026-11-20 最新状态
 
 - **P12-06 / #79 已完成并关闭**：实现、交接与最终门禁提交的 Quality CI [44776716414](https://github.com/OYLPY/stock-monitor/actions/runs/44776716414)、[44777577729](https://github.com/OYLPY/stock-monitor/actions/runs/44777577729)、[44778237505](https://github.com/OYLPY/stock-monitor/actions/runs/44778237505) 均成功。容量与限制见 [DOC-0043](../../docs/testing/RELEASE_GATE.md)。
-- **当前任务：P06-FU-02 / #94**。报告/市场信息层级与队列表已实现；format、lint、typecheck、57 files / 331 tests、production build、Playwright 10/10 均通过。当前整理最终证据并准备提交，远端 CI 尚待确认；交接见 [P06-FU-02](../handoffs/P06-FU-02.md)。
+- **P06-FU-02 / #94 实现已通过验收**：提交 [`4bbd656`](https://github.com/OYLPY/stock-monitor/commit/4bbd65669828d52c8294479d44d19ee23fa71897) 已 push；format、lint、typecheck、57 files / 331 tests、production build、Playwright 10/10 均通过，Quality CI [44785659586](https://github.com/OYLPY/stock-monitor/actions/runs/44785659586) 成功。报告与市场页的行为和限制见 [P06-FU-02](../handoffs/P06-FU-02.md)。当前提交索引/追踪/交接的最终验收记录；Issue #94 在记录提交 CI 通过后关闭。
 - **行情限制**：#49 仅获准接入免费 EODHD Free，但本机 API Key 未配置、没有外部请求；#50 没有满足覆盖要求的免费日股行情源。两者保持 BLOCKED_EXTERNAL，不能据此生成已核验策略或成交。
 - **本机文件边界**：用户已有的 tsconfig.json 与 .next-p11-05/ 未修改、未暂存。
-- **下一步**：#94 远端 Quality CI 成功后更新验收索引并关闭；接着从已解除依赖的 P13-01 / #80 继续本地安装与运行手册。不得将未核验行情描述为实时信号。
+- **下一步**：验收记录提交及其 Quality CI 成功后关闭 #94；随后先把 P13-01 / #80 中过时的 PR 要求同步为仓库已授权的 direct-main 流程，再继续本地安装与运行手册。不得将未核验行情描述为实时信号。
 ## 历史执行记录（截至 2026-11-19）
 
 - **当前任务：P11-05 / #73**：本机通知适配器、显式授权/静默开关和 Windows/macOS 持续运行指南已实现并推送：[`3b07473`](https://github.com/OYLPY/stock-monitor/commit/3b07473560c58680e4b41ca243ecfb71f014994e)，匹配 [Quality CI 44536824296](https://github.com/OYLPY/stock-monitor/actions/runs/44536824296) 全部通过。正在推送验收记录，随后关闭 #73。数据库迁移 v14 兼容修复和 v15 通知约束已应用于本机数据库，未删除用户记录。
