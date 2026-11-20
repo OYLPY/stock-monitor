@@ -62,7 +62,7 @@ test("settings backup and task status are operable and accessible", async ({
     page.getByRole("heading", { name: "任务与通知", level: 1 }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "任务队列" })).toBeVisible();
-  await expect(page.getByText("本机 Worker 运行中")).toBeVisible();
+  await expect(page.getByText("本机 Worker 未运行")).toBeVisible();
   const weeklyTask = page
     .getByRole("row")
     .filter({ hasText: "周度审计" })

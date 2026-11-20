@@ -244,6 +244,7 @@ describe("reports page", () => {
         executionStatus: "PENDING",
         attemptCount: 0,
         cancellationRequestedAtMs: null,
+        scheduledAtMs: Date.UTC(2026, 10, 19, 0),
         resultCode: null,
         errorCode: null,
         createdAtMs: Date.UTC(2026, 10, 18, 22),
@@ -271,6 +272,7 @@ describe("reports page", () => {
         executionStatus: "PENDING",
         attemptCount: 0,
         cancellationRequestedAtMs: null,
+        scheduledAtMs: Date.UTC(2026, 10, 19, 0),
         resultCode: null,
         errorCode: null,
         createdAtMs: Date.UTC(2026, 10, 18, 22),
@@ -282,7 +284,10 @@ describe("reports page", () => {
     const html = renderToStaticMarkup(createElement(() => page));
 
     expect(html).toContain("任务队列（1 项活动）");
-    expect(html).not.toContain("0c72b1db");
+    expect(html).toContain("计划 / 提交时间（JST）");
+    expect(html).toContain(
+      'href="/reports?task=0c72b1db-1577-4828-9e25-82af2eadd323"',
+    );
   });
 
   it("shows distinct evidence, inference, hypothesis, risk, and six-role audit", () => {
@@ -412,7 +417,7 @@ describe("reports page", () => {
     const html = renderReports([linkedReport]);
 
     expect(html).toContain("两项官方事件可能共同影响市场预期。");
-    expect(html).toContain("引用事件（按证据编号关联，不代表因果）");
+    expect(html).toContain("以下事件仅按共同证据编号关联，不代表因果关系。");
     expect(html).toContain("央行维持政策利率。");
     expect(html).toContain("就业数据超预期。");
   });

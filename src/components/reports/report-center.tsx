@@ -380,6 +380,12 @@ function ReportCard({ report }: { report: ResearchReport }) {
     timelineEvents.filter((event) =>
       event.evidenceIds.some((id) => evidenceIds.includes(id)),
     );
+  const linkedInferences = report.inferences
+    .map((inference) => ({
+      events: linkedEvents(inference.evidenceIds),
+      inference,
+    }))
+    .filter(({ events }) => events.length > 0);
   const renderEvents = (events: ReportEvent[]) =>
     events.length ? (
       <ul className="flex min-w-0 flex-col gap-3">
@@ -469,55 +475,42 @@ function ReportCard({ report }: { report: ResearchReport }) {
                   : "未记录"}
               </Badge>
             </div>
-            {report.inferences.length > 0 ? (
-              <ul className="flex min-w-0 flex-col gap-3">
-                {report.inferences.slice(0, 3).map((inference, index) => {
-                  const events = linkedEvents(inference.evidenceIds);
-                  return (
-                    <li className="min-w-0" key={`inference-${index}`}>
-                      <Item
-                        className="min-w-0 flex-col items-stretch gap-2"
-                        variant="muted"
-                      >
-                        <p className="break-words text-sm">{inference.text}</p>
-                        {events.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            <p className="text-xs text-muted-foreground">
-                              引用事件（按证据编号关联，不代表因果）
-                            </p>
-                            <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
-                              {events.map((event) => (
-                                <li
-                                  key={`${event.category}-${event.occurredAtMs}-${event.evidenceIds[0]}`}
-                                >
-                                  <span>
-                                    {event.marketCode ?? "美日"} ·{" "}
-                                    {event.category} ·{" "}
-                                    {formatTime(
-                                      event.occurredAtMs,
-                                      report.timeZone,
-                                    )}
-                                    ：{event.summary}
-                                  </span>{" "}
-                                  <Badge variant="outline">
-                                    {
-                                      verificationLabels[
-                                        event.verificationLevel
-                                      ]
-                                    }
-                                  </Badge>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
-                        <EvidenceIds ids={inference.evidenceIds} />
-                      </Item>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
+            {linkedInferences[0] ? (
+              <Item
+                className="min-w-0 flex-col items-stretch gap-2"
+                variant="muted"
+              >
+                <p className="text-xs text-muted-foreground">重点推论</p>
+                <p className="break-words text-sm">
+                  {linkedInferences[0].inference.text}
+                </p>
+                <Collapsible>
+                  <CollapsibleTrigger
+                    render={
+                      <Button
+                        className="w-full justify-between"
+                        variant="outline"
+                      />
+                    }
+                  >
+                    核对 {linkedInferences[0].events.length} 条关联事件
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="flex flex-col gap-3 pt-3">
+                    <p className="text-xs text-muted-foreground">
+                      以下事件仅按共同证据编号关联，不代表因果关系。
+                    </p>
+                    {renderEvents(linkedInferences[0].events)}
+                    <EvidenceIds
+                      ids={linkedInferences[0].inference.evidenceIds}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+              </Item>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                没有可与已保存事件关联的推论；不呈现未经关联核验的事件因果。
+              </p>
+            )}
           </section>
 
           <Collapsible>
@@ -1132,6 +1125,37 @@ function reportSearchText(report: ResearchReport) {
     .toLowerCase();
 }
 
+function taskResultLabel(task: TaskRunQueueItem) {
+  if (task.executionStatus === "PENDING") return "等待本机 Worker 处理";
+  if (task.executionStatus === "RUNNING") return "正在生成，尚未归档";
+
+  switch (task.errorCode ?? task.resultCode) {
+    case "NO_QUALIFIED_MARKET_DATA":
+      return "缺少合格行情；没有策略候选";
+    case "NO_SAVED_EVIDENCE":
+      return "没有已保存证据；报告未核验";
+    case "CODEX_UNAVAILABLE":
+      return "本机 Codex CLI 不可用";
+    case "AI_OUTPUT_INVALID":
+      return "报告输出未通过检查";
+    case "CANCELLED":
+      return "已取消";
+    case "TASK_TIMEOUT":
+      return "执行超时";
+    case "ATTEMPTS_EXHAUSTED":
+      return "重试已停止；查看任务记录";
+    default:
+      if (task.executionStatus === "DONE") {
+        return "已处理；核验状态见报告历史";
+      }
+      if (task.executionStatus === "FAILED") return "执行失败；查看任务记录";
+      if (task.executionStatus === "BLOCKED_EXTERNAL") {
+        return "外部条件未满足；没有生成候选";
+      }
+      return "已跳过";
+  }
+}
+
 export function ReportCenter({
   reports,
   tasks,
@@ -1216,7 +1240,14 @@ export function ReportCenter({
         </Alert>
       ) : null}
 
-      <Tabs defaultValue={taskNotice ? "tasks" : "reports"}>
+      <Tabs
+        defaultValue={
+          taskNotice ||
+          (activeTasks.length > 0 && !filters.query && !filters.type)
+            ? "tasks"
+            : "reports"
+        }
+      >
         <TabsList activateOnFocus aria-label="报告与任务">
           <TabsTrigger value="reports">报告（{reports.length}）</TabsTrigger>
           <TabsTrigger value="tasks">
@@ -1332,7 +1363,12 @@ export function ReportCenter({
 
         <TabsContent className="flex min-w-0 flex-col gap-4" value="tasks">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold">报告任务队列</h2>
+            <h2
+              className="text-base font-semibold"
+              id="report-task-queue-heading"
+            >
+              报告任务队列
+            </h2>
             <Link
               className="text-sm underline underline-offset-4"
               href="/tasks"
@@ -1348,80 +1384,97 @@ export function ReportCenter({
               ；详情和错误记录可在全部任务中查看。
             </p>
           ) : null}
-          <Table>
-            <TableCaption>
-              活动任务及最近 5 项已结束任务；数据保存在本机。
-            </TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead scope="col">报告</TableHead>
-                <TableHead scope="col">状态</TableHead>
-                <TableHead scope="col">提交时间（JST）</TableHead>
-                <TableHead scope="col">结果</TableHead>
-                <TableHead scope="col">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleTasks.length === 0 ? (
+          <div
+            aria-labelledby="report-task-queue-heading"
+            className="max-h-96 max-w-full overflow-auto focus-visible:outline-2 focus-visible:outline-offset-2 [&>[data-slot=table-container]]:w-max [&>[data-slot=table-container]]:overflow-visible"
+            role="region"
+            tabIndex={0}
+          >
+            <Table className="min-w-[44rem]">
+              <TableCaption>
+                本机保存的全部活动任务和最近 5 项已结束任务。
+              </TableCaption>
+              <TableHeader>
                 <TableRow>
-                  <TableCell className="text-muted-foreground" colSpan={5}>
-                    暂无报告任务
-                  </TableCell>
+                  <TableHead scope="col">报告</TableHead>
+                  <TableHead scope="col">状态</TableHead>
+                  <TableHead scope="col">计划 / 提交时间（JST）</TableHead>
+                  <TableHead scope="col">结果</TableHead>
+                  <TableHead scope="col">操作</TableHead>
                 </TableRow>
-              ) : (
-                visibleTasks.map((task) => {
-                  const canCancel =
-                    (task.executionStatus === "PENDING" ||
-                      task.executionStatus === "RUNNING") &&
-                    task.cancellationRequestedAtMs === null;
-                  const resultCode = task.errorCode ?? task.resultCode;
-                  const resultLabel =
-                    resultCode === "NO_QUALIFIED_MARKET_DATA"
-                      ? "缺少合格行情"
-                      : resultCode === "NO_SAVED_EVIDENCE"
-                        ? "暂无已保存证据"
-                        : resultCode
-                          ? "查看任务详情"
-                          : "—";
+              </TableHeader>
+              <TableBody>
+                {visibleTasks.length === 0 ? (
+                  <TableRow>
+                    <TableCell className="text-muted-foreground" colSpan={5}>
+                      暂无报告任务
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  visibleTasks.map((task) => {
+                    const canCancel =
+                      (task.executionStatus === "PENDING" ||
+                        task.executionStatus === "RUNNING") &&
+                      task.cancellationRequestedAtMs === null;
 
-                  return (
-                    <TableRow key={task.id}>
-                      <TableCell>
-                        <Link
-                          className="font-medium underline-offset-4 hover:underline"
-                          href={`/reports?task=${encodeURIComponent(task.id)}`}
-                        >
-                          {task.label}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {task.cancellationRequestedAtMs !== null &&
-                          task.executionStatus === "RUNNING"
-                            ? "停止请求中"
-                            : taskStatusLabels[task.executionStatus]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {formatTime(task.createdAtMs, "Asia/Tokyo")}
-                      </TableCell>
-                      <TableCell>{resultLabel}</TableCell>
-                      <TableCell>
-                        {canCancel ? (
-                          <CancelTaskButton
-                            label={task.label}
-                            taskId={task.id}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                    return (
+                      <TableRow key={task.id}>
+                        <TableCell>
+                          <Link
+                            className="font-medium underline-offset-4 hover:underline"
+                            href={`/reports?task=${encodeURIComponent(task.id)}`}
+                          >
+                            {task.label}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {task.cancellationRequestedAtMs !== null &&
+                            task.executionStatus === "RUNNING"
+                              ? "停止请求中"
+                              : taskStatusLabels[task.executionStatus]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <time
+                              dateTime={new Date(
+                                task.scheduledAtMs,
+                              ).toISOString()}
+                            >
+                              计划{" "}
+                              {task.scheduledAtMs === task.createdAtMs
+                                ? "立即执行"
+                                : formatTime(task.scheduledAtMs, "Asia/Tokyo")}
+                            </time>
+                            <time
+                              className="text-muted-foreground"
+                              dateTime={new Date(
+                                task.createdAtMs,
+                              ).toISOString()}
+                            >
+                              提交 {formatTime(task.createdAtMs, "Asia/Tokyo")}
+                            </time>
+                          </div>
+                        </TableCell>
+                        <TableCell>{taskResultLabel(task)}</TableCell>
+                        <TableCell>
+                          {canCancel ? (
+                            <CancelTaskButton
+                              label={task.label}
+                              taskId={task.id}
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

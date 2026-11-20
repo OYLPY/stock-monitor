@@ -35,6 +35,7 @@ export default defineConfig({
       STOCK_MONITOR_DATA_DIR: testDataDirectory,
       CODEX_HOME: join(testDataDirectory, "codex-home"),
       OPENAI_API_KEY: secretSentinel,
+      STOCK_MONITOR_DISABLE_WORKER: "1",
     },
   },
 });

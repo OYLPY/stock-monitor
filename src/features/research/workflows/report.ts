@@ -1,8 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { AppDatabase } from "../../../db/index.ts";
-import { marketDateAt } from "../../../domain/primitives.ts";
-import type { MarketCode, MarketDate } from "../../../domain/primitives.ts";
 import {
   marketPriceBars,
   paperAccounts,
@@ -11,7 +9,10 @@ import {
 } from "../../../db/schema.ts";
 import { listMarketEvents } from "../../evidence/repository.ts";
 import { runCodexTask } from "../../ai/codex-adapter/index.ts";
-import { marketCalendarStateAt } from "../../market-calendar/market-calendar.ts";
+import {
+  latestCompletedMarketSessionAt,
+  marketCalendarStateAt,
+} from "../../market-calendar/market-calendar.ts";
 import {
   checkResearchEvidence,
   isUsableEvidenceReference,
@@ -297,29 +298,6 @@ function qualifiedPriceInstruments(
   );
 }
 
-function previousMarketDate(date: MarketDate, marketCode: MarketCode) {
-  return marketDateAt(Date.parse(`${date}T12:00:00.000Z`) - dayMs, marketCode);
-}
-
-function latestCompletedMarketSession(
-  exchange: "NYSE" | "NASDAQ" | "TSE",
-  nowMs: number,
-) {
-  const marketCode = exchange === "TSE" ? "JP" : "US";
-  let date = marketCalendarStateAt(exchange, nowMs).date;
-  for (let daysBack = 0; daysBack < 14; daysBack += 1) {
-    const state = marketCalendarStateAt(
-      exchange,
-      Date.parse(`${date}T12:00:00.000Z`),
-    );
-    if (state.status === "CALENDAR_UNAVAILABLE") return null;
-    const closeAtMs = state.sessions.at(-1)?.closeAtMs;
-    if (closeAtMs !== undefined && closeAtMs <= nowMs) return state;
-    date = previousMarketDate(date, marketCode);
-  }
-  return null;
-}
-
 function marketCalendarSnapshots(nowMs: number) {
   return (["NYSE", "NASDAQ", "TSE"] as const).map((exchange) => {
     const current = marketCalendarStateAt(exchange, nowMs);
@@ -330,7 +308,7 @@ function marketCalendarSnapshots(nowMs: number) {
       currentStatus: current.status,
       currentReason: current.reason ?? null,
       latestCompletedDate:
-        latestCompletedMarketSession(exchange, nowMs)?.date ?? null,
+        latestCompletedMarketSessionAt(exchange, nowMs)?.date ?? null,
       timeZone: current.timeZone,
       calendarVersion: current.calendarVersion,
       checkedAt: current.checkedAt,

@@ -47,6 +47,7 @@ type TaskRunListRow = Pick<
   | "input_json"
   | "execution_status"
   | "attempt_count"
+  | "scheduled_at_ms"
   | "cancellation_requested_at_ms"
   | "result_code"
   | "error_code"
@@ -61,6 +62,7 @@ export type TaskRunQueueItem = {
   label: string;
   executionStatus: TaskRunStatus;
   attemptCount: number;
+  scheduledAtMs: number;
   cancellationRequestedAtMs: number | null;
   resultCode: string | null;
   errorCode: string | null;
@@ -175,6 +177,7 @@ export function listTaskRuns(database: AppDatabase, limit = 100) {
   const rows = database.client
     .prepare(
       `SELECT id, run_type, input_json, execution_status, attempt_count,
+              scheduled_at_ms,
               cancellation_requested_at_ms, result_code, error_code,
               created_at_ms, started_at_ms, finished_at_ms
        FROM task_runs
@@ -188,6 +191,7 @@ export function listTaskRuns(database: AppDatabase, limit = 100) {
       id: row.id,
       executionStatus: row.execution_status,
       attemptCount: safeNumber(row.attempt_count)!,
+      scheduledAtMs: safeNumber(row.scheduled_at_ms)!,
       cancellationRequestedAtMs: safeNumber(row.cancellation_requested_at_ms),
       resultCode: row.result_code,
       errorCode: row.error_code,

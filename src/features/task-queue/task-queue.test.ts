@@ -114,7 +114,12 @@ describe("task queue", () => {
       }).task;
 
       expect(listTaskRuns(fixture.database, 1)).toMatchObject([
-        { id: newer.id, kind: "REPORT", label: "周度审计" },
+        {
+          id: newer.id,
+          kind: "REPORT",
+          label: "周度审计",
+          scheduledAtMs: newer.scheduledAtMs,
+        },
       ]);
       expect(listTaskRuns(fixture.database).map(({ id }) => id)).toEqual([
         newer.id,

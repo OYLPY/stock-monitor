@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { marketDateAt } from "@/domain/primitives";
 import {
+  latestCompletedMarketSessionAt,
   marketCalendarStateAt,
   type MarketCalendarOverride,
 } from "@/features/market-calendar/market-calendar";
@@ -25,6 +26,40 @@ describe("marketCalendarStateAt", () => {
     expect(state.sourceUrls).toContain(
       "https://www.nyse.com/trade/hours-calendars",
     );
+  });
+
+  it("finds the latest completed session without treating an open session as complete", () => {
+    expect(
+      latestCompletedMarketSessionAt(
+        "NYSE",
+        instant("2026-11-20T20:00:00.000Z"),
+      )?.date,
+    ).toBe("2026-11-19");
+    expect(
+      latestCompletedMarketSessionAt(
+        "NYSE",
+        instant("2026-11-21T02:00:00.000Z"),
+      )?.date,
+    ).toBe("2026-11-20");
+    expect(
+      latestCompletedMarketSessionAt("TSE", instant("2026-11-20T08:00:00.000Z"))
+        ?.date,
+    ).toBe("2026-11-20");
+  });
+
+  it("skips exchange holidays and fails closed beyond verified coverage", () => {
+    expect(
+      latestCompletedMarketSessionAt(
+        "NYSE",
+        instant("2026-11-27T00:00:00.000Z"),
+      )?.date,
+    ).toBe("2026-11-25");
+    expect(
+      latestCompletedMarketSessionAt(
+        "NYSE",
+        instant("2029-01-02T15:00:00.000Z"),
+      ),
+    ).toBeNull();
   });
 
   it.each([

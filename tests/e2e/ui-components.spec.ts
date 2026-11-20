@@ -10,18 +10,29 @@ const routes = [
   "/tasks",
 ];
 
-test("market monitoring keeps market selection, import, and history in one flow", async ({
+test("market monitoring compares both markets and groups data actions by market", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1365, height: 900 });
   await page.goto("/markets");
 
-  const marketTabs = page.getByRole("tablist", { name: "选择市场" });
-  const usTab = marketTabs.getByRole("tab", { name: "美股" });
-  const jpTab = marketTabs.getByRole("tab", { name: "日股" });
-  await expect(marketTabs.getByRole("tab")).toHaveCount(2);
-  await expect(usTab).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("美股暂无日线")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "美股" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "日股" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/日历推算的最近已完成交易日：\d{4}-\d{2}-\d{2}/).first(),
+  ).toBeVisible();
+  await expect(page.getByText("暂无已保存日线")).toHaveCount(2);
+
+  const usDetails = page.getByRole("button", {
+    name: "查看美股图表与数据管理",
+  });
+  await usDetails.focus();
+  await page.keyboard.press("Enter");
+  await expect(usDetails).toHaveAttribute("aria-expanded", "true");
   const eodhdSymbol = page.getByRole("textbox", { name: "美股代码" });
   if ((await eodhdSymbol.count()) === 0) {
     await expect(page.getByText(/未配置 EODHD Free 凭据/)).toBeVisible();
@@ -32,13 +43,16 @@ test("market monitoring keeps market selection, import, and history in one flow"
     await expect(eodhdSymbol).toBeEnabled();
   }
 
-  await usTab.focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(jpTab).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText(/日股自动行情源尚未接入/)).toBeVisible();
-  await expect(page.getByText("日股暂无日线")).toBeVisible();
+  const jpCard = page.locator('[data-slot="card"]').filter({
+    has: page.getByRole("heading", { level: 2, name: "日股" }),
+  });
+  const jpDetails = jpCard.getByRole("button", {
+    name: "查看日股图表与数据管理",
+  });
+  await jpDetails.click();
+  await expect(page.getByText(/日股没有已接入的自动行情源/)).toBeVisible();
 
-  const importTrigger = page.getByRole("button", { name: "导入 CSV" });
+  const importTrigger = jpCard.getByRole("button", { name: "导入 CSV" });
   await importTrigger.focus();
   await page.keyboard.press("Enter");
   await expect(importTrigger).toHaveAttribute("aria-expanded", "true");
@@ -47,6 +61,9 @@ test("market monitoring keeps market selection, import, and history in one flow"
   ).toBeVisible();
   await expect(page.locator('input[name="market"]')).toHaveValue("JP");
   await expect(page.getByRole("radio")).toHaveCount(0);
+  await expect(
+    page.getByText("日历推算的最近已完成交易日：", { exact: false }),
+  ).toHaveCount(2);
 
   await page.setViewportSize({ width: 320, height: 812 });
   const widths = await page.evaluate(() => ({
@@ -99,6 +116,7 @@ test("shadcn Select controls support keyboard use and preserve GET filters", asy
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/reports");
+  await page.getByRole("tab", { name: /^报告/ }).click();
 
   const reportType = page.getByRole("combobox", { name: "历史类型" });
   await reportType.focus();
@@ -129,6 +147,7 @@ test("shadcn Select controls support keyboard use and preserve GET filters", asy
   ]);
 
   await page.goto("/reports");
+  await page.getByRole("tab", { name: /^报告/ }).click();
   const enqueueReportButton = page.getByRole("button", { name: "加入队列" });
   await enqueueReportButton.focus();
   await page.keyboard.press("Enter");
@@ -139,10 +158,16 @@ test("shadcn Select controls support keyboard use and preserve GET filters", asy
   await expect(
     page.getByRole("heading", { name: "报告任务队列" }),
   ).toBeVisible();
+  const taskRegion = page.getByRole("region", { name: "报告任务队列" });
+  await expect(taskRegion.getByRole("table")).toBeVisible();
+  await expect(taskRegion).toContainText("计划 / 提交时间（JST）");
   await expect(taskLink).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "报告任务队列" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "报告任务队列" }).getByRole("table"),
   ).toBeVisible();
   await expect(taskLink).toBeVisible();
   await page.goto("/reports");

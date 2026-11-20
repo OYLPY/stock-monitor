@@ -435,3 +435,30 @@ export function marketCalendarStateAt(
     sessions,
   };
 }
+
+const dayMs = 24 * 60 * 60 * 1_000;
+
+export function latestCompletedMarketSessionAt(
+  exchange: MarketCalendarExchange,
+  nowMs: number,
+  overrides: readonly MarketCalendarOverride[] = [],
+) {
+  const market = exchange === "TSE" ? "JP" : "US";
+  let date = marketCalendarStateAt(exchange, nowMs, overrides).date;
+
+  for (let daysBack = 0; daysBack < 14; daysBack += 1) {
+    const state = marketCalendarStateAt(
+      exchange,
+      Date.parse(`${date}T12:00:00.000Z`),
+      overrides,
+    );
+    if (state.status === "CALENDAR_UNAVAILABLE") return null;
+
+    const closeAtMs = state.sessions.at(-1)?.closeAtMs;
+    if (closeAtMs !== undefined && closeAtMs <= nowMs) return state;
+
+    date = marketDateAt(Date.parse(`${date}T12:00:00.000Z`) - dayMs, market);
+  }
+
+  return null;
+}

@@ -83,7 +83,17 @@ async function seedFixtureReport() {
       eventTimeline: {
         status: "NOT_VERIFIED",
         asOfMs: nowMs,
-        recentEvents: [],
+        recentEvents: [
+          {
+            category: "FIXTURE",
+            summary: "P12-03 E2E Fixture 事件；不是市场事实。",
+            marketCode: "JP",
+            occurredAtMs: nowMs,
+            dataClass: "FIXTURE",
+            verificationLevel: "DEMO_ONLY",
+            evidenceIds: [evidence.id],
+          },
+        ],
         upcoming24hEvents: [],
         note: "E2E Fixture；没有执行市场扫描。",
       },
@@ -93,7 +103,12 @@ async function seedFixtureReport() {
           evidenceIds: [evidence.id],
         },
       ],
-      inferences: [],
+      inferences: [
+        {
+          text: "仅验证已存事件与推论的证据关联；不表示市场因果。",
+          evidenceIds: [evidence.id],
+        },
+      ],
       hypotheses: [],
       candidates: [],
       evidenceValidation: { status: "NOT_RUN", rejections: [] },

@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("market dashboard", () => {
-  it("shows one concise empty state without inventing quotes", async () => {
+  it("shows both market calendars and their missing data separately", async () => {
     const originalDataDirectory = process.env.STOCK_MONITOR_DATA_DIR;
     const testDataDirectory = await mkdtemp(
       join(tmpdir(), "stock-monitor-market-page-"),
@@ -25,15 +25,16 @@ describe("market dashboard", () => {
       const html = renderToStaticMarkup(page);
 
       expect(html).toContain('<h1 class="sr-only">市场监测</h1>');
-      expect(html).toContain("选择市场");
-      expect(html).toContain("美股暂无日线");
-      expect(html).toContain(">日股</button>");
-      expect(html.match(/role="tab"/g)).toHaveLength(2);
-      expect(html).toContain("导入 CSV");
+      expect(html).toContain("日历推算的最近已完成交易日：");
+      expect(html).toContain("美股");
+      expect(html).toContain("日股");
+      expect(html).toContain("本机价格覆盖");
+      expect(html).toContain("暂无已保存日线");
+      expect(html).toContain("查看美股图表与数据管理");
+      expect(html).toContain("查看日股图表与数据管理");
       expect(html).not.toContain("本机行情明细");
-      expect(html).toContain("EODHD_API_TOKEN");
-      expect(html).not.toContain("开闭市状态");
-      expect(html).not.toContain("交易日历未接入");
+      expect(html).toContain("未配置 EODHD Free");
+      expect(html).not.toContain("EODHD_API_TOKEN");
       expect(html).not.toContain("SYNTHETIC-US-0001");
       expect(html).not.toContain("101.25");
     } finally {
@@ -74,12 +75,14 @@ describe("market dashboard", () => {
       const page = await MarketsPage({ searchParams: Promise.resolve({}) });
       const html = renderToStaticMarkup(page);
 
-      expect(html).toContain('role="img"');
+      expect(html).toContain("查看美股图表与数据管理");
       expect(html).toContain("AAPL");
+      expect(html).toContain("本机价格覆盖");
       expect(html).toContain('data-status="NOT_VERIFIED"');
       expect(html).toContain(">未核验</span>");
       expect(html).toContain("2024-01-03");
-      expect(html).toContain("查看本机行情明细（2 条）");
+      expect(html).not.toContain("查看本机行情明细");
+      expect(html).not.toContain('role="img"');
       expect(html).not.toContain("101.25");
     } finally {
       if (originalDataDirectory === undefined) {

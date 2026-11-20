@@ -18,13 +18,16 @@ const next = spawn(
   [nextCli, command, ...process.argv.slice(3)],
   { stdio: "inherit" },
 );
-const worker = spawn(process.execPath, ["--import", "tsx", workerScript], {
-  stdio: "inherit",
-});
+const worker =
+  process.env.STOCK_MONITOR_DISABLE_WORKER === "1"
+    ? null
+    : spawn(process.execPath, ["--import", "tsx", workerScript], {
+        stdio: "inherit",
+      });
 
 let stopping = false;
 let nextClosed = false;
-let workerClosed = false;
+let workerClosed = worker === null;
 
 function finishShutdown() {
   if (!stopping || !nextClosed || !workerClosed) return;
@@ -47,7 +50,7 @@ function stop(signal: NodeJS.Signals) {
   if (stopping) return;
   stopping = true;
   if (next.exitCode === null) next.kill(signal);
-  if (worker.exitCode === null) worker.kill(signal);
+  if (worker?.exitCode === null) worker.kill(signal);
 }
 
 process.once("SIGINT", () => stop("SIGINT"));
@@ -57,7 +60,7 @@ next.once("error", () => {
   process.exitCode = 1;
   stop("SIGTERM");
 });
-worker.once("error", () => {
+worker?.once("error", () => {
   process.exitCode = 1;
   stop("SIGTERM");
 });
@@ -70,7 +73,7 @@ next.once("close", (code) => {
   }
   finishShutdown();
 });
-worker.once("close", (code) => {
+worker?.once("close", (code) => {
   workerClosed = true;
   if (!stopping && code !== 0) {
     process.exitCode = code ?? 1;
