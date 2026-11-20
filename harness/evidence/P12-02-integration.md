@@ -4,7 +4,7 @@
 - Issue: [P12-02 / #75](https://github.com/OYLPY/stock-monitor/issues/75)
 - Implementation commit: [`9f0e63d`](https://github.com/OYLPY/stock-monitor/commit/9f0e63dc2fb804dbb679b16457264b4a418d83b1)
 - Matching Quality CI: [44758467681](https://github.com/OYLPY/stock-monitor/actions/runs/44758467681) — success at 2026-11-21 00:00 JST; format, lint, typecheck, unit, build, and E2E all passed.
-- Scope: isolated temporary SQLite databases and deterministic local `fetch` responses. No live provider request, user database, Worker, Codex call, market analysis, or paper trade was used.
+- Scope: isolated temporary SQLite databases and deterministic local `fetch` responses. No live provider request, user database, Worker, or Codex call was used. The fill replay test writes only a synthetic fill to a disposable test database, which is removed during teardown.
 
 ## Coverage
 
