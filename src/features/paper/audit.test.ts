@@ -25,6 +25,52 @@ describe("paper ledger audit", () => {
     }
   });
 
+  it("audits a ledger larger than SQLite's bound-parameter limit", async () => {
+    const fixture = await createTestDatabase();
+    try {
+      const account = initializeDefaultPaperAccount(fixture.database);
+      fixture.database.client.transaction(() => {
+        fixture.database.client
+          .prepare(
+            `
+            WITH RECURSIVE sequence(value) AS (
+              SELECT 2 UNION ALL SELECT value + 1 FROM sequence WHERE value < 32768
+            )
+            INSERT INTO ledger_events (
+              id, account_id, sequence_no, event_type, idempotency_key,
+              effective_at_ms, recorded_at_ms, rule_version
+            )
+            SELECT 'large-event-' || printf('%05d', value), ?, value, 'FEE',
+              'large-ledger-' || value, ? + value, ? + value, 'paper-fee-v1'
+            FROM sequence
+          `,
+          )
+          .run(account.id, account.initializedAtMs, account.initializedAtMs);
+        fixture.database.client
+          .prepare(
+            `
+            WITH RECURSIVE sequence(value) AS (
+              SELECT 2 UNION ALL SELECT value + 1 FROM sequence WHERE value < 32768
+            )
+            INSERT INTO cash_ledger_entries (
+              id, ledger_event_id, bucket, currency_code, currency_scale, amount_minor
+            )
+            SELECT 'large-cash-' || printf('%05d', value),
+              'large-event-' || printf('%05d', value), 'SETTLED', 'JPY', 0, -1
+            FROM sequence
+          `,
+          )
+          .run();
+      })();
+
+      const audit = auditPaperLedger(fixture.database);
+
+      expect(audit?.ledger).toEqual({ status: "VERIFIED", issueCodes: [] });
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
   it("replays verified equity snapshots and detects persisted-value tampering", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const fixture = await createTestDatabase();

@@ -70,6 +70,68 @@ describe("BacktestsPage", () => {
     expect(html).toMatch(/aria-selected="true"[^>]*>纸面账户<\/button>/);
   });
 
+  it("accepts only safe positive ledger page numbers", async () => {
+    await BacktestsPage({
+      searchParams: Promise.resolve({ page: "2", tab: "account" }),
+    });
+    expect(loadLedger).toHaveBeenCalledWith(2);
+
+    loadLedger.mockClear();
+    await BacktestsPage({
+      searchParams: Promise.resolve({ page: "9007199254740992" }),
+    });
+    expect(loadLedger).toHaveBeenCalledWith(1);
+  });
+
+  it("renders previous and next account-ledger page navigation", async () => {
+    loadLedger.mockResolvedValue({
+      state: "INITIALIZED",
+      audit: {
+        ledger: { status: "NOT_VERIFIED", issueCodes: ["TEST_FIXTURE"] },
+        trades: [],
+        equity: {
+          status: "NOT_VERIFIED",
+          issueCodes: ["EQUITY_HISTORY_NOT_ESTABLISHED"],
+          curve: [],
+          maximumDrawdown: null,
+        },
+      },
+      baseCurrency: "JPY",
+      initializedAtMs: "1794816000000",
+      page: 2,
+      totalEventCount: 101,
+      totalPages: 2,
+      eventCount: 1,
+      hasPrevious: true,
+      hasNext: false,
+      entries: [
+        {
+          eventId: "event-101",
+          sequenceNo: "101",
+          eventType: "REVERSAL",
+          effectiveAtMs: "1794816060000",
+          recordedAtMs: "1794816060000",
+          cashEntryId: null,
+          bucket: null,
+          currencyCode: null,
+          currencyScale: null,
+          amountMinor: null,
+        },
+      ],
+    });
+
+    const html = renderToStaticMarkup(
+      await BacktestsPage({
+        searchParams: Promise.resolve({ tab: "account", page: "2" }),
+      }),
+    );
+
+    expect(html).toContain("第 2 / 2 页 · 本页 1 个事件");
+    expect(html).toContain('href="/backtests?tab=account&amp;page=1"');
+    expect(html).toContain("上一页");
+    expect(html).not.toContain("下一页");
+  });
+
   it("shows fixed opening cash and its initial risk cap from the verified ledger", async () => {
     loadLedger.mockResolvedValue({
       state: "INITIALIZED",
@@ -85,6 +147,12 @@ describe("BacktestsPage", () => {
       },
       baseCurrency: "JPY",
       initializedAtMs: "1794816000000",
+      page: 1,
+      totalEventCount: 1,
+      totalPages: 1,
+      eventCount: 1,
+      hasPrevious: false,
+      hasNext: false,
       entries: [
         {
           eventId: "event-1",
@@ -149,6 +217,12 @@ describe("BacktestsPage", () => {
       },
       baseCurrency: "JPY",
       initializedAtMs: "1794816000000",
+      page: 1,
+      totalEventCount: 1,
+      totalPages: 1,
+      eventCount: 1,
+      hasPrevious: false,
+      hasNext: false,
       entries: [
         {
           eventId: "event-1",
@@ -207,6 +281,12 @@ describe("BacktestsPage", () => {
       },
       baseCurrency: "JPY",
       initializedAtMs: "1794816000000",
+      page: 1,
+      totalEventCount: 0,
+      totalPages: 1,
+      eventCount: 0,
+      hasPrevious: false,
+      hasNext: false,
       entries: [],
     });
 

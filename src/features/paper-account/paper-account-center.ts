@@ -13,6 +13,12 @@ export type PaperLedgerSnapshot =
       audit: PaperLedgerAudit;
       baseCurrency: string;
       initializedAtMs: string;
+      page: number;
+      totalEventCount: number;
+      totalPages: number;
+      eventCount: number;
+      hasPrevious: boolean;
+      hasNext: boolean;
       entries: Array<{
         eventId: string;
         sequenceNo: string;
@@ -28,12 +34,13 @@ export type PaperLedgerSnapshot =
     };
 
 export async function loadPaperAccountLedger(
+  page = 1,
   databasePath = getLocalDatabasePath(),
 ): Promise<PaperLedgerSnapshot> {
   let database: Awaited<ReturnType<typeof openDatabase>> | undefined;
   try {
     database = await openDatabase(databasePath);
-    const ledger = listPaperAccountLedger(database);
+    const ledger = listPaperAccountLedger(database, page);
     if (!ledger) return { state: "NOT_INITIALIZED" };
     const audit = auditPaperLedger(database);
     if (!audit) throw new Error("paper_account_audit_account_missing");
@@ -43,6 +50,12 @@ export async function loadPaperAccountLedger(
       audit,
       baseCurrency: ledger.account.baseCurrency,
       initializedAtMs: String(ledger.account.initializedAtMs),
+      page: ledger.page,
+      totalEventCount: ledger.totalEventCount,
+      totalPages: ledger.totalPages,
+      eventCount: ledger.eventCount,
+      hasPrevious: ledger.hasPrevious,
+      hasNext: ledger.hasNext,
       entries: ledger.entries.map((entry) => ({
         ...entry,
         sequenceNo: String(entry.sequenceNo),

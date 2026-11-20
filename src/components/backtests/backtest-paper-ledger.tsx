@@ -30,6 +30,13 @@ import {
 } from "@/components/shadcn/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/shadcn/field";
 import { Input } from "@/components/shadcn/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/shadcn/pagination";
 import { Separator } from "@/components/shadcn/separator";
 import {
   Select,
@@ -585,12 +592,42 @@ export function BacktestPaperLedger({
                     <div>
                       <dt className="text-muted-foreground">账本现金流水</dt>
                       <dd className="mt-1">
-                        {ledger.entries.length} 条事件记录
+                        {ledger.totalEventCount} 条事件记录
                       </dd>
                     </div>
                   </dl>
-                  {ledger.entries.length > 0 ? (
-                    <LedgerRows ledger={ledger} />
+                  {ledger.totalEventCount > 0 ? (
+                    <>
+                      <LedgerRows ledger={ledger} />
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm text-muted-foreground">
+                          第 {ledger.page} / {ledger.totalPages} 页 · 本页{" "}
+                          {ledger.eventCount} 个事件
+                        </p>
+                        {ledger.totalPages > 1 && (
+                          <Pagination aria-label="账本分页">
+                            <PaginationContent>
+                              {ledger.hasPrevious && (
+                                <PaginationItem>
+                                  <PaginationPrevious
+                                    href={`/backtests?tab=account&page=${ledger.page - 1}`}
+                                    text="上一页"
+                                  />
+                                </PaginationItem>
+                              )}
+                              {ledger.hasNext && (
+                                <PaginationItem>
+                                  <PaginationNext
+                                    href={`/backtests?tab=account&page=${ledger.page + 1}`}
+                                    text="下一页"
+                                  />
+                                </PaginationItem>
+                              )}
+                            </PaginationContent>
+                          </Pagination>
+                        )}
+                      </div>
+                    </>
                   ) : (
                     <Empty>
                       <EmptyHeader>

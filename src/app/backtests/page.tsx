@@ -25,6 +25,12 @@ function validDate(value: string | undefined) {
     : value;
 }
 
+function validLedgerPage(value: string | undefined) {
+  if (!value || !/^\d+$/.test(value)) return 1;
+  const page = Number(value);
+  return Number.isSafeInteger(page) && page > 0 && page <= 1_000_000 ? page : 1;
+}
+
 export default async function BacktestsPage({
   searchParams,
 }: {
@@ -40,7 +46,9 @@ export default async function BacktestsPage({
     rawInterval === "3600" || rawInterval === "86400" ? rawInterval : "";
   const from = validDate(firstValue(params.from));
   const to = validDate(firstValue(params.to));
-  const ledger = await loadPaperAccountLedger();
+  const ledger = await loadPaperAccountLedger(
+    validLedgerPage(firstValue(params.page)),
+  );
 
   return (
     <BacktestPaperLedger

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getLocalDatabasePath, openDatabase } from "@/db";
 import {
   initializeDefaultPaperAccount,
-  listPaperAccountLedger,
+  paperAccountExists,
 } from "@/db/paper-account-repository";
 import { ApiError, errorResponse, successResponse } from "@/lib/api/errors";
 import { parseJsonRequest } from "@/lib/api/request";
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const database = await openDatabase(getLocalDatabasePath());
     let opened = false;
     try {
-      if (!listPaperAccountLedger(database)) {
+      if (!paperAccountExists(database)) {
         try {
           initializeDefaultPaperAccount(database);
           opened = true;
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
           if (
             !(error instanceof Error) ||
             error.message !== "paper_account_already_initialized" ||
-            !listPaperAccountLedger(database)
+            !paperAccountExists(database)
           ) {
             throw error;
           }

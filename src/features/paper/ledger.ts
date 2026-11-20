@@ -231,23 +231,22 @@ function loadPaperLedger(database: AppDatabase, accountId: string) {
     .where(eq(ledgerEvents.accountId, accountId))
     .orderBy(asc(ledgerEvents.sequenceNo))
     .all();
-  const eventIds = rows.map(({ id }) => id);
-  const cashEntries = eventIds.length
-    ? database.orm
-        .select()
-        .from(cashLedgerEntries)
-        .where(inArray(cashLedgerEntries.ledgerEventId, eventIds))
-        .orderBy(asc(cashLedgerEntries.id))
-        .all()
-    : [];
-  const positionEntries = eventIds.length
-    ? database.orm
-        .select()
-        .from(positionLedgerEntries)
-        .where(inArray(positionLedgerEntries.ledgerEventId, eventIds))
-        .orderBy(asc(positionLedgerEntries.id))
-        .all()
-    : [];
+  const accountEvents = database.orm
+    .select({ id: ledgerEvents.id })
+    .from(ledgerEvents)
+    .where(eq(ledgerEvents.accountId, accountId));
+  const cashEntries = database.orm
+    .select()
+    .from(cashLedgerEntries)
+    .where(inArray(cashLedgerEntries.ledgerEventId, accountEvents))
+    .orderBy(asc(cashLedgerEntries.id))
+    .all();
+  const positionEntries = database.orm
+    .select()
+    .from(positionLedgerEntries)
+    .where(inArray(positionLedgerEntries.ledgerEventId, accountEvents))
+    .orderBy(asc(positionLedgerEntries.id))
+    .all();
   const cashByEvent = new Map<string, PaperLedgerCashPosting[]>();
   const positionsByEvent = new Map<string, PaperLedgerPositionPosting[]>();
 

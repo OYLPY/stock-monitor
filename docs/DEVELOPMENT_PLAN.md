@@ -138,6 +138,7 @@
 | [`P06-04`](https://github.com/OYLPY/stock-monitor/issues/45) | **晨报及六角色策略研究工作台**：实现晨报阅读、候选策略、证据/推论/假设标注、六角色审计及风控否决原因；支持报告历史。 | Reports/Strategies 页面 | 最多3策略可追踪；无数据/AI失败时不给虚假量化分数；依赖：P06-01, P05-04 |
 | [`P06-05`](https://github.com/OYLPY/stock-monitor/issues/46) | **回测与纸面模拟账户界面**：实现参数配置、实验结果、费用/风险明细、账本流水、权益曲线、模拟订单状态；禁用所有真实交易按钮。 | Backtests/Paper Ledger 页面 | NOT_VERIFIED 正确显示；无账本明确“未建立”；禁止绕过风控直接写入；依赖：P06-01, P05-01 |
 | [`P06-06`](https://github.com/OYLPY/stock-monitor/issues/47) | **设置、任务日志、通知及 E2E 页面验收**：实现数据源/模型设置、任务状态、执行日志、备份入口；统一错误提示与屏幕阅读语义；加入Playwright冒烟。 | Settings/Tasks 页面、E2E | 所有用户操作有实际行为和失败反馈；设置不泄露 token；依赖：P06-02, P06-03, P06-04, P06-05 |
+| [P06-FU-02](https://github.com/OYLPY/stock-monitor/issues/94) | **报告与市场监测信息层级重构**：按用户后续反馈继续精简报告、持久队列表格和美日市场状态呈现；证据不足时不构造事件因果。 | Reports/Markets UX、Playwright 与窄屏/键盘验收 | 关闭前需用户页面验收通过；不修改 shadcn 生成组件；依赖：P06-02, P06-04, P07-05, P06-FU-01/#93 |
 
 ### P07 — 行情与公开信息采集实现
 
@@ -219,7 +220,7 @@
 | [`P12-03`](https://github.com/OYLPY/stock-monitor/issues/76) | **Playwright 完整 E2E 研究与模拟计划**：UI 覆盖无需登录的本地初始化、晨报、证据查看、策略草案、风控拒绝、账本/设置/备份完整路径；使用显著 Fixture 模式。 | tests/e2e、截图与失败记录 | 重要按钮都有效；无行情时不出现伪实时/成交；导航和错误态可操作；依赖：P06-06, P10-05, P11-04 |
 | [`P12-04`](https://github.com/OYLPY/stock-monitor/issues/77) | **回测与研究结果可重复性审计**：检查样本外与 2020/2022 压力流程、成本/FX敏感性、数据溯源、未来函数防护及五维评分门禁。 | tests/quant-audit、验算数据 | 已声明的实测结果均可复算；无数据明确 NOT_VERIFIED，不上报虚假战绩；依赖：P09-06 |
 | [`P12-05`](https://github.com/OYLPY/stock-monitor/issues/78) | **安全与故障恢复演练**：检查无真实订单路由、无凭据泄漏、最小权限、提示注入、请求滥用、数据库损坏恢复、Codex额度/认证中断。 | docs/testing/SECURITY_AUDIT.md、故障恢复证据 | 不可突破沙盒/权限；外部不可信文本不改变规则；异常下安全暂停；依赖：P00-05, P05-05, P08-05, P11-05 |
-| [`P12-06`](https://github.com/OYLPY/stock-monitor/issues/79) | **最终系统质量门禁与缺陷清零**：执行冻结依赖安装、lint、typecheck、unit、integration、E2E、build、完整离线演示；出具问题分级和证据路径。 | docs/testing/RELEASE_GATE.md、缺陷登记 | 阻断级缺陷0；失败不宣布完成；已知外部限制逐项说明；依赖：P12-01, P12-02, P12-03, P12-04, P12-05 |
+| [`P12-06`](https://github.com/OYLPY/stock-monitor/issues/79) | **最终系统质量门禁与缺陷清零**：执行冻结依赖安装、lint、typecheck、unit、integration、E2E、build、完整离线演示；出具问题分级和证据路径。 | [DOC-0043](testing/RELEASE_GATE.md)、缺陷登记 | 阻断级缺陷0；失败不宣布完成；已知外部限制逐项说明；依赖：P12-01, P12-02, P12-03, P12-04, P12-05 |
 
 ### P13 — 本地发布与交付
 

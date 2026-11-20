@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq, inArray } from "drizzle-orm";
 import type { AppDatabase } from "./index";
 import { withTransaction } from "./index";
 import {
@@ -9,7 +9,19 @@ import {
   paperAccounts,
 } from "./schema";
 
-export function listPaperAccountLedger(database: AppDatabase) {
+const PAPER_LEDGER_PAGE_SIZE = 100;
+
+export function paperAccountExists(database: AppDatabase) {
+  return Boolean(
+    database.orm
+      .select({ id: paperAccounts.id })
+      .from(paperAccounts)
+      .where(eq(paperAccounts.accountKey, "local-default"))
+      .get(),
+  );
+}
+
+export function listPaperAccountLedger(database: AppDatabase, page = 1) {
   const account = database.orm
     .select({
       id: paperAccounts.id,
@@ -22,33 +34,69 @@ export function listPaperAccountLedger(database: AppDatabase) {
 
   if (!account) return null;
 
-  const entries = database.orm
-    .select({
-      eventId: ledgerEvents.id,
-      sequenceNo: ledgerEvents.sequenceNo,
-      eventType: ledgerEvents.eventType,
-      effectiveAtMs: ledgerEvents.effectiveAtMs,
-      recordedAtMs: ledgerEvents.recordedAtMs,
-      cashEntryId: cashLedgerEntries.id,
-      bucket: cashLedgerEntries.bucket,
-      currencyCode: cashLedgerEntries.currencyCode,
-      currencyScale: cashLedgerEntries.currencyScale,
-      amountMinor: cashLedgerEntries.amountMinor,
-    })
+  const totalEventCount =
+    database.orm
+      .select({ total: count() })
+      .from(ledgerEvents)
+      .where(eq(ledgerEvents.accountId, account.id))
+      .get()?.total ?? 0;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalEventCount / PAPER_LEDGER_PAGE_SIZE),
+  );
+  const currentPage = Math.min(page, totalPages);
+  const eventPage = database.orm
+    .select({ id: ledgerEvents.id })
     .from(ledgerEvents)
-    .leftJoin(
-      cashLedgerEntries,
-      eq(cashLedgerEntries.ledgerEventId, ledgerEvents.id),
-    )
     .where(eq(ledgerEvents.accountId, account.id))
-    .orderBy(
-      asc(ledgerEvents.sequenceNo),
-      asc(ledgerEvents.effectiveAtMs),
-      asc(cashLedgerEntries.id),
-    )
+    .orderBy(asc(ledgerEvents.sequenceNo))
+    .limit(PAPER_LEDGER_PAGE_SIZE)
+    .offset((currentPage - 1) * PAPER_LEDGER_PAGE_SIZE)
     .all();
+  const pageEvents = eventPage;
+  const entries = pageEvents.length
+    ? database.orm
+        .select({
+          eventId: ledgerEvents.id,
+          sequenceNo: ledgerEvents.sequenceNo,
+          eventType: ledgerEvents.eventType,
+          effectiveAtMs: ledgerEvents.effectiveAtMs,
+          recordedAtMs: ledgerEvents.recordedAtMs,
+          cashEntryId: cashLedgerEntries.id,
+          bucket: cashLedgerEntries.bucket,
+          currencyCode: cashLedgerEntries.currencyCode,
+          currencyScale: cashLedgerEntries.currencyScale,
+          amountMinor: cashLedgerEntries.amountMinor,
+        })
+        .from(ledgerEvents)
+        .leftJoin(
+          cashLedgerEntries,
+          eq(cashLedgerEntries.ledgerEventId, ledgerEvents.id),
+        )
+        .where(
+          inArray(
+            ledgerEvents.id,
+            pageEvents.map(({ id }) => id),
+          ),
+        )
+        .orderBy(
+          asc(ledgerEvents.sequenceNo),
+          asc(ledgerEvents.effectiveAtMs),
+          asc(cashLedgerEntries.id),
+        )
+        .all()
+    : [];
 
-  return { account, entries };
+  return {
+    account,
+    entries,
+    page: currentPage,
+    totalEventCount,
+    totalPages,
+    eventCount: pageEvents.length,
+    hasPrevious: currentPage > 1,
+    hasNext: currentPage < totalPages,
+  };
 }
 
 export function initializeDefaultPaperAccount(database: AppDatabase) {

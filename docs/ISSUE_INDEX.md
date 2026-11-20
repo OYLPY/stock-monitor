@@ -148,6 +148,7 @@
 - [x] [P06-05 — 回测与纸面模拟账户界面](https://github.com/OYLPY/stock-monitor/issues/46) · 交付：回测草稿/未验证状态、AlertDialog 一次性开户确认、本机开户 API、持久化纸面账本、`src/app/api/v1/paper-account/initialize`、`src/components/backtests`、[DOC-0009](design/API_CONTRACTS.md)、[DOC-0017](design/UI_DESIGN.md)、[六字段交接](../harness/handoffs/P06-05.md) · 覆盖：RQ-013–022、FR-Trade-004/008–013、NFR-011/012 · 依赖：P06-01, P05-01
 - [x] [P06-06 — 设置、任务日志、通知及 E2E 页面验收](https://github.com/OYLPY/stock-monitor/issues/47) · 交付：[DOC-0009](design/API_CONTRACTS.md)、[DOC-0017](design/UI_DESIGN.md)、[DOC-0039](operations/backup.md)、`src/app/settings`、`src/app/tasks`、`src/app/api/v1/backup`、[六字段交接](../harness/handoffs/P06-06.md) · 覆盖：RQ-026、NFR-007/008/012 · 依赖：P06-02, P06-03, P06-04, P06-05
 - [x] [P06-FU-01 — 市场监测与研究报告信息结构整改](https://github.com/OYLPY/stock-monitor/issues/93) · 提交 [c61593c](https://github.com/OYLPY/stock-monitor/commit/c61593c0de4e91771aa9cdafd5af9d694fe5dc70) / Quality CI [44751449777](https://github.com/OYLPY/stock-monitor/actions/runs/44751449777) 成功；市场页数据状态与操作分区，报告结论优先、队列/历史分栏、证据关联 · [六字段交接](../harness/handoffs/P06-FU-01.md) · [验收证据](../harness/evidence/P06-FU-01-ui-ux.md) · 依赖：P06-02, P06-04, P07-02
+- [ ] [P06-FU-02 — 报告与市场监测信息层级重构](https://github.com/OYLPY/stock-monitor/issues/94) · 用户后续验收仍反馈信息过载、难理解；结论与事件联系须可追溯，任务队列须在刷新后可见，市场数据时点/来源/下一步须一目了然 · 依赖：P06-02, P06-04, P07-05, P06-FU-01
 
 ### [P07 行情与公开信息采集实现](https://github.com/OYLPY/stock-monitor/issues/8)
 
@@ -200,7 +201,7 @@
 - [x] [P12-03 — Playwright 完整 E2E 研究与模拟计划](https://github.com/OYLPY/stock-monitor/issues/76) · 实现提交 [f1af657](https://github.com/OYLPY/stock-monitor/commit/f1af657f6094f2a2f80f753d2443ec5ea906c4c9) / Quality CI [44441115531](https://github.com/OYLPY/stock-monitor/actions/runs/44441115531) success；验收记录 [0eaaf45](https://github.com/OYLPY/stock-monitor/commit/0eaaf453f8965531add735871830aa18bed19fa3) / Quality CI [44441657092](https://github.com/OYLPY/stock-monitor/actions/runs/44441657092) success；#76 已关闭 · [E2E 证据](../harness/evidence/P12-03-e2e.md) · [六字段交接](../harness/handoffs/P12-03.md) · 依赖：P06-06, P10-05, P11-04
 - [x] [P12-04 — 回测与研究结果可重复性审计](https://github.com/OYLPY/stock-monitor/issues/77) · 依赖：P09-06
 - [x] [P12-05 — 安全与故障恢复演练](https://github.com/OYLPY/stock-monitor/issues/78) · [DOC-0042 安全审计](testing/SECURITY_AUDIT.md) · 实现 [697974c](https://github.com/OYLPY/stock-monitor/commit/697974c0fc1f0529224732df7449988d6162f7bb) / Quality CI [44766667138](https://github.com/OYLPY/stock-monitor/actions/runs/44766667138) success · [六字段交接](../harness/handoffs/P12-05.md) · #78 已关闭 · 依赖：P00-05, P05-05, P08-05, P11-05
-- [ ] [P12-06 — 最终系统质量门禁与缺陷清零](https://github.com/OYLPY/stock-monitor/issues/79) · 依赖：P12-01, P12-02, P12-03, P12-04, P12-05
+- [ ] [P12-06 — 最终系统质量门禁与缺陷清零](https://github.com/OYLPY/stock-monitor/issues/79) · 本地门禁与容量基准证据：[DOC-0043](testing/RELEASE_GATE.md)；报告/市场 UX 遗留：[P06-FU-02 / #94](https://github.com/OYLPY/stock-monitor/issues/94)；依赖：P12-01, P12-02, P12-03, P12-04, P12-05
 
 ### [P13 本地发布与交付](https://github.com/OYLPY/stock-monitor/issues/14)
 

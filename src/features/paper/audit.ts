@@ -108,26 +108,22 @@ function auditPaperLedgerSnapshot(database: AppDatabase) {
     .where(eq(paperOrders.accountId, ledger.account.id))
     .orderBy(asc(paperOrders.createdAtMs), asc(paperOrders.id))
     .all();
-  const orderIds = orders.map(({ id }) => id);
-  const fills = orderIds.length
-    ? database.orm
-        .select()
-        .from(paperFills)
-        .where(inArray(paperFills.orderId, orderIds))
-        .orderBy(asc(paperFills.executedAtMs), asc(paperFills.id))
-        .all()
-    : [];
-  const orderEvents = orderIds.length
-    ? database.orm
-        .select()
-        .from(paperOrderEvents)
-        .where(inArray(paperOrderEvents.orderId, orderIds))
-        .orderBy(
-          asc(paperOrderEvents.orderId),
-          asc(paperOrderEvents.sequenceNo),
-        )
-        .all()
-    : [];
+  const accountOrders = database.orm
+    .select({ id: paperOrders.id })
+    .from(paperOrders)
+    .where(eq(paperOrders.accountId, ledger.account.id));
+  const fills = database.orm
+    .select()
+    .from(paperFills)
+    .where(inArray(paperFills.orderId, accountOrders))
+    .orderBy(asc(paperFills.executedAtMs), asc(paperFills.id))
+    .all();
+  const orderEvents = database.orm
+    .select()
+    .from(paperOrderEvents)
+    .where(inArray(paperOrderEvents.orderId, accountOrders))
+    .orderBy(asc(paperOrderEvents.orderId), asc(paperOrderEvents.sequenceNo))
+    .all();
   const orderById = new Map(orders.map((order) => [order.id, order]));
   const eventById = new Map(ledger.events.map((event) => [event.id, event]));
   const fillByLedgerEventId = new Map(
