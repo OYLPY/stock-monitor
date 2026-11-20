@@ -53,9 +53,9 @@ Playwright 使用端口 3003 的隔离运行；没有对用户当前打开的端
 - **首屏 Ready P95 未测：** AC-NFR-003 的页面启动 30 次测量未在本任务执行。
 - **Worker 主机重启未验收：** 本轮 SQLite 重开时间不能替代宿主机/Worker 中断后的端到端恢复验证。
 - **无真实量化结果：** 基准、E2E 和测试 Fixture 不能被解释为市场行情、策略绩效、模拟成交或账户收益。
-- **远端门禁：** 实现与证据提交 `8ff3bf77e45ee5695cafd7b5f4b3470a00e39e85` 的 GitHub Quality CI [44776716414](https://github.com/OYLPY/stock-monitor/actions/runs/44776716414) 已成功；随后提交的最终交接/状态记录仍需单独通过匹配 CI 后才能关闭 #79。
+- **远端门禁：** 实现与证据提交 `8ff3bf77e45ee5695cafd7b5f4b3470a00e39e85` 的 GitHub Quality CI [44776716414](https://github.com/OYLPY/stock-monitor/actions/runs/44776716414) 成功；最终交接/状态提交 `bb198b1162491df728952d9f6e9d8a8c59866055` 的匹配 CI [44777577729](https://github.com/OYLPY/stock-monitor/actions/runs/44777577729) 也成功。
 
-因此，本次代码级质量检查通过，但产品交付仍为 **PARTIAL_DELIVERY**；在 UX 缺陷、真实数据源和远端 CI 状态明确前，不标记系统整体 READY。
+因此，本次代码级质量检查通过，但产品交付仍为 **PARTIAL_DELIVERY**；报告/市场 UX 缺陷与真实行情来源完成前，不标记系统整体 READY。
 
 ## 遗留本机临时文件
 

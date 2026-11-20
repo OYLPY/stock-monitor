@@ -4,12 +4,12 @@
 
 - **最近完成：P12-05 / #78 安全与故障恢复演练**。实现 `697974c` 已推送；匹配 Quality CI [44766667138](https://github.com/OYLPY/stock-monitor/actions/runs/44766667138) 全部成功，含 Playwright E2E。定向回归 22/22、集成 2/2、全量 57 文件 / 325 测试、format、lint、typecheck、build 均通过；安全审计见 [DOC-0042](../../docs/testing/SECURITY_AUDIT.md)，#78 已附证据并关闭。六字段交接见[记录](../handoffs/P12-05.md)。
 - **此前完成：P12-02 / #75**，实现 `9f0e63d`、验收 `4d1de77`、边界澄清 `263996a` 均已推送；匹配 Quality CI [44758467681](https://github.com/OYLPY/stock-monitor/actions/runs/44758467681)、[44759357324](https://github.com/OYLPY/stock-monitor/actions/runs/44759357324)、[44759990620](https://github.com/OYLPY/stock-monitor/actions/runs/44759990620) 全部成功。仅在临时 SQLite 和网络桩中验证；详情见[验收证据](../evidence/P12-02-integration.md)与[六字段交接](../handoffs/P12-02.md)。
-- **当前项：P12-06 / #79 最终系统质量门禁与缺陷清零**。实现与本地证据提交 `8ff3bf7` 已推送，匹配 Quality CI [44776716414](https://github.com/OYLPY/stock-monitor/actions/runs/44776716414) 全部成功。账本分页 P95 39.90 ms；最终交接/状态提交及其 CI 完成后关闭 #79。
+- **P12-06 / #79 最终系统质量门禁**已完成本地验收并通过两次匹配 CI：实现提交 [`8ff3bf7`](https://github.com/OYLPY/stock-monitor/commit/8ff3bf77e45ee5695cafd7b5f4b3470a00e39e85) / [44776716414](https://github.com/OYLPY/stock-monitor/actions/runs/44776716414)，交接提交 [`bb198b1`](https://github.com/OYLPY/stock-monitor/commit/bb198b1162491df728952d9f6e9d8a8c59866055) / [44777577729](https://github.com/OYLPY/stock-monitor/actions/runs/44777577729)。容量与限制见 [DOC-0043](../../docs/testing/RELEASE_GATE.md)；接下来附证据并关闭 #79。
 - **后续 UX：P06-FU-02 / #94 已建立并保持 open**。用户在 #93 的交付后仍反馈报告和市场监测页过载、难理解；#94 要求把报告事件关系与结论绑定到已存证据、刷新后持久队列表可见、美日数据时点/来源/下一步清楚呈现。#94 完成并经页面验收前，不声称两页满足用户要求。详细范围见[Issue #94](https://github.com/OYLPY/stock-monitor/issues/94)。
 - **当前阻断：P07-02 / #49**。按用户确认，仅接入免费 EODHD Free；适配器随上述提交推送且 CI 成功，但本机没有 API Key、没有真实行情验证，Issue 必须保持 open / `BLOCKED_EXTERNAL`。
 - **本轮验证**：`corepack pnpm install --frozen-lockfile`、`format:check`、`eslint src scripts tests`、typecheck 均 exit 0；`test` 57 files / 329 tests、integration 2/2、E2E 10/10、build 通过；容量基准见 [DOC-0043](../../docs/testing/RELEASE_GATE.md)。实现提交的匹配 Quality CI [44776716414](https://github.com/OYLPY/stock-monitor/actions/runs/44776716414) success。用户已有 `tsconfig.json` 与 `.next-p11-05/` 保持未修改、未暂存。
 - **运行状态事故**：截图时曾误用未隔离的 `pnpm start`，Worker 领取报告任务 `e6e5afad-bfef-43f1-9c76-dade95d4a756`。服务已停止；只读检查确认无完成事件/已归档报告，任务 attempt 仍 `RUNNING`，租约已过期。Worker 已向本机数据库写入领取/锁记录；没有手工改写或删除数据库行。保留给现有 Worker 的过期租约恢复逻辑处理；重启正常本地 Worker 后会重新领取，不要直接手改数据库状态。
-- **下一步**：完成 #79 的交接/状态提交与匹配 CI 后关闭 #79；随后从 P06-FU-02 / #94 开始实际重整报告和市场监测页面，按其 Playwright/窄屏/键盘验收。#49 因缺少本机 EODHD Key 保持 `BLOCKED_EXTERNAL`；#50 因免费日股数据覆盖不足保持阻断。
+- **下一步**：在 GitHub #79 附验收证据并关闭后，从 P06-FU-02 / #94 开始实际重整报告和市场监测页面，按其 Playwright/窄屏/键盘验收。#49 因缺少本机 EODHD Key 保持 `BLOCKED_EXTERNAL`；#50 因免费日股数据覆盖不足保持阻断。
 
 ## 历史执行记录（截至 2026-11-19）
 
