@@ -2,13 +2,14 @@
 
 ## 2026-11-21 最新状态
 
-- **最近完成：P12-02 / #75**，2026-11-21 已关闭。实现 `9f0e63d`、验收 `4d1de77`、边界澄清 `263996a` 均已推送；匹配 Quality CI [44758467681](https://github.com/OYLPY/stock-monitor/actions/runs/44758467681)、[44759357324](https://github.com/OYLPY/stock-monitor/actions/runs/44759357324)、[44759990620](https://github.com/OYLPY/stock-monitor/actions/runs/44759990620) 全部成功。集成 2/2、全量 57 文件 / 325 测试、本机 format/lint/typecheck/build 通过；远端 E2E 通过。证据已发布到 [#75 评论](https://github.com/OYLPY/stock-monitor/issues/75#issuecomment-7043013120)。仅在临时 SQLite 和网络桩中验证，未访问用户数据库、真实行情 API、Worker 或 Codex；合成成交只存在于临时测试库。详情见[验收证据](../evidence/P12-02-integration.md)与[六字段交接](../handoffs/P12-02.md)。
-- **下一项：P12-05 / #78 安全与故障恢复演练**。其前置 #19、#41、#57、#73 均已核实关闭；开始前需按当前仓库规则修正 Issue 中过时的 PR 指令并记录 main 基线。不得访问用户数据库、触发真实交易或更改 Codex 认证/额度状态。
-- **此前关闭：P06-FU-01 / #93**，提交 [`c61593c`](https://github.com/OYLPY/stock-monitor/commit/c61593c0de4e91771aa9cdafd5af9d694fe5dc70)、Quality CI [44751449777](https://github.com/OYLPY/stock-monitor/actions/runs/44751449777) 全部通过，Issue 已关闭。报告结论优先、队列和历史分 tab、详情折叠；市场页按美股/日股切换，将来源、图表、CSV 和明细关系分区。完整证据见 [P06-FU-01 UI/UX 验收](../evidence/P06-FU-01-ui-ux.md) 与[六字段交接](../handoffs/P06-FU-01.md)。
+- **最近完成：P12-05 / #78 安全与故障恢复演练**。实现 `697974c` 已推送；匹配 Quality CI [44766667138](https://github.com/OYLPY/stock-monitor/actions/runs/44766667138) 全部成功，含 Playwright E2E。定向回归 22/22、集成 2/2、全量 57 文件 / 325 测试、format、lint、typecheck、build 均通过；安全审计见 [DOC-0042](../../docs/testing/SECURITY_AUDIT.md)，#78 已附证据并关闭。六字段交接见[记录](../handoffs/P12-05.md)。
+- **此前完成：P12-02 / #75**，实现 `9f0e63d`、验收 `4d1de77`、边界澄清 `263996a` 均已推送；匹配 Quality CI [44758467681](https://github.com/OYLPY/stock-monitor/actions/runs/44758467681)、[44759357324](https://github.com/OYLPY/stock-monitor/actions/runs/44759357324)、[44759990620](https://github.com/OYLPY/stock-monitor/actions/runs/44759990620) 全部成功。仅在临时 SQLite 和网络桩中验证；详情见[验收证据](../evidence/P12-02-integration.md)与[六字段交接](../handoffs/P12-02.md)。
+- **下一项：P12-06 / #79 最终系统质量门禁与缺陷清零**。依赖 #74–#78 均已核实关闭；先修订 Issue 中遗留的 PR 要求并记录 main 基线，再执行完整离线验收。不得访问用户数据库、真实行情/新闻服务、Codex 云端或券商账户。
+- **此前关闭：P06-FU-01 / #93**，提交 [`c61593c`](https://github.com/OYLPY/stock-monitor/commit/c61593c0de4e91771aa9cdafd5af9d694fe5dc70)、Quality CI [44751449777](https://github.com/OYLPY/stock-monitor/actions/runs/44751449777) 全部通过，Issue 已关闭。报告结论优先、队列和历史分 tab、详情折叠；市场页按美股/日股切换，将来源、图表、CSV 和明细关系分区。完整证据见 [P06-FU-01 UI/UX 验收](../evidence/P06-FU-01-ui-ux.md) 与[六字段交接](../handoffs/P06-FU-01.md)。用户后续仍反馈报告与市场监测页过载、难理解；P12 质量门禁后需为相关 UX 改进建立单独 Issue。
 - **当前阻断：P07-02 / #49**。按用户确认，仅接入免费 EODHD Free；适配器随上述提交推送且 CI 成功，但本机没有 API Key、没有真实行情验证，Issue 必须保持 open / `BLOCKED_EXTERNAL`。
-- **本轮验证**：format、typecheck、321 个单测、生产构建、`eslint src scripts tests`、10 项 Playwright 和远端全仓 Quality CI 均通过。全仓 `pnpm lint` 曾被未跟踪的 `.next-p11-05` 生成文件纳入扫描而失败；该用户目录未修改或暂存，干净检出 CI lint 通过。
+- **本轮验证**：`corepack pnpm test`（57 files / 325 tests）、`test:integration`（2/2）、`format:check`、`eslint src scripts tests`、typecheck、build、文档 Prettier 和匹配 Quality CI（含 E2E）均通过。用户已有 `tsconfig.json` 与 `.next-p11-05/` 保持未修改、未暂存。
 - **运行状态事故**：截图时曾误用未隔离的 `pnpm start`，Worker 领取报告任务 `e6e5afad-bfef-43f1-9c76-dade95d4a756`。服务已停止；只读检查确认无完成事件/已归档报告，任务 attempt 仍 `RUNNING`，租约已过期。Worker 已向本机数据库写入领取/锁记录；没有手工改写或删除数据库行。保留给现有 Worker 的过期租约恢复逻辑处理；重启正常本地 Worker 后会重新领取，不要直接手改数据库状态。
-- **下一步**：从[任务索引](../../docs/ISSUE_INDEX.md)开始 P12-05 / #78，执行隔离的安全与恢复验证。#49 仅在本机配置 API Key 并完成真实行情验收后继续；#50 仍因免费日股数据覆盖不足而保持阻断。
+- **下一步**：从[任务索引](../../docs/ISSUE_INDEX.md)开始 P12-06 / #79，执行最终质量门禁和离线演示；之后为报告与市场监测 UX 建立专项 Issue。#49 仅在本机配置已获批准的 EODHD Free API Key 并完成真实行情验收后继续；#50 仍因免费日股数据覆盖不足而保持阻断。
 
 ## 历史执行记录（截至 2026-11-19）
 
